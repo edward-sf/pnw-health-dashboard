@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 from shapely.geometry import box
@@ -35,3 +36,23 @@ def pnw_fips() -> list[str]:
     """149 synthetic county FIPS with the real per-state counts (WA 39, OR 36, ID 44, AK 30)."""
     counts = {"53": 39, "41": 36, "16": 44, "02": 30}
     return [f"{st}{2 * i + 1:03d}" for st, n in counts.items() for i in range(n)]
+
+
+def make_indicator(id_: str, unit: str = "percent", direction: str = "higher_is_worse") -> Any:
+    from pnw_health.indicators import Indicator
+
+    return Indicator.model_validate(
+        {
+            "id": id_,
+            "label": id_,
+            "unit": unit,
+            "source": "acs",
+            "source_field": "X",
+            "moe_field": None,
+            "ci_level": None,
+            "year": 2024,
+            "category": "Social & Economic",
+            "direction": direction,
+            "description": "d",
+        }
+    )

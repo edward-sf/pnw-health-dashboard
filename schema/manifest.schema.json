@@ -1,0 +1,164 @@
+{
+  "$defs": {
+    "Indicator": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "Outcomes",
+            "Behaviors",
+            "Access",
+            "Social & Economic",
+            "Demographics"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "ci_level": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ci Level"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "higher_is_better",
+            "higher_is_worse",
+            "neutral"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "moe_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Moe Field"
+        },
+        "source": {
+          "enum": [
+            "acs",
+            "places",
+            "chr"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "source_field": {
+          "title": "Source Field",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "percent",
+            "dollars",
+            "years",
+            "rate_per_100k",
+            "count"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "year": {
+          "title": "Year",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "unit",
+        "source",
+        "source_field",
+        "moe_field",
+        "ci_level",
+        "year",
+        "category",
+        "direction",
+        "description"
+      ],
+      "title": "Indicator",
+      "type": "object"
+    },
+    "SourceVintage": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "year": {
+          "title": "Year",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source",
+        "year",
+        "url"
+      ],
+      "title": "SourceVintage",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "built_at": {
+      "format": "date-time",
+      "title": "Built At",
+      "type": "string"
+    },
+    "indicators": {
+      "items": {
+        "$ref": "#/$defs/Indicator"
+      },
+      "title": "Indicators",
+      "type": "array"
+    },
+    "schema_version": {
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceVintage"
+      },
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "built_at",
+    "sources",
+    "indicators"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}
