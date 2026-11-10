@@ -60,7 +60,7 @@ pnw-health-dashboard/
 |---|---|---|
 | CDC PLACES (county) | Model-based prevalence of chronic conditions, behaviors, prevention | Socrata API on data.cdc.gov |
 | County Health Rankings (CHR) | Life expectancy (ML target), premature death, access measures, rurality | Annual national CSV download |
-| Census ACS 5-year | Social/economic features and display indicators | Census Data API (optional key via secret) |
+| Census ACS 5-year | Social/economic features and display indicators | Census Data API (**key required**: `CENSUS_API_KEY` env var / repo secret; keyless requests are redirected to an HTML error page) |
 | Census cartographic boundary files | County geometry (2020 vintage) | Census TIGER/cartographic downloads |
 
 CDC WONDER is excluded: its API does not support sub-national queries.
@@ -176,7 +176,7 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 - **`ci.yml`** (every push/PR): pipeline lint, typecheck, tests; web lint, typecheck, unit tests. No real data fetched.
 - **`build-deploy.yml`** (push to `main`, monthly cron, manual dispatch): run full pipeline with raw-data cache keyed by source vintage → build site → Playwright smoke test → deploy to GitHub Pages. Any failure means no deploy; last good site stays live.
-- Secrets: optional `CENSUS_API_KEY`.
+- Secrets: `CENSUS_API_KEY` (required — free key from https://api.census.gov/data/key_signup.html).
 
 ## 9. Build order (vertical slices)
 
