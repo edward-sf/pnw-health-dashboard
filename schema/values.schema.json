@@ -1,0 +1,149 @@
+{
+  "$defs": {
+    "Legacy": {
+      "additionalProperties": false,
+      "description": "Value reported only for a retired FIPS that covers this county (spec \u00a73).",
+      "properties": {
+        "fips": {
+          "title": "Fips",
+          "type": "string"
+        },
+        "hi": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hi"
+        },
+        "lo": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lo"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "V"
+        }
+      },
+      "required": [
+        "fips",
+        "name",
+        "v",
+        "lo",
+        "hi"
+      ],
+      "title": "Legacy",
+      "type": "object"
+    },
+    "ValueEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "hi": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hi"
+        },
+        "legacy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Legacy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "lo": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lo"
+        },
+        "rank": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rank"
+        },
+        "state_rank": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "State Rank"
+        },
+        "v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "V"
+        }
+      },
+      "required": [
+        "v",
+        "lo",
+        "hi",
+        "rank",
+        "state_rank"
+      ],
+      "title": "ValueEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": {
+    "additionalProperties": {
+      "$ref": "#/$defs/ValueEntry"
+    },
+    "type": "object"
+  },
+  "description": "``{indicator_id: {fips: ValueEntry}}``",
+  "title": "ValuesFile",
+  "type": "object"
+}

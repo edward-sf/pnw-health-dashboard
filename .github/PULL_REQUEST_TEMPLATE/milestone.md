@@ -1,4 +1,4 @@
-<!-- Milestone PR: milestone/m<N> -> main. Author reviews; merge with a MERGE COMMIT (not squash). -->
+<!-- Milestone PR: milestone/m<N> -> main. Author reviews with docs/milestone-review-template.md; merge with a MERGE COMMIT (not squash). -->
 # M<N> — <milestone name>
 
 ## Summary

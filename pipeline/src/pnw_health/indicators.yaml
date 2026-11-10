@@ -1,0 +1,76 @@
+# Curated indicator catalog (spec §3). ACS Data Profile codes shift between years:
+# each code below was looked up by label in
+# https://api.census.gov/data/2024/acs/acs5/profile/variables.json and is pinned by
+# label assertions in tests/test_indicators.py. MOEs are 90% intervals.
+
+- id: median_household_income
+  label: Median household income
+  unit: dollars
+  source: acs
+  source_field: DP03_0062E
+  moe_field: DP03_0062M
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: higher_is_better
+  description: Median household income in the past 12 months (2024 inflation-adjusted dollars).
+
+- id: poverty_rate
+  label: Poverty rate
+  unit: percent
+  source: acs
+  source_field: DP03_0128PE
+  moe_field: DP03_0128PM
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: higher_is_worse
+  description: Percent of all people whose income in the past 12 months is below the poverty level.
+
+- id: unemployment_rate
+  label: Unemployment rate
+  unit: percent
+  source: acs
+  source_field: DP03_0009PE
+  moe_field: DP03_0009PM
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: higher_is_worse
+  description: Unemployed share of the civilian labor force.
+
+- id: bachelors_or_higher
+  label: Bachelor's degree or higher
+  unit: percent
+  source: acs
+  source_field: DP02_0068PE
+  moe_field: DP02_0068PM
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: higher_is_better
+  description: Percent of adults 25 and over with a bachelor's degree or higher.
+
+- id: uninsured_rate
+  label: Uninsured rate
+  unit: percent
+  source: acs
+  source_field: DP03_0099PE
+  moe_field: DP03_0099PM
+  ci_level: 0.9
+  year: 2024
+  category: Access
+  direction: higher_is_worse
+  description: Percent of the civilian noninstitutionalized population with no health insurance coverage.
+
+- id: broadband_households
+  label: Households with broadband
+  unit: percent
+  source: acs
+  source_field: DP02_0154PE
+  moe_field: DP02_0154PM
+  ci_level: 0.9
+  year: 2024
+  category: Access
+  direction: higher_is_better
+  description: Percent of households with a broadband Internet subscription.

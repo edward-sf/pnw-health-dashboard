@@ -40,7 +40,7 @@ main ◄──(milestone PR, author reviews, merge commit)── milestone/m1 �
 1. **Start.** Write the milestone's detailed plan. Reconcile its issues to match, and move them to `Ready`. Create `milestone/m<N>` from up-to-date `main`, push it, and open a **draft** milestone PR `milestone/m<N> → main` right away, so the chain of work collects in one place as issue PRs land.
 2. **Issues.** Work through the issues following the lifecycle below.
 3. **Milestone review.** When every issue is `Merged to milestone`, run the full checks on the milestone branch and fill in the milestone PR template. That means listing every issue PR, adding a `Closes #…` line for every issue, and including verification evidence. Then mark the PR ready for review.
-4. **Merge.** The author reviews and approves, then merges with a **merge commit**, not squash, so the per-issue commits stay on `main`. GitHub closes the issues, and the board moves them to `Done`. Delete the milestone branch.
+4. **Merge.** The author reviews using [`docs/milestone-review-template.md`](docs/milestone-review-template.md) and approves. They then merge with a **merge commit**, not squash, so the per-issue commits stay on `main`. GitHub closes the issues, and the board moves them to `Done`. Delete the milestone branch.
 
 ## Lifecycle of an issue
 

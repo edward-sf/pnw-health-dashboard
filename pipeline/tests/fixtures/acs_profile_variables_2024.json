@@ -1,0 +1,50 @@
+{
+  "DP02_0068PE": {
+    "attributes": "DP02_0068PEA,DP02_0068PM,DP02_0068PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!EDUCATIONAL ATTAINMENT!!Population 25 years and over!!Bachelor's degree or higher",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP02_0154PE": {
+    "attributes": "DP02_0154PEA,DP02_0154PM,DP02_0154PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!COMPUTERS AND INTERNET USE!!Total households!!With a broadband Internet subscription",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP03_0009PE": {
+    "attributes": "DP03_0009PEA,DP03_0009PM,DP03_0009PMA",
+    "concept": "Selected Economic Characteristics",
+    "group": "DP03",
+    "label": "Percent!!EMPLOYMENT STATUS!!Civilian labor force!!Unemployment Rate",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP03_0062E": {
+    "attributes": "DP03_0062EA,DP03_0062M,DP03_0062MA",
+    "concept": "Selected Economic Characteristics",
+    "group": "DP03",
+    "label": "Estimate!!INCOME AND BENEFITS (IN 2024 INFLATION-ADJUSTED DOLLARS)!!Total households!!Median household income (dollars)",
+    "limit": 0,
+    "predicateType": "int"
+  },
+  "DP03_0099PE": {
+    "attributes": "DP03_0099PEA,DP03_0099PM,DP03_0099PMA",
+    "concept": "Selected Economic Characteristics",
+    "group": "DP03",
+    "label": "Percent!!HEALTH INSURANCE COVERAGE!!Civilian noninstitutionalized population!!No health insurance coverage",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP03_0128PE": {
+    "attributes": "DP03_0128PEA,DP03_0128PM,DP03_0128PMA",
+    "concept": "Selected Economic Characteristics",
+    "group": "DP03",
+    "label": "Percent!!PERCENTAGE OF FAMILIES AND PEOPLE WHOSE INCOME IN THE PAST 12 MONTHS IS BELOW THE POVERTY LEVEL!!All people",
+    "limit": 0,
+    "predicateType": "float"
+  }
+}
