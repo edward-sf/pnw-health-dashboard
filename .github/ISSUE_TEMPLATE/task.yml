@@ -1,0 +1,25 @@
+name: Plan task
+description: One task from a milestone plan
+title: "M?.T? "
+labels: []
+body:
+  - type: input
+    id: plan
+    attributes:
+      label: Plan section
+      description: Link to the task in docs/superpowers/plans/
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: "- [ ] "
+    validations:
+      required: true
