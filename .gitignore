@@ -180,8 +180,8 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 # Project data (fetched/exported; never committed)
-data/
-web/public/data/
+/data/
+/web/public/data/
 
 # Superpowers execution workspace
 .superpowers/

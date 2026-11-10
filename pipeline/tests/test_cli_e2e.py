@@ -4,13 +4,15 @@ from pathlib import Path
 
 import httpx
 import pytest
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
 from pnw_health.config import Paths
 from pnw_health.contract import Manifest, ValuesFile
 from pnw_health.fetch import FetchError, make_client
+from pnw_health.indicators import load_catalog
+from pnw_health.sources.acs import acs_cache_path
 from pnw_health.validate import DataValidationError
 from tests.helpers import make_boundary_zip
 
@@ -119,3 +121,64 @@ def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path
     result = CliRunner().invoke(cli.app, ["run", "--root", str(tmp_path)])
     assert result.exit_code == 1
     assert "run --stage fetch first" in result.output
+
+
+def write_acs_cache(paths: Paths, rows_edit: Callable[[list[list[str]]], list[list[str]]]) -> None:
+    """Put the recorded ACS sample in the cache, after editing its data rows."""
+    header, *rows = json.loads(ACS_SAMPLE.read_text())
+    cache = acs_cache_path(paths.raw, load_catalog())
+    cache.parent.mkdir(parents=True)
+    cache.write_text(json.dumps([header, *rows_edit(rows)]))
+
+
+def run_harmonize_cli(root: Path) -> Result:
+    return CliRunner().invoke(cli.app, ["run", "--stage", "harmonize", "--root", str(root)])
+
+
+def test_cli_reports_duplicate_counties_without_traceback(tmp_path: Path) -> None:
+    def add_wade_hampton(rows: list[list[str]]) -> list[list[str]]:
+        kusilvak = next(r for r in rows if r[-2:] == ["02", "158"])
+        return [*rows, [*kusilvak[:-1], "270"]]  # 02270 renames onto the existing 02158
+
+    write_acs_cache(Paths.default(tmp_path), add_wade_hampton)
+    result = run_harmonize_cli(tmp_path)
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert "duplicate (fips, indicator_id)" in result.output
+
+
+def test_cli_reports_corrupt_cache_without_traceback(tmp_path: Path) -> None:
+    cache = acs_cache_path(Paths.default(tmp_path).raw, load_catalog())
+    cache.parent.mkdir(parents=True)
+    cache.write_text("<html>maintenance</html>")
+    result = run_harmonize_cli(tmp_path)
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert "--refresh" in result.output
+
+
+def test_bad_census_response_stops_the_run_and_is_retried(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    bad_html = lambda r: httpx.Response(200, text="<html>maintenance</html>")  # noqa: E731
+    with client_for(bad_html) as client, pytest.raises(FetchError):
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    assert (paths.out / "values.json").exists()
+
+
+def test_harmonize_reports_warning_count(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def report_only_valdez_cordova(rows: list[list[str]]) -> list[list[str]]:
+        kept = [r for r in rows if r[-2:] not in (["02", "063"], ["02", "066"])]
+        chugach = next(r for r in rows if r[-2:] == ["02", "063"])
+        return [*kept, [*chugach[:-1], "261"]]
+
+    paths = Paths.default(tmp_path)
+    write_acs_cache(paths, report_only_valdez_cordova)
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+    # One legacy-only warning per catalog indicator.
+    assert "6 warning(s)" in capsys.readouterr().err
+    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 6

@@ -5,13 +5,28 @@ from pathlib import Path
 import httpx
 import pytest
 
-from pnw_health.fetch import make_client
+from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.long import LONG_COLUMNS
 from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs
 from tests.helpers import make_indicator
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "acs_profile_2024_sample.json"
+VALID_BODY = json.dumps(
+    [
+        ["NAME", "DP03_0062E", "DP03_0062M", "DP03_0009PE", "DP03_0009PM", "state", "county"],
+        ["A", "50000", "2500", "12.5", "1.5", "53", "001"],
+    ]
+).encode()
+BAD_BODIES = {
+    "html": b"<html>maintenance</html>",
+    "not-a-table": b'{"error": "nope"}',
+    "empty": b"[]",
+    "header-only": json.dumps([json.loads(VALID_BODY)[0]]).encode(),
+    "missing-field": b'[["NAME","state","county"],["A","53","001"]]',
+    "no-county-columns": b'[["NAME","DP03_0062E","DP03_0062M","DP03_0009PE","DP03_0009PM"],'
+    b'["A","1","1","1","1"]]',
+}
 
 
 def write_table(tmp_path: Path, rows: list[list[str]]) -> Path:
@@ -88,7 +103,7 @@ def test_fetch_acs_requests_national_profile(tmp_path: Path) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        return httpx.Response(200, content=b"[]")
+        return httpx.Response(200, content=VALID_BODY)
 
     with make_client(httpx.MockTransport(handler)) as client:
         path = fetch_acs(client, tmp_path, two_indicators(), api_key="K")
@@ -143,3 +158,27 @@ def test_ci_clipped_to_unit_bounds(tmp_path: Path) -> None:
 def test_ci_has_no_float_noise(tmp_path: Path) -> None:
     path = write_table(tmp_path, [["A", "1", "1", "2.6", "1.2", "53", "001"]])
     assert by(parse_acs(path, two_indicators()), "53001", "unemp").ci_low == 1.4
+
+
+@pytest.mark.parametrize("body", BAD_BODIES.values(), ids=BAD_BODIES.keys())
+def test_bad_response_is_not_cached(tmp_path: Path, body: bytes) -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=body))
+    with make_client(transport) as client, pytest.raises(FetchError):
+        fetch_acs(client, tmp_path, two_indicators(), api_key="SECRET")
+    assert not acs_cache_path(tmp_path, two_indicators()).exists()
+
+
+def test_bad_response_error_omits_key(tmp_path: Path) -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=b"<html>"))
+    with make_client(transport) as client, pytest.raises(FetchError) as err:
+        fetch_acs(client, tmp_path, two_indicators(), api_key="SECRET")
+    assert "SECRET" not in str(err.value)
+
+
+@pytest.mark.parametrize("body", BAD_BODIES.values(), ids=BAD_BODIES.keys())
+def test_bad_existing_cache_says_refresh(tmp_path: Path, body: bytes) -> None:
+    # A file cached before responses were validated must not crash with a traceback.
+    path = tmp_path / "acs.json"
+    path.write_bytes(body)
+    with pytest.raises(FetchError, match="--refresh"):
+        parse_acs(path, two_indicators())

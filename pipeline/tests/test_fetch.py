@@ -130,3 +130,81 @@ def test_transport_error_redacts_key(tmp_path: Path) -> None:
         cached_get(client, URL, tmp_path / "d", params={"key": "SECRET"})
     assert "SECRET" not in str(err.value)
     assert "timed out" in str(err.value)
+
+
+def test_transport_error_text_is_scrubbed(tmp_path: Path) -> None:
+    def boom(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout(f"timed out on {request.url}", request=request)
+
+    with client_for(boom) as client, pytest.raises(FetchError) as err:
+        cached_get(client, URL, tmp_path / "d", params={"key": "SECRET"})
+    assert "SECRET" not in str(err.value)
+
+
+@pytest.mark.parametrize(
+    ("key", "response", "leaked", "kept"),
+    [
+        (
+            "SECRET",
+            httpx.Response(302, headers={"Location": "https://x.test/a?key=SECRET"}),
+            "SECRET",
+            "x.test/a",
+        ),
+        (
+            "S/C",
+            httpx.Response(302, headers={"Location": "https://x.test/a?key=S%2FC"}),
+            "S%2FC",
+            "x.test/a",
+        ),
+        ("SECRET", httpx.Response(400, text="invalid key SECRET given"), "SECRET", "invalid key"),
+    ],
+    ids=["location", "location-url-encoded", "body"],
+)
+def test_key_echoed_by_server_is_redacted(
+    tmp_path: Path, key: str, response: httpx.Response, leaked: str, kept: str
+) -> None:
+    with client_for(lambda r: response) as client, pytest.raises(FetchError) as err:
+        cached_get(client, URL, tmp_path / "d", params={"key": key})
+    assert leaked not in str(err.value)
+    assert kept in str(err.value)
+
+
+def test_key_straddling_the_body_limit_is_redacted(tmp_path: Path) -> None:
+    body = "x" * 195 + "SECRET"  # truncating to 200 before redacting would leave "SECRE"
+    with client_for(lambda r: httpx.Response(400, text=body)) as client:
+        with pytest.raises(FetchError) as err:
+            cached_get(client, URL, tmp_path / "d", params={"key": "SECRET"})
+    assert "SECRE" not in str(err.value)
+
+
+def reject(path: Path) -> None:
+    raise FetchError("bad body")
+
+
+def test_rejected_body_is_not_cached(tmp_path: Path) -> None:
+    dest = tmp_path / "data.json"
+    handler, calls = counting(lambda r: httpx.Response(200, content=b"<html>"))
+    with client_for(handler) as client:
+        for _ in range(2):
+            with pytest.raises(FetchError, match="bad body"):
+                cached_get(client, URL, dest, validate=reject)
+    assert len(calls) == 2  # nothing cached, so the second call goes back to the server
+    assert_nothing_written(dest)
+
+
+def test_rejected_refresh_keeps_the_good_cache(tmp_path: Path) -> None:
+    dest = tmp_path / "data.json"
+    dest.write_bytes(b"good")
+    with client_for(lambda r: httpx.Response(200, content=b"<html>")) as client:
+        with pytest.raises(FetchError):
+            cached_get(client, URL, dest, refresh=True, validate=reject)
+    assert dest.read_bytes() == b"good"
+
+
+def test_validator_sees_the_complete_body(tmp_path: Path) -> None:
+    dest = tmp_path / "data.json"
+    seen: list[bytes] = []
+    with client_for(lambda r: httpx.Response(200, content=b"full")) as client:
+        cached_get(client, URL, dest, validate=lambda p: seen.append(p.read_bytes()))
+    assert seen == [b"full"]
+    assert dest.read_bytes() == b"full"

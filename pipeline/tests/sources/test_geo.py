@@ -1,12 +1,15 @@
+import io
 import json
+import zipfile
 from pathlib import Path
 
 import geopandas as gpd
 import httpx
+import pytest
 import topojson
 from shapely.geometry import MultiPolygon, box
 
-from pnw_health.fetch import make_client
+from pnw_health.fetch import FetchError, make_client
 from pnw_health.sources.geo import fetch_boundaries, load_pnw_counties, to_topojson
 from tests.helpers import make_boundary_zip
 
@@ -49,12 +52,39 @@ def test_antimeridian_parts_preserved() -> None:
 
 def test_fetch_boundaries_url(tmp_path: Path) -> None:
     seen: list[str] = []
+    body = make_boundary_zip(tmp_path / "src" / "b.zip", ["53033"]).read_bytes()
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request.url.path)
-        return httpx.Response(200, content=b"zip")
+        return httpx.Response(200, content=body)
 
     with make_client(httpx.MockTransport(handler)) as client:
         path = fetch_boundaries(client, tmp_path)
     assert seen == ["/geo/tiger/GENZ2024/shp/cb_2024_us_county_5m.zip"]
     assert path == tmp_path / "geo" / "cb_2024_us_county_5m.zip"
+
+
+def zip_without_shapefile() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("readme.txt", "no shapes here")
+    return buf.getvalue()
+
+
+BAD_ZIPS = {"html": b"<html>maintenance</html>", "no-shapefile": zip_without_shapefile()}
+
+
+@pytest.mark.parametrize("body", BAD_ZIPS.values(), ids=BAD_ZIPS.keys())
+def test_bad_boundary_download_is_not_cached(tmp_path: Path, body: bytes) -> None:
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, content=body))
+    with make_client(transport) as client, pytest.raises(FetchError):
+        fetch_boundaries(client, tmp_path)
+    assert not (tmp_path / "geo" / "cb_2024_us_county_5m.zip").exists()
+
+
+@pytest.mark.parametrize("body", BAD_ZIPS.values(), ids=BAD_ZIPS.keys())
+def test_bad_existing_boundary_cache_says_refresh(tmp_path: Path, body: bytes) -> None:
+    path = tmp_path / "b.zip"
+    path.write_bytes(body)
+    with pytest.raises(FetchError, match="--refresh"):
+        load_pnw_counties(path)
