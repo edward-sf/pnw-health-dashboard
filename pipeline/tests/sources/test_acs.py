@@ -8,7 +8,7 @@ import pytest
 from pnw_health.fetch import make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.long import LONG_COLUMNS
-from pnw_health.sources.acs import fetch_acs, parse_acs
+from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs
 from tests.helpers import make_indicator
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "acs_profile_2024_sample.json"
@@ -93,7 +93,7 @@ def test_fetch_acs_requests_national_profile(tmp_path: Path) -> None:
     with make_client(httpx.MockTransport(handler)) as client:
         path = fetch_acs(client, tmp_path, two_indicators(), api_key="K")
         fetch_acs(client, tmp_path / "nokey", two_indicators())
-    assert path == tmp_path / "acs" / "acs5_profile_2024.json"
+    assert path == acs_cache_path(tmp_path, two_indicators())
     req = seen[0]
     assert req.url.path == "/data/2024/acs/acs5/profile"
     assert req.url.params["get"] == "NAME,DP03_0062E,DP03_0062M,DP03_0009PE,DP03_0009PM"
@@ -112,3 +112,34 @@ def test_too_many_fields_rejected(tmp_path: Path) -> None:
     with make_client(httpx.MockTransport(lambda r: httpx.Response(200))) as client:
         with pytest.raises(ValueError, match="50"):
             fetch_acs(client, tmp_path, cat)
+
+
+def test_cache_name_tracks_fields(tmp_path: Path) -> None:
+    both, one = two_indicators(), two_indicators()[:1]
+    assert acs_cache_path(tmp_path, both) == acs_cache_path(tmp_path, list(both))
+    assert acs_cache_path(tmp_path, both) != acs_cache_path(tmp_path, one)
+    renamed = [one[0].model_copy(update={"moe_field": "DP03_0062PM"})]
+    assert acs_cache_path(tmp_path, one) != acs_cache_path(tmp_path, renamed)
+    path = acs_cache_path(tmp_path, both)
+    assert path.parent == tmp_path / "acs"
+    assert path.name.startswith("acs5_profile_2024_") and path.suffix == ".json"
+
+
+def test_ci_clipped_to_unit_bounds(tmp_path: Path) -> None:
+    path = write_table(
+        tmp_path,
+        [
+            ["A", "100", "500", "0.8", "1.2", "53", "001"],
+            ["B", "100", "5", "99.5", "1.0", "53", "003"],
+        ],
+    )
+    df = parse_acs(path, two_indicators())
+    low = by(df, "53001", "unemp")
+    assert (low.ci_low, low.ci_high) == (0.0, 2.0)
+    assert by(df, "53003", "unemp").ci_high == 100.0
+    assert by(df, "53001", "income").ci_low == 0.0
+
+
+def test_ci_has_no_float_noise(tmp_path: Path) -> None:
+    path = write_table(tmp_path, [["A", "1", "1", "2.6", "1.2", "53", "001"]])
+    assert by(parse_acs(path, two_indicators()), "53001", "unemp").ci_low == 1.4

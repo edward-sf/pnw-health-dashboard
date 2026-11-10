@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -38,6 +39,12 @@ def _fields(catalog: list[Indicator]) -> list[str]:
     return fields
 
 
+def acs_cache_path(raw_dir: Path, catalog: list[Indicator], year: int = ACS_YEAR) -> Path:
+    """Cache file for this exact field list, so a catalog change never reuses a stale file."""
+    digest = hashlib.sha1(",".join(sorted(_fields(catalog))).encode()).hexdigest()[:8]
+    return raw_dir / "acs" / f"acs5_profile_{year}_{digest}.json"
+
+
 def fetch_acs(
     client: httpx.Client,
     raw_dir: Path,
@@ -56,7 +63,7 @@ def fetch_acs(
     params = {"get": ",".join(["NAME", *fields]), "for": "county:*"}
     if api_key:
         params["key"] = api_key
-    dest = raw_dir / "acs" / f"acs5_profile_{year}.json"
+    dest = acs_cache_path(raw_dir, catalog, year)
     return cached_get(client, profile_url(year), dest, params=params, refresh=refresh)
 
 
@@ -78,7 +85,12 @@ def parse_acs(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
         value = _numeric(table[ind.source_field])
         if ind.moe_field:
             moe = _numeric(table[ind.moe_field])
-            ci_low, ci_high = value - moe, value + moe
+            # ACS values are non-negative; percents are also capped at 100. Rounding
+            # drops float noise from the subtraction (2.6 - 1.2 -> 1.4, not 1.4000000000000001).
+            ci_low = (value - moe).clip(lower=0).round(6)
+            ci_high = (value + moe).round(6)
+            if ind.unit == "percent":
+                ci_high = ci_high.clip(upper=100)
         else:
             ci_low = ci_high = pd.Series(np.nan, index=table.index)
         frames.append(

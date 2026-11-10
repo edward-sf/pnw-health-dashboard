@@ -16,6 +16,7 @@ from pathlib import Path
 import httpx
 
 from pnw_health.config import ACS_YEAR, census_api_key
+from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -25,9 +26,8 @@ PROFILE = f"https://api.census.gov/data/{ACS_YEAR}/acs/acs5/profile"
 
 def record_variables() -> Path:
     """Save the catalog's ACS variable metadata (labels and MOE attributes)."""
-    resp = httpx.get(f"{PROFILE}/variables.json", timeout=60)
-    resp.raise_for_status()
-    variables = resp.json()["variables"]
+    with make_client() as client:
+        variables = fetch_json(client, f"{PROFILE}/variables.json")["variables"]
     wanted = sorted({i.source_field for i in load_catalog() if i.source == "acs"})
     subset = {code: variables[code] for code in wanted}
     out = FIXTURES / f"acs_profile_variables_{ACS_YEAR}.json"
@@ -35,8 +35,11 @@ def record_variables() -> Path:
     return out
 
 
-def record_acs_sample() -> Path:
-    """Save catalog ACS fields for all PNW counties plus two non-PNW counties."""
+def record_acs_sample(client: httpx.Client | None = None) -> Path:
+    """Save catalog ACS fields for all PNW counties plus two non-PNW counties.
+
+    Uses the pipeline's fetch helpers so error messages never contain the API key.
+    """
     key = census_api_key(REPO_ROOT)
     if not key:
         raise SystemExit("CENSUS_API_KEY not set (environment or repo-root .env)")
@@ -52,11 +55,14 @@ def record_acs_sample() -> Path:
     ]
     header: list[str] = []
     rows: list[list[str]] = []
-    for q in queries:
-        resp = httpx.get(PROFILE, params={"get": get, **q, "key": key}, timeout=60)
-        resp.raise_for_status()
-        header, *body = resp.json()
-        rows += body
+    c = client or make_client()
+    try:
+        for q in queries:
+            header, *body = fetch_json(c, PROFILE, params={"get": get, **q, "key": key})
+            rows += body
+    finally:
+        if client is None:
+            c.close()
     rows.sort(key=lambda r: (r[-2], r[-1]))
     out = FIXTURES / f"acs_profile_{ACS_YEAR}_sample.json"
     out.write_text(json.dumps([header, *rows], indent=0) + "\n")

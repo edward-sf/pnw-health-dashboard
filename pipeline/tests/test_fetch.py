@@ -105,8 +105,10 @@ class FailingStream(httpx.SyncByteStream):
 def test_interrupted_write_does_not_poison_cache(tmp_path: Path) -> None:
     dest = tmp_path / "data.json"
     fail = lambda r: httpx.Response(200, stream=FailingStream())  # noqa: E731
-    with client_for(fail) as client, pytest.raises(httpx.ReadError):
+    with client_for(fail) as client, pytest.raises(FetchError) as err:
         cached_get(client, URL, dest)
+    assert URL in str(err.value)
+    assert "connection reset" in str(err.value)
     assert_nothing_written(dest)
     with client_for(lambda r: httpx.Response(200, content=b"full")) as client:
         cached_get(client, URL, dest)
@@ -118,3 +120,13 @@ def test_client_identifies_itself() -> None:
     with client_for(handler) as client:
         client.get(URL)
     assert calls[0].headers["User-Agent"] == "pnw-health-dashboard-pipeline"
+
+
+def test_transport_error_redacts_key(tmp_path: Path) -> None:
+    def boom(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectTimeout("timed out", request=request)
+
+    with client_for(boom) as client, pytest.raises(FetchError) as err:
+        cached_get(client, URL, tmp_path / "d", params={"key": "SECRET"})
+    assert "SECRET" not in str(err.value)
+    assert "timed out" in str(err.value)

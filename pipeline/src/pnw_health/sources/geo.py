@@ -19,11 +19,16 @@ def boundary_url(year: int = GEO_YEAR) -> str:
     return BOUNDARY_URL.format(year=year)
 
 
+def boundaries_cache_path(raw_dir: Path, year: int = GEO_YEAR) -> Path:
+    return raw_dir / "geo" / boundary_url(year).rsplit("/", 1)[1]
+
+
 def fetch_boundaries(
     client: httpx.Client, raw_dir: Path, *, year: int = GEO_YEAR, refresh: bool = False
 ) -> Path:
-    url = boundary_url(year)
-    return cached_get(client, url, raw_dir / "geo" / url.rsplit("/", 1)[1], refresh=refresh)
+    return cached_get(
+        client, boundary_url(year), boundaries_cache_path(raw_dir, year), refresh=refresh
+    )
 
 
 def load_pnw_counties(zip_path: Path) -> gpd.GeoDataFrame:

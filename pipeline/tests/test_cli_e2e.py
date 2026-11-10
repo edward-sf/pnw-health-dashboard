@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from pnw_health import cli
-from pnw_health.cli import Stage, run_pipeline
+from pnw_health.cli import Stage, StageInputError, run_pipeline
 from pnw_health.config import Paths
 from pnw_health.contract import Manifest, ValuesFile
 from pnw_health.fetch import FetchError, make_client
@@ -96,3 +96,26 @@ def test_cli_exit_code(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     result = CliRunner().invoke(cli.app, ["run", "--root", str(tmp_path)])
     assert result.exit_code == 1
     assert "something is wrong" in result.output
+
+
+def test_harmonize_before_fetch_says_run_fetch(tmp_path: Path) -> None:
+    with client_for(failing) as client, pytest.raises(StageInputError, match="--stage fetch"):
+        run_pipeline(Paths.default(tmp_path), Stage.harmonize, client=client)
+
+
+def test_export_before_harmonize_says_run_harmonize(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client, pytest.raises(StageInputError, match="--stage harmonize"):
+        run_pipeline(paths, Stage.export, client=client)
+
+
+def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def boom(*args: object, **kwargs: object) -> None:
+        raise StageInputError("run --stage fetch first")
+
+    monkeypatch.setattr(cli, "run_pipeline", boom)
+    result = CliRunner().invoke(cli.app, ["run", "--root", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "run --stage fetch first" in result.output

@@ -45,7 +45,9 @@ def harmonize(frames: list[pd.DataFrame]) -> HarmonizeResult:
     for old, successors in FIPS_SPLITS.items():
         for row in values[values.fips == old].itertuples():
             has_successor = (
-                values.fips.isin(successors) & (values.indicator_id == row.indicator_id)
+                values.fips.isin(successors)
+                & (values.indicator_id == row.indicator_id)
+                & values.value.notna()
             ).any()
             if has_successor:
                 continue

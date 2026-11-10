@@ -18,11 +18,27 @@ from pnw_health.fetch import FetchError, make_client
 from pnw_health.harmonize import harmonize, pnw_only
 from pnw_health.indicators import load_catalog
 from pnw_health.ranks import add_ranks
-from pnw_health.sources.acs import fetch_acs, parse_acs, profile_url
-from pnw_health.sources.geo import boundary_url, fetch_boundaries, load_pnw_counties, to_topojson
+from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs, profile_url
+from pnw_health.sources.geo import (
+    boundaries_cache_path,
+    boundary_url,
+    fetch_boundaries,
+    load_pnw_counties,
+    to_topojson,
+)
 from pnw_health.validate import DataValidationError, validate_display
 
 app = typer.Typer(add_completion=False, help=__doc__)
+
+
+class StageInputError(Exception):
+    """A stage's input is missing because an earlier stage has not run."""
+
+
+def _require(path: Path, stage: str) -> Path:
+    if not path.exists():
+        raise StageInputError(f"{path} not found; run `pnw-health run --stage {stage}` first")
+    return path
 
 
 class Stage(StrEnum):
@@ -37,9 +53,9 @@ def _fetch(paths: Paths, client: httpx.Client, api_key: str | None, refresh: boo
     fetch_boundaries(client, paths.raw, refresh=refresh)
 
 
-def _harmonize(paths: Paths, client: httpx.Client) -> None:
+def _harmonize(paths: Paths) -> None:
     catalog = load_catalog()
-    acs = parse_acs(fetch_acs(client, paths.raw, catalog), catalog)  # cache hit after fetch
+    acs = parse_acs(_require(acs_cache_path(paths.raw, catalog), "fetch"), catalog)
     result = harmonize([acs])
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
@@ -47,12 +63,12 @@ def _harmonize(paths: Paths, client: httpx.Client) -> None:
     (paths.interim / "warnings.txt").write_text("".join(f"{w}\n" for w in result.warnings))
 
 
-def _export(paths: Paths, client: httpx.Client) -> None:
+def _export(paths: Paths) -> None:
     catalog = load_catalog()
-    counties = load_pnw_counties(fetch_boundaries(client, paths.raw))  # cache hit after fetch
+    counties = load_pnw_counties(_require(boundaries_cache_path(paths.raw), "fetch"))
     county_fips = set(counties.fips)
-    values = pnw_only(pd.read_parquet(paths.interim / "long.parquet"))
-    legacy = pnw_only(pd.read_parquet(paths.interim / "legacy.parquet"))
+    values = pnw_only(pd.read_parquet(_require(paths.interim / "long.parquet", "harmonize")))
+    legacy = pnw_only(pd.read_parquet(_require(paths.interim / "legacy.parquet", "harmonize")))
 
     validate_display(values, county_fips, catalog)
 
@@ -78,13 +94,18 @@ def run_pipeline(
     api_key: str | None = None,
     refresh: bool = False,
 ) -> None:
-    """Run one stage, or all of them in order. Raises FetchError / DataValidationError."""
+    """Run one stage, or all of them in order.
+
+    Only ``fetch`` uses the network; ``harmonize`` and ``export`` read what earlier stages
+    wrote and raise StageInputError if it is missing. Also raises FetchError and
+    DataValidationError.
+    """
     if stage in (Stage.fetch, Stage.all):
         _fetch(paths, client, api_key, refresh)
     if stage in (Stage.harmonize, Stage.all):
-        _harmonize(paths, client)
+        _harmonize(paths)
     if stage in (Stage.export, Stage.all):
-        _export(paths, client)
+        _export(paths)
 
 
 @app.callback()
@@ -109,6 +130,6 @@ def run(
                 api_key=census_api_key(root),
                 refresh=refresh,
             )
-    except (DataValidationError, FetchError) as err:
+    except (DataValidationError, FetchError, StageInputError) as err:
         typer.echo(f"pipeline failed:\n{err}", err=True)
         raise typer.Exit(1) from err

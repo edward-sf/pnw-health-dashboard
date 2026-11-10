@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -31,6 +32,30 @@ def _redacted(url: httpx.URL) -> str:
     return str(url.copy_with(params=params))
 
 
+def _raise_for_response(resp: httpx.Response) -> None:
+    if resp.status_code == 204 or not resp.is_success:
+        body = resp.read().decode("utf-8", errors="replace")[:200]
+        location = resp.headers.get("Location", "")
+        detail = f" -> {location}" if location else ""
+        raise FetchError(
+            f"GET {_redacted(resp.request.url)} returned {resp.status_code}{detail}: {body}"
+        )
+
+
+def _transport_error(url: str, params: dict[str, str] | None, err: Exception) -> FetchError:
+    return FetchError(f"GET {_redacted(httpx.URL(url, params=params))} failed: {err}")
+
+
+def fetch_json(client: httpx.Client, url: str, *, params: dict[str, str] | None = None) -> Any:
+    """GET and decode JSON, with the same error handling and key redaction as ``cached_get``."""
+    try:
+        resp = client.get(url, params=params)
+    except httpx.TransportError as err:
+        raise _transport_error(url, params, err) from err
+    _raise_for_response(resp)
+    return resp.json()
+
+
 def cached_get(
     client: httpx.Client,
     url: str,
@@ -50,17 +75,13 @@ def cached_get(
     part = dest.with_suffix(dest.suffix + ".part")
     try:
         with client.stream("GET", url, params=params) as resp:
-            if resp.status_code == 204 or not resp.is_success:
-                body = resp.read().decode("utf-8", errors="replace")[:200]
-                location = resp.headers.get("Location", "")
-                detail = f" -> {location}" if location else ""
-                raise FetchError(
-                    f"GET {_redacted(resp.request.url)} returned {resp.status_code}{detail}: {body}"
-                )
+            _raise_for_response(resp)
             with part.open("wb") as fh:
                 for chunk in resp.iter_bytes():
                     fh.write(chunk)
         os.replace(part, dest)
+    except httpx.TransportError as err:
+        raise _transport_error(url, params, err) from err
     finally:
         part.unlink(missing_ok=True)
     return dest
