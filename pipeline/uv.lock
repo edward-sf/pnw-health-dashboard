@@ -334,6 +334,7 @@ source = { editable = "." }
 dependencies = [
     { name = "geopandas" },
     { name = "httpx" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -356,6 +357,7 @@ dev = [
 requires-dist = [
     { name = "geopandas", specifier = ">=1.2.0" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "numpy", specifier = ">=2.5.4" },
     { name = "pandas", specifier = ">=3.1.1" },
     { name = "pyarrow", specifier = ">=26.0.1" },
     { name = "pydantic", specifier = ">=2" },

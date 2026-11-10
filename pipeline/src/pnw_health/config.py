@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,3 +34,17 @@ class Paths:
 def state_abbr(fips: str) -> str | None:
     """Return the PNW state abbreviation for a 5-character county FIPS, else None."""
     return STATES.get(fips[:2])
+
+
+def census_api_key(root: Path) -> str | None:
+    """CENSUS_API_KEY from the environment, else from the git-ignored ``<root>/.env``."""
+    if key := os.environ.get("CENSUS_API_KEY"):
+        return key
+    env_file = root / ".env"
+    if not env_file.exists():
+        return None
+    for line in env_file.read_text().splitlines():
+        name, sep, value = line.strip().partition("=")
+        if sep and name.strip() == "CENSUS_API_KEY":
+            return value.strip().strip("\"'") or None
+    return None
