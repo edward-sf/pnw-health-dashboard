@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from pnw_health.config import ACS_YEAR
-from pnw_health.fetch import cached_get
+from pnw_health.fetch import FetchError, cached_get
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
 
@@ -64,7 +64,34 @@ def fetch_acs(
     if api_key:
         params["key"] = api_key
     dest = acs_cache_path(raw_dir, catalog, year)
-    return cached_get(client, profile_url(year), dest, params=params, refresh=refresh)
+    return cached_get(
+        client,
+        profile_url(year),
+        dest,
+        params=params,
+        refresh=refresh,
+        validate=lambda path: _load_table(path, fields),
+    )
+
+
+def _invalid(reason: str) -> FetchError:
+    return FetchError(
+        f"invalid ACS data: {reason}; re-download with `pnw-health run --stage fetch --refresh`"
+    )
+
+
+def _load_table(path: Path, fields: list[str]) -> list[list[str | None]]:
+    """Read a Census response, raising FetchError unless it is a table with every field."""
+    try:
+        table = json.loads(path.read_text())
+    except ValueError as err:
+        raise _invalid("response is not JSON") from err
+    if not isinstance(table, list) or len(table) < 2 or not isinstance(table[0], list):
+        raise _invalid("response is not a table with data rows")
+    missing = [f for f in ["state", "county", *fields] if f not in table[0]]
+    if missing:
+        raise _invalid(f"missing columns {', '.join(missing)}")
+    return table
 
 
 def _numeric(col: pd.Series) -> pd.Series:
@@ -74,7 +101,7 @@ def _numeric(col: pd.Series) -> pd.Series:
 
 def parse_acs(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     """One long-format row per county x ACS indicator; sentinels and junk become NaN."""
-    header, *rows = json.loads(path.read_text())
+    header, *rows = _load_table(path, _fields(catalog))
     table = pd.DataFrame(rows, columns=header, dtype="object")
     fips = table["state"].astype(str).str.zfill(2) + table["county"].astype(str).str.zfill(3)
 

@@ -61,7 +61,7 @@ pnw-health-dashboard/
 | CDC PLACES (county) | Model-based prevalence of chronic conditions, behaviors, prevention | Socrata API on data.cdc.gov |
 | County Health Rankings (CHR) | Life expectancy (ML target), premature death, access measures, rurality | Annual national CSV download |
 | Census ACS 5-year | Social/economic features and display indicators | Census Data API (**key required**: `CENSUS_API_KEY` env var / repo secret; keyless requests are redirected to an HTML error page) |
-| Census cartographic boundary files | County geometry (2020 vintage) | Census TIGER/cartographic downloads |
+| Census cartographic boundary files | County geometry (`cb_2024_us_county_5m`; same county set as 2020-vintage FIPS for the four states) | Census TIGER/cartographic downloads |
 
 CDC WONDER is excluded: its API does not support sub-national queries.
 
@@ -87,7 +87,7 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 
 ## 4. Export contract (`web/public/data/`)
 
-Defined once as Pydantic models in `contract.py`. Export also writes JSON Schema; the web build generates TypeScript types from it, so contract drift breaks the build.
+Defined once as Pydantic models in `contract.py`. JSON Schema generated from those models is committed in `schema/`, and a pipeline test fails if it drifts from them; the web build generates TypeScript types from it, so contract drift breaks the build.
 
 | File | Contents |
 |---|---|

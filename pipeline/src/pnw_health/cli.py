@@ -60,7 +60,9 @@ def _harmonize(paths: Paths) -> None:
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
     result.legacy.to_parquet(paths.interim / "legacy.parquet", index=False)
-    (paths.interim / "warnings.txt").write_text("".join(f"{w}\n" for w in result.warnings))
+    warnings_path = paths.interim / "warnings.txt"
+    warnings_path.write_text("".join(f"{w}\n" for w in result.warnings))
+    typer.echo(f"harmonize: {len(result.warnings)} warning(s), see {warnings_path}", err=True)
 
 
 def _export(paths: Paths) -> None:
@@ -130,6 +132,8 @@ def run(
                 api_key=census_api_key(root),
                 refresh=refresh,
             )
-    except (DataValidationError, FetchError, StageInputError) as err:
+    # ValueError covers the data and config checks raised outside validation, such as
+    # duplicate counties after a rename and an invalid indicator catalog.
+    except (DataValidationError, FetchError, StageInputError, ValueError) as err:
         typer.echo(f"pipeline failed:\n{err}", err=True)
         raise typer.Exit(1) from err
