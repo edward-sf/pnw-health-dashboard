@@ -17,7 +17,7 @@ A portfolio project demonstrating balanced full-stack data work — data enginee
 
 **Assumptions:** Python pipeline; desktop-first but usable on mobile; no accounts, no backend, no user data.
 
-**Out of scope for v1:** state health-department portals, CDC WONDER, forecasting, clustering/typologies, sub-county geography (tracts), live model serving.
+**Out of scope for v1:** state health-department portals, CDC WONDER, forecasting, clustering/typologies, race-stratified outcomes, sub-county geography (tracts), live model serving. These are deliberate deferrals; see §10 Future work.
 
 ## 2. Architecture
 
@@ -68,12 +68,14 @@ CDC WONDER is excluded: its API does not support sub-national queries.
 Display covers the **149 county-equivalents** in the four states (WA 39, OR 36, ID 44, AK 30). Sources are fetched **nationally** (~3,100 counties) because the model trains on all US counties (§5).
 
 ### Indicator catalog
-A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic), `direction` (`higher_is_better` | `higher_is_worse`), `description`.
+A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic / Demographics), `direction` (`higher_is_better` | `higher_is_worse` | `neutral`), `description`.
+
+**Demographics category:** ACS population shares by race/ethnicity (AI/AN, Hispanic, Black, Asian, NHPI, White, two or more races). These are descriptive context only — `direction: neutral` (no ranks, neutral sequential color scale) and never used as model features (§5).
 
 ### Harmonization rules
 - **Geography:** 2020 Census vintage FIPS, zero-padded 5-character strings.
 - **Alaska renames:** Wade Hampton (02270) → Kusilvak (02158) is remapped.
-- **Alaska split:** Valdez-Cordova (02261) → Chugach (02063) + Copper River (02066). Values reported only for 02261 are **not** copied to successors; successors are null for that indicator/vintage, and the pipeline logs a warning.
+- **Alaska split:** Valdez-Cordova (02261) → Chugach (02063) + Copper River (02066). Values reported only for 02261 are **not** copied to successors; successors are null (`v: null`) for that indicator/vintage and carry a `legacy` reference instead: `{fips: "02261", name: "Valdez-Cordova Census Area (former)", v, lo, hi}`. The pipeline logs a warning. Legacy rows are excluded from model training and from ranks.
 - **Suppressed/missing values** stay null — never imputed for display.
 - **Confidence intervals** are carried through wherever the source provides them.
 
@@ -91,8 +93,10 @@ Defined once as Pydantic models in `contract.py`. Export also writes JSON Schema
 |---|---|
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
-| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null |
-| `model.json` | Model metrics (national + PNW subset, ridge + LightGBM), global feature importance, and per PNW county: `actual`, `predicted`, `residual`, `flag` (`better` / `worse` / `none` / `insufficient_data`), top-5 SHAP `{feature, value, contribution}`, `base_value` |
+| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` per §3 |
+| `model.json` | Metrics (national + PNW subset) for ridge, LightGBM, and the behaviors-included comparison model; global feature importance; flag thresholds (`sigma_model`, `z` per tier); and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
+
+`flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
 All files are small enough to load up front.
 
@@ -106,9 +110,15 @@ All files are small enough to load up front.
   - **Excluded:** health behaviors (on the causal path; would restate the outcome) and race/ethnicity shares (proxies for structural factors; SHAP attributions would mislead). Rationale documented on the methodology page.
   - Missing feature values: median imputation fitted within each training fold.
 - **Models:** ridge regression baseline (standardized features) and LightGBM. Both reported.
+- **Behaviors comparison:** a second LightGBM model with PLACES health-behavior measures (smoking, obesity, physical inactivity, binge drinking) added to the features. Only its CV metrics are reported — on the methodology page, as "how much do behaviors add?" — never its SHAP values or predictions.
 - **Validation:** 5-fold CV grouped by state. Metrics: RMSE, MAE, R² — national and PNW subset.
-- **Residuals:** from out-of-fold predictions only.
-- **Flags:** `better`/`worse` only when |residual| exceeds both 1 SD of national OOF residuals and the county's own life-expectancy CI half-width; `insufficient_data` when the target is null.
+- **Residuals:** `residual = actual − predicted`, from out-of-fold predictions of the main LightGBM model only.
+- **Flags (two tiers):** each county gets its own threshold combining model error and its own measurement uncertainty.
+  - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's life-expectancy CI.
+  - `σ_resid²` = variance of national OOF residuals; `σ_model² = max(σ_resid² − mean(se_i²), 0)` (removes average measurement noise already present in residuals; mean over counties with a CI).
+  - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
+  - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign: positive residual = better.
+  - `insufficient_data` when the target is null.
 - **Explanations:** SHAP TreeExplainer on the final LightGBM model (trained on all counties); top-5 contributions per PNW county plus global mean |SHAP| importance.
 - **Reproducibility:** fixed seeds, pinned dependencies (uv lockfile), auto-generated model card rendered on the methodology page.
 - **Framing:** UI and docs use "factors associated with," never "drivers" or causal language.
@@ -130,12 +140,14 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
 - **Indicator picker:** grouped by category, searchable.
 - **Map:**
   - *Values mode:* direction-aware sequential color scale, quantile bins, legend; hatch pattern for suppressed/missing.
-  - *Model mode:* diverging scale on life-expectancy residuals.
+  - *Neutral indicators (Demographics):* neutral single-hue sequential scale; no ranks.
+  - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
   - Hover tooltip; click selects county.
-- **County panel** (right drawer on desktop, bottom sheet on mobile):
-  - Selected indicator value with CI; rank among 149 and within state.
+- **County panel** (right drawer on desktop, bottom sheet on mobile), in this order:
+  - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
-  - Model card: actual vs expected life expectancy, flag, top-5 SHAP bar chart labeled "factors associated with."
+  - Model card: actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart labeled "factors associated with."
+  - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
 - **Table view:** sortable table of the current indicator across all counties; together with a county search box, this is the keyboard and screen-reader path to every county.
 
 ### State and data loading
@@ -150,7 +162,8 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 **Pipeline (pytest; ruff; mypy):**
 - Source parsers against recorded fixtures — no network in tests.
-- Harmonization: Alaska remap and split handling, suppression passthrough, long-format output.
+- Harmonization: Alaska remap and split handling (including `legacy` attachment and exclusion from ranks/model), suppression passthrough, long-format output.
+- Flags: threshold formula on hand-computed cases — tier boundaries, sign convention, missing-CI fallback, `σ_model²` floor at 0.
 - Validation: each check has a failing-input test.
 - Model: smoke test on synthetic data — output shapes, OOF residuals, determinism under seed, SHAP additivity (contributions sum to prediction − base value).
 - Export: outputs validate against Pydantic contract.
@@ -168,8 +181,17 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 ## 9. Build order (vertical slices)
 
 1. Pipeline skeleton + ACS source → harmonize → validate → export (`manifest`, `counties.topojson`, `values.json`).
-2. Web skeleton: map rendering ACS indicators, indicator picker, URL state.
-3. PLACES and CHR sources; full indicator catalog; county panel and table view.
-4. ML pipeline → `model.json`.
+2. Web skeleton (map rendering ACS indicators, indicator picker, URL state) **plus** `ci.yml` and `build-deploy.yml` — the site is live on GitHub Pages at the end of this slice, and every later slice deploys automatically.
+3. PLACES and CHR sources; full indicator catalog (incl. Demographics); county panel, legacy display, and table view.
+4. ML pipeline → `model.json` (main model, ridge baseline, behaviors comparison, flags, SHAP).
+   - **Checkpoint:** stop and review model metrics, residual/flag distribution, and sample SHAP output with the author before slice 5. If PNW performance is weak, revise the ML design before building model UI.
 5. Model mode on the map and model card in the county panel.
-6. Methodology/about pages, CI/CD workflows, deployment, README, polish.
+6. Methodology/about pages (incl. model card, behaviors comparison, feature-exclusion rationale), README, polish.
+
+## 10. Future work (deliberately deferred)
+
+- **Race-stratified outcomes** ("which groups are impacted"): CHR county measures by race/ethnicity, displayed only where not suppressed; needs its own design for suppression-heavy AK/ID counties.
+- **State health-department datasets** (WA DOH, OHA, IDHW, AK DOH) as state-specific spotlight indicators.
+- **County peer-group clustering** and "compare to similar counties."
+- **Forecasting** from time series (pending a credible approach for small counties).
+- **Additional model targets** (e.g., diabetes prevalence) — config change plus UI target picker.
