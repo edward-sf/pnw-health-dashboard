@@ -1,6 +1,6 @@
 # M1 Pipeline Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Each task is one GitHub Issue (`M1.T<k>`); follow `CONTRIBUTING.md` for branch, PR, and merge rules.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Each task is one GitHub Issue (`M1.T<k>`) and one issue PR into `milestone/m1`. The milestone ends with a single milestone PR `milestone/m1 → main` for the author to review. Follow `CONTRIBUTING.md` for branch, PR, and merge rules. M1 has no CI yet, so each issue PR's checks are run locally: `uv run pytest && uv run ruff check && uv run ruff format --check && uv run mypy src`. A task's final "Commit" step is followed by its issue PR.
 
 **Goal:** `pnw-health run` fetches Census ACS data and county boundaries, harmonizes them, validates them, and exports `manifest.json`, `values.json`, and `counties.topojson`, plus committed JSON Schema files.
 
