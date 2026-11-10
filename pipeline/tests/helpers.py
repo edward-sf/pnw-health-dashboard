@@ -29,3 +29,9 @@ def make_boundary_zip(path: Path, fips: list[str]) -> Path:
             for part in Path(tmp).iterdir():
                 zf.write(part, part.name)
     return path
+
+
+def pnw_fips() -> list[str]:
+    """149 synthetic county FIPS with the real per-state counts (WA 39, OR 36, ID 44, AK 30)."""
+    counts = {"53": 39, "41": 36, "16": 44, "02": 30}
+    return [f"{st}{2 * i + 1:03d}" for st, n in counts.items() for i in range(n)]
