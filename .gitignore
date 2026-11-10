@@ -179,3 +179,9 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# Project data (fetched/exported; never committed)
+data/
+web/public/data/
+
+# Superpowers execution workspace
+.superpowers/
