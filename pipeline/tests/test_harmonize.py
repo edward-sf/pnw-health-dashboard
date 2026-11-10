@@ -82,3 +82,11 @@ def test_duplicate_after_rename_raises() -> None:
 def test_pnw_only_keeps_alaska() -> None:
     df = long_rows([("02013", "x", 1.0), ("53033", "x", 1.0), ("06037", "x", 1.0)])
     assert pnw_only(df).fips.tolist() == ["02013", "53033"]
+
+
+def test_split_null_successors_keep_legacy() -> None:
+    nan = float("nan")
+    res = harmonize([long_rows([("02261", "x", 78.2), ("02063", "x", nan), ("02066", "x", nan)])])
+    assert sorted(res.legacy.fips) == ["02063", "02066"]
+    assert "02261" not in set(res.values.fips)
+    assert len(res.warnings) == 1
