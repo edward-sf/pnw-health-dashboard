@@ -40,7 +40,8 @@ export function formatValue(v: number | null, unit: Unit): string {
   return `${formatBound(v, unit)}${SUFFIX[unit]}`;
 }
 
-export function formatSigned(v: number, unit: Unit, digits = 1): string {
+/** Signed value with + or the true minus (U+2212), and no sign when it rounds to zero. */
+export function formatSigned(v: number, unit: Unit, digits?: number): string {
   const body = formatBound(Math.abs(v), unit, digits);
   const isZero = Number(body.replace(/[^0-9.]/g, "")) === 0;
   const sign = isZero ? "" : v > 0 ? "+" : "−";

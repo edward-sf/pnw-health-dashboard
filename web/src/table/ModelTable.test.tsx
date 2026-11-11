@@ -86,3 +86,19 @@ test("marks the selected row", () => {
   setup("53033");
   expect(screen.getByRole("button", { name: "King, WA" })).toHaveAttribute("aria-current", "true");
 });
+
+test("a negative difference uses the true minus, and a near-zero one has no sign", () => {
+  const king = countyModel(model, "53033");
+  render(
+    <ModelTable
+      rows={[
+        { fips: "1", name: "Below", state: "WA", model: { ...king, residual: -1.24 } },
+        { fips: "2", name: "Level", state: "WA", model: { ...king, residual: 0.01 } },
+      ]}
+      selected={null}
+      onSelect={() => {}}
+    />,
+  );
+  expect(within(rowOf("Below, WA")).getByText("\u22121.2 years")).toBeInTheDocument();
+  expect(within(rowOf("Level, WA")).getByText("0.0 years")).toBeInTheDocument();
+});

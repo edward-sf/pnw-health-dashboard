@@ -16,6 +16,8 @@ type Props = {
   modelEntry: CountyModel;
   manifest: Manifest;
   values: ValuesFile;
+  /** In model mode the model card comes first (parent spec §6). */
+  modelMode: boolean;
   focusRequested: boolean;
   onFocusHandled: () => void;
   onClose: () => void;
@@ -29,6 +31,7 @@ export function CountyPanel({
   modelEntry,
   manifest,
   values,
+  modelMode,
   focusRequested,
   onFocusHandled,
   onClose,
@@ -70,6 +73,36 @@ export function CountyPanel({
       ? rankSummary(county.fips, entries, counties)
       : null;
 
+  const indicatorSection = (
+    <>
+      <p className="panel-measure">{indicator.label}</p>
+      {v !== null ? (
+        <>
+          <p className="panel-value">{formatValue(v, indicator.unit)}</p>
+          {ci && <p className="panel-ci">{ci}</p>}
+          {ranks && <p className="panel-ranks">{ranks}</p>}
+          {entry?.unreliable && (
+            <p className="panel-unreliable">
+              The data source marks this estimate as unreliable, so read it and its rank with
+              caution. <Link to="/methodology#unreliable">Methodology</Link>
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="panel-missing">
+          {legacy
+            ? `Reported only for the former Valdez-Cordova Census Area (combined area, CHR ${legacy.year}): ${formatValue(legacy.v, indicator.unit)}`
+            : "Suppressed or not available"}{" "}
+          <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
+        </p>
+      )}
+      <StripPlot county={county} indicator={indicator} entries={entries} />
+    </>
+  );
+  const modelCard = (
+    <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
+  );
+
   return (
     <aside
       className={
@@ -105,29 +138,9 @@ export function CountyPanel({
         </div>
       </div>
       <div id={bodyId} className="panel-body">
-        <p className="panel-measure">{indicator.label}</p>
-        {v !== null ? (
-          <>
-            <p className="panel-value">{formatValue(v, indicator.unit)}</p>
-            {ci && <p className="panel-ci">{ci}</p>}
-            {ranks && <p className="panel-ranks">{ranks}</p>}
-            {entry?.unreliable && (
-              <p className="panel-unreliable">
-                The data source marks this estimate as unreliable, so read it and its rank with
-                caution. <Link to="/methodology#unreliable">Methodology</Link>
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="panel-missing">
-            {legacy
-              ? `Reported only for the former Valdez-Cordova Census Area (combined area, CHR ${legacy.year}): ${formatValue(legacy.v, indicator.unit)}`
-              : "Suppressed or not available"}{" "}
-            <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
-          </p>
-        )}
-        <StripPlot county={county} indicator={indicator} entries={entries} />
-        <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
+        {modelMode && modelCard}
+        {indicatorSection}
+        {!modelMode && modelCard}
         <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
       </div>
     </aside>

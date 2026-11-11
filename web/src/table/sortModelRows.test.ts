@@ -48,9 +48,15 @@ test("ties break by name in either direction", () => {
   expect(names(sortModelRows(tied, "result", "desc"))).toEqual(["Abe", "Zed"]);
 });
 
-test("rows with no value are ordered by name", () => {
-  const out = names(sortModelRows(rows, "actual", "asc"));
-  expect(out).toEqual(["Multnomah", "Ada", "Aleutians West", "King", "Chugach"]);
+test("rows with no value are ordered by name, last in either direction", () => {
+  const chugach = rows.find((r) => r.fips === "02063")!;
+  const withTwoNulls: ModelRow[] = [...rows, { ...chugach, fips: "02050", name: "Bethel" }];
+  expect(names(sortModelRows(withTwoNulls, "actual", "asc"))).toEqual([
+    "Multnomah", "Ada", "Aleutians West", "King", "Bethel", "Chugach",
+  ]);
+  expect(names(sortModelRows(withTwoNulls, "actual", "desc")).slice(-2)).toEqual([
+    "Bethel", "Chugach",
+  ]);
 });
 
 test("does not mutate its input", () => {
