@@ -1,0 +1,461 @@
+{
+  "$defs": {
+    "BehaviorsComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "behaviors": {
+          "$ref": "#/$defs/RegionMetrics"
+        },
+        "excluded_states": {
+          "items": {
+            "$ref": "#/$defs/ExcludedState"
+          },
+          "title": "Excluded States",
+          "type": "array"
+        },
+        "main": {
+          "$ref": "#/$defs/RegionMetrics"
+        }
+      },
+      "required": [
+        "main",
+        "behaviors",
+        "excluded_states"
+      ],
+      "title": "BehaviorsComparison",
+      "type": "object"
+    },
+    "CountyModel": {
+      "additionalProperties": false,
+      "properties": {
+        "actual": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actual"
+        },
+        "base_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Base Value"
+        },
+        "flag": {
+          "enum": [
+            "notably_better",
+            "somewhat_better",
+            "none",
+            "somewhat_worse",
+            "notably_worse",
+            "insufficient_data"
+          ],
+          "title": "Flag",
+          "type": "string"
+        },
+        "predicted": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Predicted"
+        },
+        "residual": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Residual"
+        },
+        "se": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Se"
+        },
+        "shap": {
+          "items": {
+            "$ref": "#/$defs/ShapEntry"
+          },
+          "title": "Shap",
+          "type": "array"
+        },
+        "threshold_75": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Threshold 75"
+        },
+        "threshold_90": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Threshold 90"
+        }
+      },
+      "required": [
+        "actual",
+        "predicted",
+        "residual",
+        "se",
+        "threshold_75",
+        "threshold_90",
+        "base_value",
+        "flag",
+        "shap"
+      ],
+      "title": "CountyModel",
+      "type": "object"
+    },
+    "ExcludedCounty": {
+      "additionalProperties": false,
+      "properties": {
+        "fips": {
+          "title": "Fips",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fips",
+        "reason"
+      ],
+      "title": "ExcludedCounty",
+      "type": "object"
+    },
+    "ExcludedFeatureGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "reason"
+      ],
+      "title": "ExcludedFeatureGroup",
+      "type": "object"
+    },
+    "ExcludedState": {
+      "additionalProperties": false,
+      "properties": {
+        "counties": {
+          "title": "Counties",
+          "type": "integer"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "state_fips": {
+          "title": "State Fips",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state_fips",
+        "counties",
+        "reason"
+      ],
+      "title": "ExcludedState",
+      "type": "object"
+    },
+    "ImportanceEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "mean_abs_shap": {
+          "title": "Mean Abs Shap",
+          "type": "number"
+        }
+      },
+      "required": [
+        "feature",
+        "mean_abs_shap"
+      ],
+      "title": "ImportanceEntry",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "mae": {
+          "title": "Mae",
+          "type": "number"
+        },
+        "n": {
+          "title": "N",
+          "type": "integer"
+        },
+        "r2": {
+          "title": "R2",
+          "type": "number"
+        },
+        "rmse": {
+          "title": "Rmse",
+          "type": "number"
+        }
+      },
+      "required": [
+        "rmse",
+        "mae",
+        "r2",
+        "n"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "ModelCard": {
+      "additionalProperties": false,
+      "properties": {
+        "excluded_counties": {
+          "items": {
+            "$ref": "#/$defs/ExcludedCounty"
+          },
+          "title": "Excluded Counties",
+          "type": "array"
+        },
+        "excluded_feature_groups": {
+          "items": {
+            "$ref": "#/$defs/ExcludedFeatureGroup"
+          },
+          "title": "Excluded Feature Groups",
+          "type": "array"
+        },
+        "features": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Features",
+          "type": "array"
+        },
+        "lightgbm_params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Lightgbm Params",
+          "type": "object"
+        },
+        "lightgbm_version": {
+          "title": "Lightgbm Version",
+          "type": "string"
+        },
+        "n_folds": {
+          "title": "N Folds",
+          "type": "integer"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "training_counties": {
+          "title": "Training Counties",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target",
+        "training_counties",
+        "features",
+        "excluded_counties",
+        "excluded_feature_groups",
+        "n_folds",
+        "seed",
+        "lightgbm_params",
+        "lightgbm_version"
+      ],
+      "title": "ModelCard",
+      "type": "object"
+    },
+    "ModelMetricsBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "lightgbm": {
+          "$ref": "#/$defs/RegionMetrics"
+        },
+        "ridge": {
+          "$ref": "#/$defs/RegionMetrics"
+        }
+      },
+      "required": [
+        "ridge",
+        "lightgbm"
+      ],
+      "title": "ModelMetricsBlock",
+      "type": "object"
+    },
+    "RegionMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "national": {
+          "$ref": "#/$defs/Metrics"
+        },
+        "pnw": {
+          "$ref": "#/$defs/Metrics"
+        }
+      },
+      "required": [
+        "national",
+        "pnw"
+      ],
+      "title": "RegionMetrics",
+      "type": "object"
+    },
+    "ShapEntry": {
+      "additionalProperties": false,
+      "description": "One factor associated with a county's prediction; ``value`` is None if imputed.",
+      "properties": {
+        "contribution": {
+          "title": "Contribution",
+          "type": "number"
+        },
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "feature",
+        "value",
+        "contribution"
+      ],
+      "title": "ShapEntry",
+      "type": "object"
+    },
+    "Thresholds": {
+      "additionalProperties": false,
+      "properties": {
+        "sigma_model": {
+          "title": "Sigma Model",
+          "type": "number"
+        },
+        "z_75": {
+          "title": "Z 75",
+          "type": "number"
+        },
+        "z_90": {
+          "title": "Z 90",
+          "type": "number"
+        }
+      },
+      "required": [
+        "sigma_model",
+        "z_75",
+        "z_90"
+      ],
+      "title": "Thresholds",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "behaviors_comparison": {
+      "$ref": "#/$defs/BehaviorsComparison"
+    },
+    "counties": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CountyModel"
+      },
+      "title": "Counties",
+      "type": "object"
+    },
+    "global_importance": {
+      "items": {
+        "$ref": "#/$defs/ImportanceEntry"
+      },
+      "title": "Global Importance",
+      "type": "array"
+    },
+    "metrics": {
+      "$ref": "#/$defs/ModelMetricsBlock"
+    },
+    "model_card": {
+      "$ref": "#/$defs/ModelCard"
+    },
+    "thresholds": {
+      "$ref": "#/$defs/Thresholds"
+    }
+  },
+  "required": [
+    "metrics",
+    "behaviors_comparison",
+    "global_importance",
+    "thresholds",
+    "counties",
+    "model_card"
+  ],
+  "title": "ModelFile",
+  "type": "object"
+}

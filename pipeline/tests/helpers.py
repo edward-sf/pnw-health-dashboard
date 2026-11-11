@@ -56,3 +56,73 @@ def make_indicator(id_: str, unit: str = "percent", direction: str = "higher_is_
             "description": "d",
         }
     )
+
+
+def make_county_model(**overrides: Any) -> Any:
+    """A county whose base value and contributions add up to its prediction."""
+    from pnw_health.contract import CountyModel, ShapEntry
+
+    fields: dict[str, Any] = {
+        "actual": 78.0,
+        "predicted": 77.0,
+        "residual": 1.0,
+        "se": 0.5,
+        "threshold_75": 1.5,
+        "threshold_90": 2.5,
+        "base_value": 76.0,
+        "flag": "none",
+        "shap": [
+            ShapEntry(feature="poverty_rate", value=10.0, contribution=0.75),
+            ShapEntry(feature="uninsured_rate", value=None, contribution=0.25),
+        ],
+    }
+    return CountyModel(**{**fields, **overrides})
+
+
+def make_null_county_model() -> Any:
+    from pnw_health.contract import CountyModel
+
+    return CountyModel(
+        actual=None,
+        predicted=None,
+        residual=None,
+        se=None,
+        threshold_75=None,
+        threshold_90=None,
+        base_value=None,
+        flag="insufficient_data",
+        shap=[],
+    )
+
+
+def make_model_file(counties: dict[str, Any], features: list[str] | None = None) -> Any:
+    from pnw_health.contract import (
+        BehaviorsComparison,
+        Metrics,
+        ModelCard,
+        ModelFile,
+        ModelMetricsBlock,
+        RegionMetrics,
+        Thresholds,
+    )
+
+    metrics = Metrics(rmse=1.23456, mae=1.0, r2=0.5, n=10)
+    region = RegionMetrics(national=metrics, pnw=metrics)
+    return ModelFile(
+        metrics=ModelMetricsBlock(ridge=region, lightgbm=region),
+        behaviors_comparison=BehaviorsComparison(main=region, behaviors=region, excluded_states=[]),
+        global_importance=[],
+        thresholds=Thresholds(sigma_model=1.23456, z_75=1.15, z_90=1.645),
+        counties=counties,
+        model_card=ModelCard(
+            target="life_expectancy",
+            training_counties=10,
+            features=["poverty_rate"] if features is None else features,
+            excluded_counties=[],
+            excluded_feature_groups=[],
+            n_folds=5,
+            seed=42,
+            lightgbm_params={"learning_rate": 0.03, "deterministic": True},
+            lightgbm_version="4.0.0",
+        ),
+    )

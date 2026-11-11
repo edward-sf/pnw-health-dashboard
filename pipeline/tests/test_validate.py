@@ -1,11 +1,12 @@
 import pandas as pd
 import pytest
 
+from pnw_health.contract import ModelFile
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
-from pnw_health.validate import DataValidationError, validate_display
-from tests.helpers import pnw_fips
+from pnw_health.validate import DataValidationError, validate_display, validate_model
+from tests.helpers import make_county_model, make_model_file, make_null_county_model, pnw_fips
 
 
 def indicator(id_: str, unit: str) -> Indicator:
@@ -169,3 +170,92 @@ def test_legacy_out_of_range() -> None:
 def test_legacy_in_range_passes() -> None:
     fips = pnw_fips()
     validate_display(valid_values(fips), set(fips), CATALOG, legacy_row("pct", 4.5))
+
+
+MODEL_CATALOG = [
+    indicator("poverty_rate", "percent"),
+    Indicator.model_validate(
+        {**indicator("obesity", "percent").model_dump(), "category": "Behaviors"}
+    ),
+]
+WITH_TARGET = "53001"
+NO_TARGET = "02063"
+MODEL_COUNTIES = {WITH_TARGET, NO_TARGET}
+
+
+def target_rows() -> pd.DataFrame:
+    rows = [
+        {
+            "fips": fips,
+            "indicator_id": "life_expectancy",
+            "year": 2025,
+            "value": value,
+            "ci_low": None,
+            "ci_high": None,
+            "source": "chr",
+        }
+        for fips, value in ((WITH_TARGET, 78.0), (NO_TARGET, float("nan")))
+    ]
+    return pd.DataFrame(rows, columns=LONG_COLUMNS)
+
+
+def model_problems(model: ModelFile) -> list[str]:
+    with pytest.raises(DataValidationError) as err:
+        validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
+    return err.value.problems
+
+
+def test_valid_model_passes() -> None:
+    model = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
+    validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
+
+
+def test_model_missing_county() -> None:
+    model = make_model_file({WITH_TARGET: make_county_model()})
+    assert model_problems(model) == [f"model is missing counties: {NO_TARGET}"]
+
+
+def test_model_flag_where_target_present() -> None:
+    model = make_model_file(
+        {WITH_TARGET: make_null_county_model(), NO_TARGET: make_null_county_model()}
+    )
+    assert model_problems(model) == [
+        f"model flags counties insufficient_data despite a target: {WITH_TARGET}"
+    ]
+
+
+def test_model_flag_missing_where_target_null() -> None:
+    model = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_county_model()})
+    assert model_problems(model) == [
+        f"model is not insufficient_data for counties with no target: {NO_TARGET}"
+    ]
+
+
+def test_model_additivity_broken() -> None:
+    model = make_model_file(
+        {
+            WITH_TARGET: make_county_model(predicted=77.00001),
+            NO_TARGET: make_null_county_model(),
+        }
+    )
+    assert model_problems(model) == [
+        f"model contributions do not sum to the prediction: {WITH_TARGET}"
+    ]
+
+
+def test_model_additivity_needs_a_prediction() -> None:
+    model = make_model_file(
+        {WITH_TARGET: make_county_model(predicted=None), NO_TARGET: make_null_county_model()}
+    )
+    assert model_problems(model) == [
+        f"model contributions do not sum to the prediction: {WITH_TARGET}"
+    ]
+
+
+@pytest.mark.parametrize("feature", ["obesity", "not_in_catalog"])
+def test_model_excluded_feature_present(feature: str) -> None:
+    model = make_model_file(
+        {WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()},
+        features=["poverty_rate", feature],
+    )
+    assert model_problems(model) == [f"model uses features outside allowed categories: {feature}"]
