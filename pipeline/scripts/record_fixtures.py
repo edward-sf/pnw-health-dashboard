@@ -6,20 +6,23 @@ indicator catalog changes:
     uv run python scripts/record_fixtures.py variables
     uv run python scripts/record_fixtures.py acs   # needs CENSUS_API_KEY (env or repo .env)
     uv run python scripts/record_fixtures.py places   # public API, no key
+    uv run python scripts/record_fixtures.py chr   # ~13 MB public CSV, no key
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import tempfile
 from pathlib import Path
 
 import httpx
 
-from pnw_health.config import ACS_YEAR, PLACES_RELEASE, census_api_key
+from pnw_health.config import ACS_YEAR, CHR_YEAR, PLACES_RELEASE, census_api_key
 from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
+from pnw_health.sources.chr import fetch_chr
 from pnw_health.sources.places import fetch_places
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -89,14 +92,51 @@ def record_places_sample(client: httpx.Client | None = None) -> Path:
     return out
 
 
+def record_chr_sample(client: httpx.Client | None = None) -> Path:
+    """Save the two CHR header rows and the catalog's columns for PNW and sample counties."""
+    catalog = load_catalog()
+    wanted = ["statecode", "countycode", "fipscode", "state", "county", "year"]
+    for ind in catalog:
+        if ind.source == "chr":
+            stem = ind.source_field.removesuffix("_rawvalue")
+            wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh"]
+    keep_states = {"53", "41", "16", "02"}
+    keep_fips = {"06037", "36061", "53000", "00000"}
+    c = client or make_client()
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            src = fetch_chr(c, Path(tmp), catalog)
+            with src.open(newline="", encoding="latin-1") as fh:
+                reader = csv.reader(fh)
+                labels = next(reader)
+                names = next(reader)
+                index = [names.index(w) if w in names else None for w in wanted]
+                fips_at = names.index("fipscode")
+                rows = [
+                    [row[i] if i is not None else "" for i in index]
+                    for row in reader
+                    if row[fips_at][:2] in keep_states or row[fips_at] in keep_fips
+                ]
+            labels_out = [labels[i] if i is not None else "" for i in index]
+    finally:
+        if client is None:
+            c.close()
+    out = FIXTURES / f"chr_{CHR_YEAR}_sample.csv"
+    with out.open("w", newline="", encoding="latin-1") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerows([labels_out, wanted, *rows])
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("what", choices=["variables", "acs", "places"])
+    parser.add_argument("what", choices=["variables", "acs", "places", "chr"])
     args = parser.parse_args()
     recorders = {
         "variables": record_variables,
         "acs": record_acs_sample,
         "places": record_places_sample,
+        "chr": record_chr_sample,
     }
     print(recorders[args.what]())
 

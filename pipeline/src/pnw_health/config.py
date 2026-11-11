@@ -12,6 +12,9 @@ EXPECTED_COUNTY_COUNTS: dict[str, int] = {"WA": 39, "OR": 36, "ID": 44, "AK": 30
 ACS_YEAR = 2024
 PLACES_RELEASE = 2025
 PLACES_DATASET = "swc5-untb"
+CHR_YEAR = 2025
+CHR_LEGACY_YEAR = 2023
+CHR_FILES: dict[int, str] = {2025: "analytic_data2025_v3.csv", 2023: "analytic_data2023_0.csv"}
 GEO_YEAR = 2024
 SCHEMA_VERSION = "1.0.0"
 

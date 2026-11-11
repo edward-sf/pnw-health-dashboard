@@ -115,3 +115,26 @@ def test_collects_all_problems() -> None:
     found = problems(v, set(fips))
     assert len(found) == 2  # AK count, out-of-range
     assert "\n" in str(DataValidationError(found))
+
+
+def years_indicator() -> Indicator:
+    return indicator("life", "years")
+
+
+@pytest.mark.parametrize("bad", [-1.0, 121.0])
+def test_years_out_of_range(bad: float) -> None:
+    fips = pnw_fips()
+    catalog = [years_indicator()]
+    v = valid_values(fips)
+    v = v[v.indicator_id == "pct"].assign(indicator_id="life", value=65.0)
+    v.loc[v.index[0], "value"] = bad
+    with pytest.raises(DataValidationError) as err:
+        validate_display(v, set(fips), catalog)
+    assert any("outside [0, 120]" in p for p in err.value.problems)
+
+
+def test_years_in_range() -> None:
+    fips = pnw_fips()
+    v = valid_values(fips)
+    v = v[v.indicator_id == "pct"].assign(indicator_id="life", value=65.0)
+    validate_display(v, set(fips), [years_indicator()])

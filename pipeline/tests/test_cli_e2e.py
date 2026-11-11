@@ -8,11 +8,12 @@ from typer.testing import CliRunner, Result
 
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
-from pnw_health.config import Paths
+from pnw_health.config import CHR_YEAR, Paths
 from pnw_health.contract import Manifest, ValuesFile
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.sources.acs import acs_cache_path
+from pnw_health.sources.chr import chr_cache_path
 from pnw_health.sources.places import places_cache_path
 from pnw_health.validate import DataValidationError
 from tests.helpers import make_boundary_zip
@@ -20,6 +21,7 @@ from tests.helpers import make_boundary_zip
 FIXTURES = Path(__file__).parent / "fixtures"
 ACS_SAMPLE = FIXTURES / "acs_profile_2024_sample.json"
 PLACES_SAMPLE = FIXTURES / "places_2025_sample.json"
+CHR_SAMPLE = FIXTURES / "chr_2025_sample.csv"
 
 
 def sample_pnw_fips() -> list[str]:
@@ -34,6 +36,8 @@ def transport(boundary_zip: Path) -> Callable[[httpx.Request], httpx.Response]:
             return httpx.Response(200, content=ACS_SAMPLE.read_bytes())
         if request.url.host == "data.cdc.gov":
             return httpx.Response(200, content=PLACES_SAMPLE.read_bytes())
+        if request.url.host == "www.countyhealthrankings.org":
+            return httpx.Response(200, content=CHR_SAMPLE.read_bytes())
         if request.url.path.endswith("cb_2024_us_county_5m.zip"):
             return httpx.Response(200, content=boundary_zip.read_bytes())
         return httpx.Response(404)
@@ -61,9 +65,9 @@ def test_full_run_produces_valid_exports(tmp_path: Path, full_zip: Path) -> None
     manifest = Manifest.model_validate_json((paths.out / "manifest.json").read_text())
     values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
     topo = json.loads((paths.out / "counties.topojson").read_text())
-    assert len(manifest.indicators) == 18
-    assert {s.source for s in manifest.sources} == {"acs", "places", "boundaries"}
-    assert len(values.root) == 18
+    assert len(manifest.indicators) == 29
+    assert {s.source for s in manifest.sources} == {"acs", "places", "chr", "boundaries"}
+    assert len(values.root) == 29
     assert all(len(entries) == 149 for entries in values.root.values())
     assert len(topo["objects"]["counties"]["geometries"]) == 149
     assert (paths.interim / "warnings.txt").exists()
@@ -128,7 +132,7 @@ def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path
 
 
 def write_acs_cache(paths: Paths, rows_edit: Callable[[list[list[str]]], list[list[str]]]) -> None:
-    """Put the recorded ACS sample (edited) and PLACES sample in the cache."""
+    """Put the recorded ACS sample (edited) and PLACES and CHR samples in the cache."""
     header, *rows = json.loads(ACS_SAMPLE.read_text())
     cache = acs_cache_path(paths.raw, load_catalog())
     cache.parent.mkdir(parents=True)
@@ -136,6 +140,9 @@ def write_acs_cache(paths: Paths, rows_edit: Callable[[list[list[str]]], list[li
     places_cache = places_cache_path(paths.raw, load_catalog())
     places_cache.parent.mkdir(parents=True)
     places_cache.write_bytes(PLACES_SAMPLE.read_bytes())
+    chr_cache = chr_cache_path(paths.raw, CHR_YEAR)
+    chr_cache.parent.mkdir(parents=True)
+    chr_cache.write_bytes(CHR_SAMPLE.read_bytes())
 
 
 def run_harmonize_cli(root: Path) -> Result:
