@@ -118,6 +118,8 @@ Deferrals I'm pulling back in:
 **M5 Model UI**
 - [ ] Copy says "factors associated with", and flags show their 75%/90% ranges
 - [ ] Model mode is understandable to someone who hasn't read the spec
+- [ ] The card's numbers reconcile for 2–3 counties I check (base value + bars + "All other factors" = expected)
+- [ ] The factors section never reads as explaining the difference between actual and expected
 
 **M6 Methodology + polish**
 - [ ] The methodology page covers sources, vintages, harmonization, the ML method, exclusion rationale and caveats
