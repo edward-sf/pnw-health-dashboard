@@ -53,3 +53,19 @@ test("setCounty keeps i and pushes", async () => {
   expect(router.state.location.search).toBe("?i=pct_asian&c=02016");
   expect(router.state.historyAction).toBe("PUSH");
 });
+
+test("setCounty with the current county does not push", async () => {
+  const router = setup("/?c=53033");
+  const key = router.state.location.key;
+  await act(async () => api.setCounty("53033"));
+  expect(router.state.location.key).toBe(key);
+  expect(router.state.historyAction).toBe("POP");
+});
+
+test("setIndicator with the current indicator does not push", async () => {
+  const router = setup("/?i=median_household_income");
+  const key = router.state.location.key;
+  await act(async () => api.setIndicator("median_household_income"));
+  expect(router.state.location.key).toBe(key);
+  expect(router.state.historyAction).toBe("POP");
+});

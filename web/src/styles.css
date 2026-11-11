@@ -20,7 +20,7 @@ body {
 }
 
 .county {
-  stroke: #fff;
+  stroke: #b8b8b8;
   stroke-width: 0.5;
   cursor: pointer;
 }
@@ -55,7 +55,13 @@ body {
   color: #fff;
   font-size: 0.85rem;
   border-radius: 4px;
-  white-space: nowrap;
+  max-width: min(240px, 60vw);
+  width: max-content;
+  white-space: normal;
+}
+
+.map-tooltip--left {
+  transform: translateX(-100%);
 }
 
 main {

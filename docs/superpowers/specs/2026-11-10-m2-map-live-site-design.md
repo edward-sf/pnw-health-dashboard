@@ -28,7 +28,7 @@ A React site shows a choropleth of any M1 indicator across all 149 counties, wit
 Vite, React, TypeScript and React Router in `web/`, with Node 26 pinned in `web/.nvmrc`.
 
 ### Types
-`npm run gen:types` runs `json-schema-to-typescript` over `schema/*.json` and writes to `web/src/types/generated/`, which is git-ignored. It runs before typecheck, test and build, so contract drift fails them. `counties.topojson` is not covered by the schema; it uses `@types/topojson-specification` plus a hand-written properties type `{fips, name, state}`.
+`npm run gen:types` runs `json-schema-to-typescript` over `schema/*.json` and writes to `web/src/types/generated/`, which is git-ignored. It runs before typecheck, test and build, but only `tsc` catches contract drift (`vite build` and Vitest do not typecheck), so drift fails `npm run typecheck`, which `ci` requires. `counties.topojson` is not covered by the schema; it uses `@types/topojson-specification` plus a hand-written properties type `{fips, name, state}`.
 
 ### Data loading
 `useData()` fetches `manifest.json`, `values.json` and `counties.topojson` once, under `import.meta.env.BASE_URL`, and returns `loading`, `error` (with `retry`) or `ready`. A failed fetch, or a `schema_version` whose major version is not `1`, gives `error`, which renders the full-page error with retry.

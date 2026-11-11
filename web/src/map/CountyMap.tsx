@@ -9,14 +9,15 @@ type Props = {
   onSelect: (fips: string) => void;
 };
 
-type Tip = { fips: string; x: number; y: number };
+type Tip = { fips: string; x: number; y: number; flip: boolean };
 
 export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Props) {
   const [tip, setTip] = useState<Tip | null>(null);
 
   const place = (el: Element, fips: string, clientX: number, clientY: number) => {
     const box = el.closest(".county-map")?.getBoundingClientRect();
-    setTip({ fips, x: clientX - (box?.left ?? 0), y: clientY - (box?.top ?? 0) });
+    const x = clientX - (box?.left ?? 0);
+    setTip({ fips, x, y: clientY - (box?.top ?? 0), flip: box !== undefined && x > box.width / 2 });
   };
 
   const renderGroup = (items: MapPath[]) => {
@@ -57,7 +58,11 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
         <g className="map-inset">{renderGroup(paths.filter((p) => p.state === "AK"))}</g>
       </svg>
       {tip && (
-        <div className="map-tooltip" role="tooltip" style={{ left: tip.x + 12, top: tip.y + 12 }}>
+        <div
+          className={tip.flip ? "map-tooltip map-tooltip--left" : "map-tooltip"}
+          role="tooltip"
+          style={{ left: tip.flip ? tip.x - 12 : tip.x + 12, top: tip.y + 12 }}
+        >
           {tooltipFor(tip.fips)}
         </div>
       )}
