@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { expect, test } from "vitest";
-import { manifest, values } from "../test/fixtures";
-import type { Indicator } from "../types";
-import { CountyPanel, type County } from "./CountyPanel";
+import { countyModel } from "../model/modelView";
+import { manifest, model, values } from "../test/fixtures";
+import type { County, Indicator } from "../types";
+import { CountyPanel } from "./CountyPanel";
 
 const counties: County[] = [
   { fips: "53033", name: "King", state: "WA" },
@@ -21,6 +22,7 @@ function setup(fips: string, indicatorId: string) {
         indicator={indicator}
         entries={values[indicatorId]!}
         counties={counties}
+        modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
         focusRequested={false}
@@ -68,6 +70,7 @@ test("suppressed county", () => {
         indicator={indicator}
         entries={{ "02016": { v: null, lo: null, hi: null, rank: null, state_rank: null } }}
         counties={counties}
+        modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
         focusRequested={false}
@@ -97,7 +100,7 @@ test("neutral indicator has no ranks", () => {
   setup("02016", "pct_asian");
   // The value also appears in the Who lives here section, so match both.
   expect(screen.getAllByText("5.0%")).toHaveLength(2);
-  expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
+  expect(document.querySelector(".panel-ranks")).toBeNull();
 });
 
 test("strip plot summary and not-shown note", () => {
@@ -122,6 +125,7 @@ test("strip plot summary omitted for a null selection", () => {
           "53033": { v: 9.5, lo: null, hi: null, rank: 1, state_rank: 1 },
         }}
         counties={counties}
+        modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
         focusRequested={false}
@@ -142,4 +146,13 @@ test("cautions about an estimate the source marks unreliable", () => {
 test("shows no caution on a reliable estimate", () => {
   setup("53033", "poverty_rate");
   expect(screen.queryByText(/unreliable/)).not.toBeInTheDocument();
+});
+
+test("shows the model card after the strip plot and before Who lives here", () => {
+  setup("53033", "poverty_rate");
+  const card = screen.getByRole("heading", { level: 3, name: "Life expectancy model" });
+  const strip = screen.getByRole("region", { name: "Distribution across counties" });
+  const who = screen.getByText(/who lives here/i);
+  expect(strip.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(card.compareDocumentPosition(who) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

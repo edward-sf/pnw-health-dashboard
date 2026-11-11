@@ -36,3 +36,9 @@ test("formatSigned uses + and the true minus, and drops the sign at zero", () =>
   expect(formatSigned(-0.04, "years")).toBe("0.0 years");
   expect(formatSigned(2.58, "years", 2)).toBe("+2.58 years");
 });
+
+test("formatSigned uses the same unit suffix as formatValue", () => {
+  expect(formatSigned(2.6, "percent")).toBe("+2.6%");
+  expect(formatSigned(-1500, "dollars", 0)).toBe("−$1,500");
+  expect(formatSigned(3.4, "rate_per_100k")).toBe("+3.4 per 100k");
+});

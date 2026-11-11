@@ -7,7 +7,8 @@ import { buildMapPaths } from "../map/buildMapPaths";
 import { ModelLegend } from "../model/ModelLegend";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
 import { CountyMap } from "../map/CountyMap";
-import { CountyPanel, type County } from "../panel/CountyPanel";
+import { CountyPanel } from "../panel/CountyPanel";
+import type { County } from "../types";
 import { CountySearch } from "../search/CountySearch";
 import { CountyTable } from "../table/CountyTable";
 import type { Row } from "../table/sortRows";
@@ -35,8 +36,10 @@ export function Explorer({ data }: { data: AppData }) {
   );
   const openerRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const [focusRequested, setFocusRequested] = useState(false);
-  const onFocusHandled = useCallback(() => setFocusRequested(false), []);
+  // The county a search or table selection asked to focus. It is bound to that FIPS, so a
+  // selection that renders no panel cannot hand its request to a later map selection.
+  const [focusFips, setFocusFips] = useState<string | null>(null);
+  const onFocusHandled = useCallback(() => setFocusFips(null), []);
   const onClosePanel = useCallback(() => {
     setCounty(null);
     const opener = openerRef.current;
@@ -48,18 +51,20 @@ export function Explorer({ data }: { data: AppData }) {
     (fips: string, opener: HTMLElement) => {
       openerRef.current = opener;
       setCounty(fips);
-      setFocusRequested(true);
+      setFocusFips(fips);
     },
     [setCounty],
   );
   const onSelectFromMap = useCallback(
     (fips: string) => {
+      setFocusFips(null);
       openerRef.current = null;
       setCounty(fips);
     },
     [setCounty],
   );
 
+  const selectedCounty = counties.find((c) => c.fips === params.county);
   const indicator = manifest.indicators.find((x) => x.id === params.indicator);
   const entries = indicator ? values[indicator.id] : undefined;
   const scale = useMemo(
@@ -74,7 +79,6 @@ export function Explorer({ data }: { data: AppData }) {
     model,
     counties.map((c) => c.fips),
   );
-  const selectedCounty = counties.find((c) => c.fips === params.county);
 
   return (
     <div className={selectedCounty ? "explorer explorer--panel" : "explorer"}>
@@ -158,9 +162,10 @@ export function Explorer({ data }: { data: AppData }) {
           indicator={indicator}
           entries={entries ?? {}}
           counties={counties}
+          modelEntry={countyModel(model, selectedCounty.fips)}
           manifest={manifest}
           values={values}
-          focusRequested={focusRequested}
+          focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
           onFocusHandled={onFocusHandled}
           onClose={onClosePanel}
         />

@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import type { County } from "../panel/CountyPanel";
+import type { County } from "../types";
 import { STATE_NAMES } from "../panel/rankSummary";
 
 type Props = {
