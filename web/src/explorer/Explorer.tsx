@@ -4,17 +4,22 @@ import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
 import type { AppData } from "../data/loadData";
 import { buildMapPaths } from "../map/buildMapPaths";
+import { ModelLegend } from "../model/ModelLegend";
+import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
 import { CountyMap } from "../map/CountyMap";
-import { CountyPanel, type County } from "../panel/CountyPanel";
+import { CountyPanel } from "../panel/CountyPanel";
+import type { County } from "../types";
 import { CountySearch } from "../search/CountySearch";
 import { CountyTable } from "../table/CountyTable";
+import { ModelTable } from "../table/ModelTable";
+import type { ModelRow } from "../table/sortModelRows";
 import type { Row } from "../table/sortRows";
 import { IndicatorPicker } from "./IndicatorPicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
 export function Explorer({ data }: { data: AppData }) {
-  const { manifest, values, topology } = data;
+  const { manifest, values, topology, model } = data;
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
   const fipsSet = useMemo(
     () =>
@@ -25,7 +30,7 @@ export function Explorer({ data }: { data: AppData }) {
       ),
     [topology],
   );
-  const { params, setIndicator, setCounty, setView } = useExplorerParams(manifest, fipsSet);
+  const { params, setIndicator, setCounty, setView, setMode } = useExplorerParams(manifest, fipsSet);
 
   const counties = useMemo<County[]>(
     () => paths.map(({ fips, name, state }) => ({ fips, name, state })),
@@ -33,8 +38,10 @@ export function Explorer({ data }: { data: AppData }) {
   );
   const openerRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const [focusRequested, setFocusRequested] = useState(false);
-  const onFocusHandled = useCallback(() => setFocusRequested(false), []);
+  // The county a search or table selection asked to focus. It is bound to that FIPS, so a
+  // selection that renders no panel cannot hand its request to a later map selection.
+  const [focusFips, setFocusFips] = useState<string | null>(null);
+  const onFocusHandled = useCallback(() => setFocusFips(null), []);
   const onClosePanel = useCallback(() => {
     setCounty(null);
     const opener = openerRef.current;
@@ -46,27 +53,41 @@ export function Explorer({ data }: { data: AppData }) {
     (fips: string, opener: HTMLElement) => {
       openerRef.current = opener;
       setCounty(fips);
-      setFocusRequested(true);
+      setFocusFips(fips);
     },
     [setCounty],
   );
   const onSelectFromMap = useCallback(
     (fips: string) => {
+      setFocusFips(null);
       openerRef.current = null;
       setCounty(fips);
     },
     [setCounty],
   );
 
+  const selectedCounty = counties.find((c) => c.fips === params.county);
   const indicator = manifest.indicators.find((x) => x.id === params.indicator);
   const entries = indicator ? values[indicator.id] : undefined;
   const scale = useMemo(
     () => (indicator ? makeColorScale(indicator, entries ?? {}) : null),
     [indicator, entries],
   );
+  const rows = useMemo<Row[]>(
+    () => counties.map((c) => ({ ...c, entry: entries?.[c.fips] })),
+    [counties, entries],
+  );
+  const modelRows = useMemo<ModelRow[]>(
+    () => counties.map((c) => ({ ...c, model: countyModel(model, c.fips) })),
+    [counties, model],
+  );
   if (!indicator || !scale) return null;
-  const rows: Row[] = counties.map((c) => ({ ...c, entry: entries?.[c.fips] }));
-  const selectedCounty = counties.find((c) => c.fips === params.county);
+  const modelMode = params.mode === "model";
+  const lifeExpectancy = manifest.indicators.find((x) => x.id === "life_expectancy");
+  const counts = tierCounts(
+    model,
+    counties.map((c) => c.fips),
+  );
 
   return (
     <div className={selectedCounty ? "explorer explorer--panel" : "explorer"}>
@@ -75,11 +96,20 @@ export function Explorer({ data }: { data: AppData }) {
           indicators={manifest.indicators}
           selectedId={indicator.id}
           onSelect={setIndicator}
+          dimmed={modelMode}
         />
       </aside>
       <section className="explorer-main">
         <CountySearch counties={counties} onSelect={onSelectWithOpener} />
-        <div className="view-toggle">
+        <div className="view-toggle" role="group" aria-label="Mode">
+          <button type="button" aria-pressed={!modelMode} onClick={() => setMode("values")}>
+            Values
+          </button>
+          <button type="button" aria-pressed={modelMode} onClick={() => setMode("model")}>
+            Model
+          </button>
+        </div>
+        <div className="view-toggle" role="group" aria-label="View">
           <button type="button" aria-pressed={params.view === "map"} onClick={() => setView("map")}>
             Map
           </button>
@@ -88,31 +118,54 @@ export function Explorer({ data }: { data: AppData }) {
           </button>
         </div>
         <h2 ref={titleRef} className="indicator-title" tabIndex={-1}>
-          {indicator.label}
+          {modelMode ? "Life expectancy: compared with expected" : indicator.label}
         </h2>
-        <p className="indicator-description">{indicator.description}</p>
-        <p className="indicator-source">{sourceLine(indicator)}</p>
+        <p className="indicator-description">
+          {modelMode
+            ? "How each county's life expectancy compares with what the model expects for counties nationwide with a similar social and economic profile."
+            : indicator.description}
+        </p>
+        {modelMode ? (
+          lifeExpectancy && <p className="indicator-source">{sourceLine(lifeExpectancy)}</p>
+        ) : (
+          <p className="indicator-source">{sourceLine(indicator)}</p>
+        )}
         {params.view === "table" ? (
-          <CountyTable
-            key={indicator.id}
-            rows={rows}
-            indicator={indicator}
-            selected={params.county}
-            onSelect={onSelectWithOpener}
-          />
+          modelMode ? (
+            <ModelTable rows={modelRows} selected={params.county} onSelect={onSelectWithOpener} />
+          ) : (
+            <CountyTable
+              key={indicator.id}
+              rows={rows}
+              indicator={indicator}
+              selected={params.county}
+              onSelect={onSelectWithOpener}
+            />
+          )
         ) : (
           <>
             <CountyMap
               paths={paths}
-              fillFor={(fips) => scale.fill(entries?.[fips]?.v ?? null)}
+              fillFor={(fips) =>
+                modelMode
+                  ? tierFill(countyModel(model, fips).flag)
+                  : scale.fill(entries?.[fips]?.v ?? null)
+              }
               tooltipFor={(fips) => {
                 const p = paths.find((x) => x.fips === fips);
+                if (modelMode) {
+                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips));
+                }
                 return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
               }}
               selected={params.county}
               onSelect={onSelectFromMap}
             />
-            <Legend scale={scale} unit={indicator.unit} />
+            {modelMode ? (
+              <ModelLegend counts={counts} />
+            ) : (
+              <Legend scale={scale} unit={indicator.unit} />
+            )}
           </>
         )}
       </section>
@@ -122,9 +175,10 @@ export function Explorer({ data }: { data: AppData }) {
           indicator={indicator}
           entries={entries ?? {}}
           counties={counties}
+          modelEntry={countyModel(model, selectedCounty.fips)}
           manifest={manifest}
           values={values}
-          focusRequested={focusRequested}
+          focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
           onFocusHandled={onFocusHandled}
           onClose={onClosePanel}
         />

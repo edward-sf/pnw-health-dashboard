@@ -143,13 +143,14 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - *Values mode:* direction-aware sequential color scale, quantile bins, legend; hatch pattern for suppressed/missing.
   - *Neutral indicators (Demographics):* neutral single-hue sequential scale; no ranks.
   - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
+  - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode the indicator picker stays usable but dimmed, and `i` is kept for values mode; the title and legend describe life expectancy compared with expected.
   - Hover tooltip; click selects county.
 - **County panel** (right drawer on desktop, bottom sheet on mobile), in this order:
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
-  - Model card: actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
+  - Model card (shown in both modes): actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
-- **Table view:** sortable table of the current indicator across all counties; together with a county search box, this is the keyboard and screen-reader path to every county.
+- **Table view:** sortable table of the current indicator across all counties (in model mode: actual, expected, difference and flag tier); together with a county search box, this is the keyboard and screen-reader path to every county.
 
 ### State and data loading
 URL params plus a single `useData()` hook that fetches the four files once. No global store, no query library.

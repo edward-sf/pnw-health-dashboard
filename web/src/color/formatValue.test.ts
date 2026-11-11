@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatBound, formatTick, formatValue } from "./formatValue";
+import { formatBound, formatSigned, formatTick, formatValue } from "./formatValue";
 
 test("formats by unit", () => {
   expect(formatValue(12.34, "percent")).toBe("12.3%");
@@ -28,4 +28,17 @@ test("formatTick is compact, with the unit only where it is short", () => {
   expect(formatTick(78.25, "years")).toBe("78.3");
   expect(formatTick(15000, "rate_per_100k")).toBe("15K");
   expect(formatTick(1234, "count")).toBe("1.2K");
+});
+
+test("formatSigned uses + and the true minus, and drops the sign at zero", () => {
+  expect(formatSigned(3.65, "years")).toBe("+3.7 years");
+  expect(formatSigned(-2.6, "years")).toBe("\u22122.6 years");
+  expect(formatSigned(-0.04, "years")).toBe("0.0 years");
+  expect(formatSigned(2.58, "years", 2)).toBe("+2.58 years");
+});
+
+test("formatSigned uses the same unit suffix as formatValue", () => {
+  expect(formatSigned(2.6, "percent")).toBe("+2.6%");
+  expect(formatSigned(-1500, "dollars", 0)).toBe("−$1,500");
+  expect(formatSigned(3.4, "rate_per_100k")).toBe("+3.4 per 100k");
 });

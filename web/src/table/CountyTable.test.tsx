@@ -71,8 +71,19 @@ test("a legacy-only row points to the panel", () => {
 });
 
 test("a row with no data and no legacy says not available", () => {
-  setup("median_household_income");
+  const noData = counties.map((c) => ({ ...c, entry: undefined }));
+  render(
+    <CountyTable rows={noData} indicator={ind("median_household_income")} selected={null} onSelect={vi.fn()} />,
+  );
   expect(screen.queryByText("Former-area value in panel")).not.toBeInTheDocument();
+  expect(screen.getAllByText("Suppressed or not available", { selector: "td" })).toHaveLength(5);
+});
+
+test("an indicator with no CI shows an empty CI cell under the header CI", () => {
+  setup("pct_asian");
+  expect(screen.getByRole("columnheader", { name: "CI" })).toBeInTheDocument();
+  const cell = screen.getByRole("button", { name: "King, WA" }).closest("tr")!.querySelectorAll("td")[3]!;
+  expect(cell.textContent).toBe("");
 });
 
 test("clicking a county name selects it and passes the button", async () => {

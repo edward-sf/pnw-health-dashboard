@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { CountySearch } from "./CountySearch";
 
 const counties = [
@@ -10,6 +10,16 @@ const counties = [
   { fips: "16087", name: "Washington County", state: "ID" },
   { fips: "02016", name: "Aleutians West Census Area", state: "AK" },
 ];
+
+const listeners: Array<(e: KeyboardEvent) => void> = [];
+function spyOnKeydown(seen: boolean[]) {
+  const l = (e: KeyboardEvent) => seen.push(e.defaultPrevented);
+  document.addEventListener("keydown", l);
+  listeners.push(l);
+}
+afterEach(() => {
+  for (const l of listeners.splice(0)) document.removeEventListener("keydown", l);
+});
 
 function setup() {
   const onSelect = vi.fn();
@@ -62,7 +72,7 @@ test("Escape closes an open list and prevents default so the panel stays", async
   const { input } = setup();
   await userEvent.type(input, "king");
   const seen: boolean[] = [];
-  document.addEventListener("keydown", (e) => seen.push(e.defaultPrevented));
+  spyOnKeydown(seen);
   await userEvent.keyboard("{Escape}");
   expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   expect(seen).toEqual([true]);
@@ -72,7 +82,7 @@ test("Escape with the list closed is not prevented", async () => {
   const { input } = setup();
   input.focus();
   const seen: boolean[] = [];
-  document.addEventListener("keydown", (e) => seen.push(e.defaultPrevented));
+  spyOnKeydown(seen);
   await userEvent.keyboard("{Escape}");
   expect(seen).toEqual([false]);
 });
@@ -123,4 +133,11 @@ test("announces when nothing matches", async () => {
   expect(screen.getByRole("status")).toHaveTextContent("No matching counties");
   await userEvent.clear(input);
   expect(screen.getByRole("status")).toBeEmptyDOMElement();
+});
+
+test("aria-controls is absent while the listbox is closed and points at it when open", async () => {
+  const { input } = setup();
+  expect(input).not.toHaveAttribute("aria-controls");
+  await userEvent.type(input, "king");
+  expect(input).toHaveAttribute("aria-controls", screen.getByRole("listbox").id);
 });

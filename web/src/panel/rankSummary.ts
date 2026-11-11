@@ -1,5 +1,4 @@
-import type { ValueEntry } from "../types";
-import type { County } from "./CountyPanel";
+import type { County, ValueEntry } from "../types";
 
 export const STATE_NAMES: Record<string, string> = {
   WA: "Washington",

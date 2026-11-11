@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import type { ValueEntry } from "../types";
 import { rankSummary } from "./rankSummary";
-import type { County } from "./CountyPanel";
+import type { County } from "../types";
 
 const e = (rank: number | null, state_rank: number | null): ValueEntry => ({
   v: rank === null ? null : 1,

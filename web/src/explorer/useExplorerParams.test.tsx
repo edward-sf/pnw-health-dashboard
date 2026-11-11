@@ -75,3 +75,12 @@ test("setCounty(null) deletes only c", async () => {
   await act(async () => api.setCounty(null));
   expect(router.state.location.search).toBe("?i=pct_asian");
 });
+
+test("setMode pushes, keeps i, c and view, and values deletes mode", async () => {
+  const router = setup("/?i=poverty_rate&c=53033&view=table");
+  await act(async () => api.setMode("model"));
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&view=table&mode=model");
+  expect(router.state.historyAction).toBe("PUSH");
+  await act(async () => api.setMode("values"));
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&view=table");
+});
