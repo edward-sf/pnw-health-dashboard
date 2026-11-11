@@ -158,6 +158,7 @@ Serious or critical violations fail the test. Moderate and minor ones are attach
 - **Route focus:** navigating between pages moves focus to the new page's `<h2>` (the Explorer keeps its existing focus rules). The initial page load doesn't move focus.
 - **Focus visibility:** one consistent `:focus-visible` outline for all interactive elements.
 - **Contrast:** fix whatever axe flags (likely candidates: the dimmed picker, legend text, the hatch swatch).
+- **County boundaries (amended in M7, #138):** county outlines are required graphics under WCAG 1.4.11; axe doesn't test SVG strokes. The `.county` stroke (`#808080`) is at least 3:1 against the page and the pale fills: white, the model `none` tier, the hatch background, and the lightest neutral and values bins. A unit test checks this against `styles.css`. Against the darkest fills it is 1.3–2.0:1, since no single grey reaches 3:1 at both ends of the ramps. That leaves only two adjacent counties in the same dark bin, which share a value, so the boundary isn't needed to read it. Hover and focus draw the `#333` outline. See `2026-11-11-m7-web-a11y-polish-design.md` §3.1.
 
 ### 6.3 Manual checklist
 
