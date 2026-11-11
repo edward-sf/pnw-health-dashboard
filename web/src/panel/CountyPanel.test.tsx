@@ -84,3 +84,13 @@ test("neutral indicator has no ranks", () => {
   expect(screen.getByText("5.0%")).toBeInTheDocument();
   expect(screen.queryByText(/of \d+ counties/)).not.toBeInTheDocument();
 });
+
+test("strip plot summary and not-shown note", () => {
+  setup("53033", "poverty_rate");
+  expect(screen.getByText(/Higher than \d+ of \d+ counties with data/)).toBeInTheDocument();
+});
+
+test("strip plot summary omitted for a null selection", () => {
+  setup("02016", "pct_asian");
+  expect(screen.queryByText(/Higher than/)).not.toBeInTheDocument();
+});
