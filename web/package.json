@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "screenshot": "node scripts/screenshot.mjs",
     "pretest": "npm run gen:types",
     "test": "vitest run",
     "lint": "eslint .",

@@ -110,7 +110,7 @@ Replaces the current README and keeps its pipeline instructions.
 
 ### 4.3 Screenshot
 
-`web/scripts/screenshot.ts`, run as `npm run screenshot`, uses Playwright against `vite preview` of the built site at a fixed 1280×800 desktop viewport. It captures model mode with one county selected, so the image shows the map, legend and model card. Output: `docs/images/explorer.png`, committed. CI doesn't run it; it's rerun by hand after data or UI changes.
+`web/scripts/screenshot.mjs`, run as `npm run screenshot`, uses Playwright against `vite preview` of the built site at a fixed 1280×800 desktop viewport. It captures model mode with one county selected, so the image shows the map, legend and model card. It is an `.mjs` file, like `gen-types.mjs`, so it needs no TypeScript runner. Output: `docs/images/explorer.png`, committed. CI doesn't run it; it's rerun by hand after data or UI changes.
 
 ## 5. Mobile layout (≤720px)
 
