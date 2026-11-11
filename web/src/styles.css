@@ -26,7 +26,7 @@ body {
 }
 
 .county {
-  stroke: #b8b8b8;
+  stroke: #808080;
   stroke-width: 0.5;
   cursor: pointer;
 }
