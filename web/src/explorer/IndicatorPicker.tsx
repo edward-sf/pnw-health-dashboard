@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { type KeyboardEvent, useId, useRef, useState } from "react";
 import type { Indicator } from "../types";
 
 type Props = {
@@ -6,10 +6,20 @@ type Props = {
   selectedId: string;
   onSelect: (id: string) => void;
   dimmed?: boolean;
+  /** Phone layout: hide the search and list behind an "Indicator: …" disclosure button. */
+  collapsible?: boolean;
 };
 
-export function IndicatorPicker({ indicators, selectedId, onSelect, dimmed = false }: Props) {
+export function IndicatorPicker({
+  indicators,
+  selectedId,
+  onSelect,
+  dimmed = false,
+  collapsible = false,
+}: Props) {
   const [filter, setFilter] = useState("");
+  const [open, setOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const inputId = useId();
   const needle = filter.trim().toLowerCase();
   const shown = indicators.filter((x) => x.label.toLowerCase().includes(needle));
@@ -21,42 +31,73 @@ export function IndicatorPicker({ indicators, selectedId, onSelect, dimmed = fal
     else groups.set(ind.category, [ind]);
   }
 
+  const close = () => {
+    setOpen(false);
+    toggleRef.current?.focus();
+  };
+  const choose = (id: string) => {
+    onSelect(id);
+    if (collapsible) close();
+  };
+  // Escape closes only the disclosure; preventDefault tells the county panel to stay open.
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (!collapsible || !open || e.key !== "Escape") return;
+    e.preventDefault();
+    close();
+  };
+  const selectedLabel = indicators.find((x) => x.id === selectedId)?.label ?? selectedId;
+
   return (
-    <div className={dimmed ? "picker indicator-picker--dimmed" : "picker"}>
-      {dimmed && (
-        <p className="picker-note">
-          Model mode shows life expectancy compared with what the model expects. Your indicator
-          choice is kept for values mode.
-        </p>
+    <div className={dimmed ? "picker indicator-picker--dimmed" : "picker"} onKeyDown={onKeyDown}>
+      {collapsible && (
+        <button
+          ref={toggleRef}
+          type="button"
+          className="picker-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          Indicator: {selectedLabel}
+        </button>
       )}
-      <label htmlFor={inputId} className="picker-label">
-        Filter indicators
-      </label>
-      <input
-        id={inputId}
-        type="search"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
-      {shown.length === 0 && <p className="picker-empty">No indicators match</p>}
-      {[...groups].map(([category, items], n) => (
-        <section key={category} role="group" aria-labelledby={`${inputId}-group-${n}`}>
-          <h2 id={`${inputId}-group-${n}`}>{category}</h2>
-          <ul>
-            {items.map((ind) => (
-              <li key={ind.id}>
-                <button
-                  type="button"
-                  aria-pressed={ind.id === selectedId}
-                  onClick={() => onSelect(ind.id)}
-                >
-                  {ind.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {(!collapsible || open) && (
+        <>
+          {dimmed && (
+            <p className="picker-note">
+              Model mode shows life expectancy compared with what the model expects. Your indicator
+              choice is kept for values mode.
+            </p>
+          )}
+          <label htmlFor={inputId} className="picker-label">
+            Filter indicators
+          </label>
+          <input
+            id={inputId}
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+          {shown.length === 0 && <p className="picker-empty">No indicators match</p>}
+          {[...groups].map(([category, items], n) => (
+            <section key={category} role="group" aria-labelledby={`${inputId}-group-${n}`}>
+              <h2 id={`${inputId}-group-${n}`}>{category}</h2>
+              <ul>
+                {items.map((ind) => (
+                  <li key={ind.id}>
+                    <button
+                      type="button"
+                      aria-pressed={ind.id === selectedId}
+                      onClick={() => choose(ind.id)}
+                    >
+                      {ind.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </>
+      )}
     </div>
   );
 }

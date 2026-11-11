@@ -35,10 +35,26 @@ describe("CountyMap", () => {
   test("hover shows tooltipFor text", () => {
     const { container } = setup();
     expect(screen.queryByText("tip 53033")).not.toBeInTheDocument();
-    fireEvent.mouseEnter(container.querySelector('path[data-fips="53033"]')!);
+    fireEvent.pointerEnter(container.querySelector('path[data-fips="53033"]')!, {
+      pointerType: "mouse",
+    });
     expect(screen.getByText("tip 53033")).toBeVisible();
-    fireEvent.mouseLeave(container.querySelector('path[data-fips="53033"]')!);
+    fireEvent.pointerLeave(container.querySelector('path[data-fips="53033"]')!, {
+      pointerType: "mouse",
+    });
     expect(screen.queryByText("tip 53033")).not.toBeInTheDocument();
+  });
+
+  test("touch shows no tooltip and a tap still selects", () => {
+    const { container, onSelect } = setup();
+    const king = container.querySelector('path[data-fips="53033"]')!;
+    fireEvent.pointerEnter(king, { pointerType: "mouse" });
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    fireEvent.pointerEnter(king, { pointerType: "touch" });
+    fireEvent.pointerMove(king, { pointerType: "touch" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.click(king);
+    expect(onSelect).toHaveBeenCalledWith("53033");
   });
 
   test("the selected county has aria-current and renders last", () => {
@@ -62,7 +78,11 @@ describe("CountyMap", () => {
       vi.spyOn(map, "getBoundingClientRect").mockReturnValue({
         left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300, x: 0, y: 0, toJSON: () => ({}),
       });
-      fireEvent.mouseMove(container.querySelector('path[data-fips="53033"]')!, { clientX, clientY: 50 });
+      fireEvent.pointerMove(container.querySelector('path[data-fips="53033"]')!, {
+        pointerType: "mouse",
+        clientX,
+        clientY: 50,
+      });
       return screen.getByRole("tooltip");
     }
 

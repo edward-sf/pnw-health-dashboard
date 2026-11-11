@@ -256,9 +256,76 @@ main {
   }
 }
 
+.panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.picker-toggle {
+  padding: 6px 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 @media (max-width: 720px) {
   .explorer {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Keeps counties at the bottom of the map tappable above the peek sheet. */
+  .explorer--sheet-open .explorer-main {
+    padding-bottom: 40dvh;
+  }
+
+  .county-panel--sheet {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    box-sizing: border-box;
+    height: 40dvh;
+    overflow-y: auto;
+    padding-top: 8px;
+    border-bottom: 0;
+    border-radius: 12px 12px 0 0;
+    background: #fff;
+    box-shadow: 0 -2px 12px rgb(0 0 0 / 15%);
+    transition: height 200ms ease;
+  }
+
+  .county-panel--expanded {
+    height: 85dvh;
+  }
+
+  .sheet-handle {
+    flex: none;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 2px;
+    background: #bbb;
+  }
+
+  /* Touch targets: buttons, view toggles and table sort buttons. */
+  button,
+  .view-toggle button,
+  .sort-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .county-panel--sheet {
+    transition: none;
   }
 }
 

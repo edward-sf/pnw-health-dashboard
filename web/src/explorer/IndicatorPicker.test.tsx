@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { manifest } from "../test/fixtures";
 import { IndicatorPicker } from "./IndicatorPicker";
 
@@ -85,4 +85,59 @@ test("dimmed adds the class, shows the note, and stays interactive", async () =>
   expect(document.querySelector(".indicator-picker--dimmed")).not.toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
   expect(onSelect).toHaveBeenCalledWith("pct_asian");
+});
+
+describe("collapsible", () => {
+  const setupCollapsible = (onSelect = vi.fn()) => {
+    render(
+      <IndicatorPicker
+        indicators={manifest.indicators}
+        selectedId="poverty_rate"
+        onSelect={onSelect}
+        collapsible
+      />,
+    );
+    return onSelect;
+  };
+
+  test("starts closed with a button naming the indicator", () => {
+    setupCollapsible();
+    const toggle = screen.getByRole("button", { name: "Indicator: Poverty rate" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("Filter indicators")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Median household income" })).not.toBeInTheDocument();
+  });
+
+  test("opening shows the search box", async () => {
+    setupCollapsible();
+    await userEvent.click(screen.getByRole("button", { name: "Indicator: Poverty rate" }));
+    expect(screen.getByRole("button", { name: "Indicator: Poverty rate" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByLabelText("Filter indicators")).toBeInTheDocument();
+  });
+
+  test("choosing an indicator selects it, closes and focuses the button", async () => {
+    const onSelect = setupCollapsible();
+    await userEvent.click(screen.getByRole("button", { name: "Indicator: Poverty rate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
+    expect(onSelect).toHaveBeenCalledWith("median_household_income");
+    const toggle = screen.getByRole("button", { name: "Indicator: Poverty rate" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+    expect(screen.queryByLabelText("Filter indicators")).not.toBeInTheDocument();
+  });
+
+  test("Escape closes it, prevents default and focuses the button", async () => {
+    setupCollapsible();
+    await userEvent.click(screen.getByRole("button", { name: "Indicator: Poverty rate" }));
+    const input = screen.getByLabelText("Filter indicators");
+    input.focus();
+    const notCancelled = fireEvent.keyDown(input, { key: "Escape" });
+    expect(notCancelled).toBe(false);
+    const toggle = screen.getByRole("button", { name: "Indicator: Poverty rate" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+  });
 });
