@@ -5,7 +5,7 @@ export const values: ValuesFile = {
     "53033": { v: 9.5, lo: 9.1, hi: 9.9, rank: 2, state_rank: 2 },
     "41051": { v: 9.5, lo: 9.0, hi: 10.0, rank: 2, state_rank: 1 },
     "16001": { v: 0, lo: 0, hi: 0.4, rank: 5, state_rank: 1 },
-    "02016": { v: 14.2, lo: 10.2, hi: 18.2, rank: 1, state_rank: 1 },
+    "02016": { v: 14.2, lo: 10.2, hi: 18.2, rank: 1, state_rank: 1, unreliable: true },
     "02063": {
       v: null,
       lo: null,

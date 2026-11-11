@@ -128,7 +128,7 @@ def record_chr_sample(client: httpx.Client | None = None) -> list[Path]:
     for ind in load_catalog():
         if ind.source == "chr":
             stem = ind.source_field.removesuffix("_rawvalue")
-            wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh"]
+            wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh", f"{stem}_flag"]
     keep_states = {"53", "41", "16", "02"}
     keep_fips = {"06037", "36061", "53000", "00000"}
     c = client or make_client()

@@ -9,15 +9,9 @@ import { CountyPanel, type County } from "../panel/CountyPanel";
 import { CountySearch } from "../search/CountySearch";
 import { CountyTable } from "../table/CountyTable";
 import type { Row } from "../table/sortRows";
-import type { Indicator } from "../types";
 import { IndicatorPicker } from "./IndicatorPicker";
+import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
-
-const SOURCE_NAMES: Record<Indicator["source"], string> = {
-  acs: "Census ACS 5-year",
-  places: "CDC PLACES",
-  chr: "County Health Rankings",
-};
 
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
@@ -97,9 +91,7 @@ export function Explorer({ data }: { data: AppData }) {
           {indicator.label}
         </h2>
         <p className="indicator-description">{indicator.description}</p>
-        <p className="indicator-source">
-          Source: {SOURCE_NAMES[indicator.source]}, {indicator.year}.
-        </p>
+        <p className="indicator-source">{sourceLine(indicator)}</p>
         {params.view === "table" ? (
           <CountyTable
             key={indicator.id}

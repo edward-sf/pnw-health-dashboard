@@ -237,6 +237,11 @@ main {
   color: #555;
 }
 
+.panel-unreliable {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
 @media (min-width: 1100px) {
   .explorer--panel {
     grid-template-columns: 280px minmax(0, 1fr) 360px;

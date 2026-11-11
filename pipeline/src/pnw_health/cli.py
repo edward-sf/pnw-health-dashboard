@@ -98,7 +98,7 @@ def _export(paths: Paths) -> None:
     values = pnw_only(pd.read_parquet(_require(paths.interim / "long.parquet", "harmonize")))
     legacy = pnw_only(pd.read_parquet(_require(paths.interim / "legacy.parquet", "harmonize")))
 
-    validate_display(values, county_fips, catalog)
+    validate_display(values, county_fips, catalog, legacy)
 
     manifest = Manifest(
         schema_version=SCHEMA_VERSION,

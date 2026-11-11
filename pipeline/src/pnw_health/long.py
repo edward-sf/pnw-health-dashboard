@@ -8,4 +8,5 @@ LONG_COLUMNS: list[str] = [
     "ci_low",
     "ci_high",
     "source",
+    "unreliable",
 ]

@@ -114,6 +114,7 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
                     "ci_low": _numeric(rows, "low_confidence_limit"),
                     "ci_high": _numeric(rows, "high_confidence_limit"),
                     "source": "places",
+                    "unreliable": False,
                 }
             )
         )

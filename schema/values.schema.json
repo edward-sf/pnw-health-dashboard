@@ -119,6 +119,11 @@
           ],
           "title": "State Rank"
         },
+        "unreliable": {
+          "default": false,
+          "title": "Unreliable",
+          "type": "boolean"
+        },
         "v": {
           "anyOf": [
             {

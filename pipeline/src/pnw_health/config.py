@@ -16,7 +16,7 @@ CHR_YEAR = 2025
 CHR_LEGACY_YEAR = 2023
 CHR_FILES: dict[int, str] = {2025: "analytic_data2025_v3.csv", 2023: "analytic_data2023_0.csv"}
 GEO_YEAR = 2024
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.2.0"
 
 
 @dataclass(frozen=True)

@@ -158,3 +158,19 @@ def test_legacy_skips_null_and_absent_fields(tmp_path: Path) -> None:
     out = parse_chr_legacy(path, [chr_indicator(), absent])
     assert out.empty
     assert list(out.columns) == LONG_COLUMNS
+
+
+FLAG_HEADER = f"{HEADER},v147_flag"
+
+
+@pytest.mark.parametrize(
+    ("flag", "expected"), [("1", True), ("0", False), ("2", False), ("", False)]
+)
+def test_only_flag_one_is_unreliable(tmp_path: Path, flag: str, expected: bool) -> None:
+    path = write_csv(tmp_path, [f"53,033,53033,WA,King,2025,81,80,82,{flag}"], header=FLAG_HEADER)
+    assert bool(parse_chr(path, [chr_indicator()]).iloc[0].unreliable) is expected
+
+
+def test_absent_flag_column_is_not_unreliable(tmp_path: Path) -> None:
+    path = write_csv(tmp_path, ["53,033,53033,WA,King,2025,81,80,82"])
+    assert not parse_chr(path, [chr_indicator()]).unreliable.any()

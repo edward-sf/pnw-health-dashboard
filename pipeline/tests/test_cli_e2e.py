@@ -1,3 +1,4 @@
+import csv
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -215,3 +216,30 @@ def test_harmonize_reports_warning_count(
     # fixture reports for 02261 where 2025 has no successor value (4); PLACES has none.
     assert "18 warning(s)" in capsys.readouterr().err
     assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 18
+
+
+def test_unreliable_flag_reaches_values_json(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
+    assert values.root["low_birth_weight"]["41063"].unreliable is True  # Wallowa, flag 1
+    assert values.root["low_birth_weight"]["53033"].unreliable is False
+
+
+def test_bad_legacy_value_stops_export(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    cache = chr_cache_path(paths.raw, CHR_LEGACY_YEAR)
+    rows = list(csv.reader(cache.read_text(encoding="latin-1").splitlines()))
+    fips_at, life_at = rows[1].index("fipscode"), rows[1].index("v147_rawvalue")
+    next(r for r in rows if r[fips_at] == "02261")[life_at] = "780"
+    with cache.open("w", newline="", encoding="latin-1") as fh:
+        csv.writer(fh, lineterminator="\n").writerows(rows)
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        with pytest.raises(DataValidationError) as err:
+            run_pipeline(paths, Stage.export, client=client)
+    assert any(p.startswith("life_expectancy legacy:") for p in err.value.problems)
+    assert not paths.out.exists() or not any(paths.out.iterdir())

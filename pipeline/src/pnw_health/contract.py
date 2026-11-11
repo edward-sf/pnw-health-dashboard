@@ -62,12 +62,15 @@ class ValueEntry(BaseModel):
     rank: int | None
     state_rank: int | None
     legacy: Legacy | None = None
+    unreliable: bool = False
 
     @model_serializer(mode="wrap")
-    def _omit_absent_legacy(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+    def _omit_absent_optionals(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data: dict[str, Any] = handler(self)
         if data.get("legacy") is None:
             data.pop("legacy", None)
+        if not data.get("unreliable"):
+            data.pop("unreliable", None)
         return data
 
 

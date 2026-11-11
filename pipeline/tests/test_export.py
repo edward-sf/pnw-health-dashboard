@@ -17,7 +17,14 @@ COUNTIES = {"53001", "53003", "02063"}
 def ranked(rows: list[tuple[str, float, float | None, float | None]]) -> pd.DataFrame:
     df = pd.DataFrame(
         [
-            {"fips": f, "indicator_id": "x", "value": v, "ci_low": lo, "ci_high": hi}
+            {
+                "fips": f,
+                "indicator_id": "x",
+                "value": v,
+                "ci_low": lo,
+                "ci_high": hi,
+                "unreliable": False,
+            }
             for f, v, lo, hi in rows
         ]
     )
@@ -131,3 +138,11 @@ def test_legacy_exported_with_year() -> None:
     assert entry.rank is None
     assert entry.legacy is not None
     assert entry.legacy.year == 2023
+
+
+def test_unreliable_exported_only_when_true() -> None:
+    df = ranked([("53001", 1.0, None, None), ("53003", 2.0, None, None)])
+    df.loc[df.fips == "53001", "unreliable"] = True
+    dumped = json.loads(build_values_file(df, no_legacy(), COUNTIES, CATALOG).model_dump_json())
+    assert dumped["x"]["53001"]["unreliable"] is True
+    assert "unreliable" not in dumped["x"]["53003"]

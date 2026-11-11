@@ -76,7 +76,7 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
                 <td>{r.state}</td>
                 <td>
                   {v !== null
-                    ? formatValue(v, indicator.unit)
+                    ? `${formatValue(v, indicator.unit)}${e?.unreliable ? " (unreliable)" : ""}`
                     : e?.legacy
                       ? "Former-area value in panel"
                       : formatValue(null, indicator.unit)}
