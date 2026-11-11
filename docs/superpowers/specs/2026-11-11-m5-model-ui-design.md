@@ -80,7 +80,7 @@ Its own subheading. It uses one neutral hue and never the tier colours, so it ne
 - **Lead line:** "These factors moved the model's expected value from a starting point of {75.0} to {77.1} years. They describe what the model expects for a county with this profile; they don't explain the difference above."
 - **Bars:** five horizontal bars on a zero axis, direction shown by side. Each has a label like "Bachelor's degree or higher: 43.0%" and a value like "+2.58 years". Labels and units come from the manifest. A null `value` reads "value not reported; estimated".
 - **"All other factors" row:** `predicted − base_value − Σ top 5`, drawn the same way, so the card reconciles.
-- **Implementation:** a pure `buildShapBars(county, indicators)` returns the rows and is unit-tested; Observable Plot renders them, following the `StripPlot` pattern. A text list gives screen readers the same content.
+- **Implementation:** `buildShapBars()` returns the rows; an inline SVG renders them, like `ResidualRange`. A text list gives screen readers the same content.
 
 ### No model result
 For `insufficient_data`: "The model has no result for this county because its life expectancy isn't reported." with a Methodology link. No numbers, range graphic or bars.

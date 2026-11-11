@@ -82,10 +82,12 @@ test("wording guard: no driver, cause or because of in any tier", () => {
   }
 });
 
-test("the factors section never uses a tier colour", () => {
+test("the factors section draws neutral bars and never uses a tier colour", () => {
   const { container } = renderCard(model.counties["53033"]!);
   const factors = container.querySelector(".model-factors")!;
-  expect(factors.querySelector("svg")).not.toBeNull();
+  const rects = factors.querySelectorAll("rect.shap-bar");
+  expect(rects.length).toBeGreaterThan(0);
+  for (const r of rects) expect(r.getAttribute("fill")).toBe("#6b7280");
   const tiers = ["#ca0020", "#f4a582", "#e3e3e3", "#92c5de", "#0571b0"];
   for (const el of [factors, ...factors.querySelectorAll("*")]) {
     const used = ["style", "fill", "stroke"]
