@@ -20,7 +20,9 @@ function ExplorerRoute({ state }: { state: DataState }) {
   return (
     <>
       {state.status === "loading" && <p>Loading data…</p>}
-      {state.status === "error" && <ErrorPage message={state.message} onRetry={state.retry} />}
+      {state.status === "error" && (
+        <ErrorPage message={state.message} onRetry={state.retry} />
+      )}
       {state.status === "ready" && <Explorer data={state.data} />}
     </>
   );
@@ -38,7 +40,8 @@ export default function App() {
           <NavLink to={{ pathname: "/", search: explorerSearch }} end>
             Explorer
           </NavLink>{" "}
-          <NavLink to="/methodology">Methodology</NavLink> <NavLink to="/about">About</NavLink>
+          <NavLink to="/methodology">Methodology</NavLink>{" "}
+          <NavLink to="/about">About</NavLink>
         </nav>
       </header>
       <main>

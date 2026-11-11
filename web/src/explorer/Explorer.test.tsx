@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
@@ -237,8 +237,25 @@ test("focusRequested is cleared when a selection renders no panel", async () => 
     await router.navigate("/?c=bogus");
   });
   expect(screen.queryByRole("complementary", { name: "County details" })).not.toBeInTheDocument();
-  await userEvent.click(screen.getByLabelText("Multnomah, OR"));
+  // A URL change, not a select handler, so only the request's FIPS binding keeps it from firing.
+  await act(async () => {
+    await router.navigate("/?c=41051");
+  });
   expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
+});
+
+test("Back to the county a pending request named fulfils it", async () => {
+  const router = setup();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "King");
+  await act(async () => {
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await router.navigate("/?c=bogus");
+  });
+  await act(async () => {
+    await router.navigate(-1);
+  });
+  expect(router.state.location.search).toBe("?c=53033");
+  expect(screen.getByRole("heading", { name: "King" })).toHaveFocus();
 });
 
 test("model table replaces the value table, keeps c and view, and back restores values", async () => {
@@ -313,4 +330,17 @@ test("the skip link works in model table view with a county open, and keeps c", 
   expect(screen.getByRole("combobox", { name: "Search counties" })).toHaveFocus();
   expect(router.state.location.search).toContain("c=53033");
   expect(router.state.location.hash).toBe("");
+});
+
+test("switching to model mode with a county open puts the card first and keeps focus", async () => {
+  const router = setup("/?c=53033");
+  const user = userEvent.setup();
+  const modelButton = screen.getByRole("button", { name: "Model" });
+  await user.click(modelButton);
+  expect(router.state.location.search).toContain("c=53033");
+  expect(modelButton).toHaveFocus();
+  const panel = screen.getByRole("complementary", { name: "County details" });
+  const card = within(panel).getByRole("heading", { name: "Life expectancy model" });
+  const measure = panel.querySelector(".panel-measure")!;
+  expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

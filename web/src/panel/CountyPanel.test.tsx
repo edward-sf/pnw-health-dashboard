@@ -14,7 +14,7 @@ const counties: County[] = [
   { fips: "02063", name: "Chugach", state: "AK" },
 ];
 
-function setup(fips: string, indicatorId: string) {
+function setup(fips: string, indicatorId: string, modelMode = false) {
   const indicator = manifest.indicators.find((i) => i.id === indicatorId) as Indicator;
   const county = counties.find((c) => c.fips === fips)!;
   render(
@@ -27,6 +27,7 @@ function setup(fips: string, indicatorId: string) {
         modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
+        modelMode={modelMode}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -75,6 +76,7 @@ test("suppressed county", () => {
         modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
+        modelMode={false}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -136,6 +138,7 @@ test("strip plot summary omitted for a null selection", () => {
         modelEntry={countyModel(model, "02016")}
         manifest={manifest}
         values={values}
+        modelMode={false}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -181,6 +184,7 @@ describe("phone sheet", () => {
         modelEntry={countyModel(model, fips)}
         manifest={manifest}
         values={values}
+        modelMode={false}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={onClose}
@@ -271,4 +275,21 @@ describe("phone sheet", () => {
     expect(aside()).not.toHaveClass("county-panel--sheet");
     expect(screen.queryByRole("button", { name: "Expand" })).not.toBeInTheDocument();
   });
+});
+
+const precedes = (a: Element, b: Element) =>
+  (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+test("model mode puts the model card before the indicator section", () => {
+  setup("53033", "poverty_rate", true);
+  const card = screen.getByRole("heading", { name: "Life expectancy model" });
+  const measure = document.querySelector(".panel-measure")!;
+  expect(precedes(card, measure)).toBe(true);
+});
+
+test("values mode keeps the indicator section before the model card", () => {
+  setup("53033", "poverty_rate", false);
+  const card = screen.getByRole("heading", { name: "Life expectancy model" });
+  const measure = document.querySelector(".panel-measure")!;
+  expect(precedes(measure, card)).toBe(true);
 });

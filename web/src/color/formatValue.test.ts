@@ -42,3 +42,9 @@ test("formatSigned uses the same unit suffix as formatValue", () => {
   expect(formatSigned(-1500, "dollars", 0)).toBe("−$1,500");
   expect(formatSigned(3.4, "rate_per_100k")).toBe("+3.4 per 100k");
 });
+
+test("formatSigned defaults to the unit's own digits", () => {
+  expect(formatSigned(1500, "dollars")).toBe("+$1,500");
+  expect(formatSigned(2.6, "percent")).toBe("+2.6%");
+  expect(formatSigned(3.65, "years")).toBe("+3.7 years");
+});
