@@ -28,25 +28,12 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
         d={p.d}
         fill={fillFor(p.fips)}
         className="county"
-        role="button"
-        tabIndex={0}
         aria-label={`${p.name}, ${p.state}`}
         aria-current={p.fips === selected ? "true" : undefined}
         onClick={() => onSelect(p.fips)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onSelect(p.fips);
-          }
-        }}
         onMouseEnter={(e) => place(e.currentTarget, p.fips, e.clientX, e.clientY)}
         onMouseMove={(e) => place(e.currentTarget, p.fips, e.clientX, e.clientY)}
         onMouseLeave={() => setTip(null)}
-        onFocus={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          place(e.currentTarget, p.fips, r.left + r.width / 2, r.top + r.height / 2);
-        }}
-        onBlur={() => setTip(null)}
       />
     ));
   };

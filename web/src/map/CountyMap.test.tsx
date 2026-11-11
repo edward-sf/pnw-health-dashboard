@@ -43,13 +43,11 @@ describe("CountyMap", () => {
 
   test("the selected county has aria-current and renders last", () => {
     const { container } = setup("53033");
-    const all = [...container.querySelectorAll("path[data-fips]")];
     const current = container.querySelectorAll('[aria-current="true"]');
     expect(current).toHaveLength(1);
     expect(current[0]!.getAttribute("data-fips")).toBe("53033");
     const lowerGroup = current[0]!.parentElement!;
     expect(lowerGroup.lastElementChild).toBe(current[0]);
-    expect(all.filter((p) => p.getAttribute("aria-current") === "true")).toHaveLength(1);
   });
 
   test("labels the inset 'Alaska (not to scale)'", () => {
