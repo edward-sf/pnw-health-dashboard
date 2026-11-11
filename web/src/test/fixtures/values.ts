@@ -5,14 +5,14 @@ export const values: ValuesFile = {
     "53033": { v: 9.5, lo: 9.1, hi: 9.9, rank: 2, state_rank: 2 },
     "41051": { v: 9.5, lo: 9.0, hi: 10.0, rank: 2, state_rank: 1 },
     "16001": { v: 0, lo: 0, hi: 0.4, rank: 5, state_rank: 1 },
-    "02016": { v: 14.2, lo: 10.2, hi: 18.2, rank: 1, state_rank: 1 },
+    "02016": { v: 14.2, lo: 10.2, hi: 18.2, rank: 1, state_rank: 1, unreliable: true },
     "02063": {
       v: null,
       lo: null,
       hi: null,
       rank: null,
       state_rank: null,
-      legacy: { fips: "02261", name: "Valdez-Cordova", v: 8.1, lo: 6.0, hi: 10.2 },
+      legacy: { fips: "02261", name: "Valdez-Cordova Census Area (former)", year: 2023, v: 8.1, lo: 6.0, hi: 10.2 },
     },
   },
   median_household_income: {

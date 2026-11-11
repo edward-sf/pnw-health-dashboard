@@ -5,7 +5,7 @@ export type ExplorerParams = {
   indicator: string;
   county: string | null;
   mode: "values";
-  view: "map";
+  view: "map" | "table";
   invalid: ParamKey[];
 };
 
@@ -35,7 +35,7 @@ export function parseParams(
   const mode = q.get("mode");
   if (mode !== null && mode !== "values") invalid.push("mode");
   const view = q.get("view");
-  if (view !== null && view !== "map") invalid.push("view");
+  if (view !== null && view !== "map" && view !== "table") invalid.push("view");
 
-  return { indicator, county, mode: "values", view: "map", invalid };
+  return { indicator, county, mode: "values", view: view === "table" ? "table" : "map", invalid };
 }

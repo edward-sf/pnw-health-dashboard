@@ -17,7 +17,14 @@ COUNTIES = {"53001", "53003", "02063"}
 def ranked(rows: list[tuple[str, float, float | None, float | None]]) -> pd.DataFrame:
     df = pd.DataFrame(
         [
-            {"fips": f, "indicator_id": "x", "value": v, "ci_low": lo, "ci_high": hi}
+            {
+                "fips": f,
+                "indicator_id": "x",
+                "value": v,
+                "ci_low": lo,
+                "ci_high": hi,
+                "unreliable": False,
+            }
             for f, v, lo, hi in rows
         ]
     )
@@ -55,6 +62,7 @@ def test_legacy_attached_to_successor() -> None:
                 "indicator_id": "x",
                 "legacy_fips": "02261",
                 "legacy_name": "Valdez-Cordova Census Area (former)",
+                "year": 2023,
                 "value": 78.2,
                 "ci_low": 77.0,
                 "ci_high": 79.4,
@@ -106,3 +114,35 @@ def test_write_exports_round_trip(tmp_path: Path) -> None:
     assert (
         Manifest.model_validate_json((tmp_path / "out" / "manifest.json").read_text()) == manifest
     )
+
+
+def test_legacy_exported_with_year() -> None:
+    legacy = pd.DataFrame(
+        [
+            {
+                "fips": "02063",
+                "indicator_id": "x",
+                "legacy_fips": "02261",
+                "legacy_name": "Valdez-Cordova Census Area (former)",
+                "year": 2023,
+                "value": 78.2,
+                "ci_low": 77.0,
+                "ci_high": 79.4,
+            }
+        ],
+        columns=LEGACY_COLUMNS,
+    )
+    vf = build_values_file(ranked([("53001", 1.0, None, None)]), legacy, COUNTIES, CATALOG)
+    entry = vf.root["x"]["02063"]
+    assert entry.v is None
+    assert entry.rank is None
+    assert entry.legacy is not None
+    assert entry.legacy.year == 2023
+
+
+def test_unreliable_exported_only_when_true() -> None:
+    df = ranked([("53001", 1.0, None, None), ("53003", 2.0, None, None)])
+    df.loc[df.fips == "53001", "unreliable"] = True
+    dumped = json.loads(build_values_file(df, no_legacy(), COUNTIES, CATALOG).model_dump_json())
+    assert dumped["x"]["53001"]["unreliable"] is True
+    assert "unreliable" not in dumped["x"]["53003"]

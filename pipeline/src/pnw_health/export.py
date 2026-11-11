@@ -24,6 +24,10 @@ def _int(x: object) -> int | None:
     return None if x is None or pd.isna(x) else int(x)  # type: ignore[call-overload]
 
 
+def _bool(x: object) -> bool:
+    return False if x is None or pd.isna(x) else bool(x)  # type: ignore[call-overload]
+
+
 def build_values_file(
     values: pd.DataFrame,
     legacy: pd.DataFrame,
@@ -48,12 +52,14 @@ def build_values_file(
                 legacy=Legacy(
                     fips=str(lg.legacy_fips),
                     name=str(lg.legacy_name),
+                    year=int(lg.year),  # type: ignore[arg-type]
                     v=_num(lg.value),
                     lo=_num(lg.ci_low),
                     hi=_num(lg.ci_high),
                 )
                 if lg is not None
                 else None,
+                unreliable=_bool(r.unreliable) if r is not None else False,
             )
         out[ind.id] = entries
     return ValuesFile(out)

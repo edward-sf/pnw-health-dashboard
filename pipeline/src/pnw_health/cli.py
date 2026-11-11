@@ -11,7 +11,16 @@ import httpx
 import pandas as pd
 import typer
 
-from pnw_health.config import ACS_YEAR, GEO_YEAR, SCHEMA_VERSION, Paths, census_api_key
+from pnw_health.config import (
+    ACS_YEAR,
+    CHR_LEGACY_YEAR,
+    CHR_YEAR,
+    GEO_YEAR,
+    PLACES_RELEASE,
+    SCHEMA_VERSION,
+    Paths,
+    census_api_key,
+)
 from pnw_health.contract import Manifest, SourceVintage
 from pnw_health.export import build_values_file, write_exports
 from pnw_health.fetch import FetchError, make_client
@@ -19,6 +28,13 @@ from pnw_health.harmonize import harmonize, pnw_only
 from pnw_health.indicators import load_catalog
 from pnw_health.ranks import add_ranks
 from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs, profile_url
+from pnw_health.sources.chr import (
+    chr_cache_path,
+    chr_url,
+    fetch_chr,
+    parse_chr,
+    parse_chr_legacy,
+)
 from pnw_health.sources.geo import (
     boundaries_cache_path,
     boundary_url,
@@ -26,6 +42,7 @@ from pnw_health.sources.geo import (
     load_pnw_counties,
     to_topojson,
 )
+from pnw_health.sources.places import fetch_places, parse_places, places_cache_path, places_url
 from pnw_health.validate import DataValidationError, validate_display
 
 app = typer.Typer(add_completion=False, help=__doc__)
@@ -49,14 +66,23 @@ class Stage(StrEnum):
 
 
 def _fetch(paths: Paths, client: httpx.Client, api_key: str | None, refresh: bool) -> None:
-    fetch_acs(client, paths.raw, load_catalog(), api_key=api_key, refresh=refresh)
+    catalog = load_catalog()
+    fetch_acs(client, paths.raw, catalog, api_key=api_key, refresh=refresh)
+    fetch_places(client, paths.raw, catalog, refresh=refresh)
+    fetch_chr(client, paths.raw, catalog, CHR_YEAR, refresh=refresh)
+    fetch_chr(client, paths.raw, catalog, CHR_LEGACY_YEAR, refresh=refresh)
     fetch_boundaries(client, paths.raw, refresh=refresh)
 
 
 def _harmonize(paths: Paths) -> None:
     catalog = load_catalog()
     acs = parse_acs(_require(acs_cache_path(paths.raw, catalog), "fetch"), catalog)
-    result = harmonize([acs])
+    places = parse_places(_require(places_cache_path(paths.raw, catalog), "fetch"), catalog)
+    chr_ = parse_chr(_require(chr_cache_path(paths.raw, CHR_YEAR), "fetch"), catalog)
+    legacy = parse_chr_legacy(
+        _require(chr_cache_path(paths.raw, CHR_LEGACY_YEAR), "fetch"), catalog
+    )
+    result = harmonize([acs, places, chr_, legacy])
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
     result.legacy.to_parquet(paths.interim / "legacy.parquet", index=False)
@@ -72,13 +98,16 @@ def _export(paths: Paths) -> None:
     values = pnw_only(pd.read_parquet(_require(paths.interim / "long.parquet", "harmonize")))
     legacy = pnw_only(pd.read_parquet(_require(paths.interim / "legacy.parquet", "harmonize")))
 
-    validate_display(values, county_fips, catalog)
+    validate_display(values, county_fips, catalog, legacy)
 
     manifest = Manifest(
         schema_version=SCHEMA_VERSION,
         built_at=datetime.now(UTC),
         sources=[
             SourceVintage(source="acs", year=ACS_YEAR, url=profile_url(ACS_YEAR)),
+            SourceVintage(source="places", year=PLACES_RELEASE, url=places_url()),
+            SourceVintage(source="chr", year=CHR_YEAR, url=chr_url(CHR_YEAR)),
+            SourceVintage(source="chr", year=CHR_LEGACY_YEAR, url=chr_url(CHR_LEGACY_YEAR)),
             SourceVintage(source="boundaries", year=GEO_YEAR, url=boundary_url(GEO_YEAR)),
         ],
         indicators=catalog,

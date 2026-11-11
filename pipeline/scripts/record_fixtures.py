@@ -5,19 +5,26 @@ indicator catalog changes:
 
     uv run python scripts/record_fixtures.py variables
     uv run python scripts/record_fixtures.py acs   # needs CENSUS_API_KEY (env or repo .env)
+    uv run python scripts/record_fixtures.py places   # public API, no key
+    uv run python scripts/record_fixtures.py chr   # ~13 MB public CSV, no key
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 
-from pnw_health.config import ACS_YEAR, census_api_key
+from pnw_health.config import ACS_YEAR, CHR_LEGACY_YEAR, CHR_YEAR, PLACES_RELEASE, census_api_key
 from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
+from pnw_health.sources.chr import fetch_chr
+from pnw_health.sources.places import fetch_places
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = REPO_ROOT / "pipeline" / "tests" / "fixtures"
@@ -69,11 +76,88 @@ def record_acs_sample(client: httpx.Client | None = None) -> Path:
     return out
 
 
+def record_places_sample(client: httpx.Client | None = None) -> Path:
+    """Save catalog PLACES rows for all PNW counties plus two non-PNW counties."""
+    catalog = load_catalog()
+    c = client or make_client()
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = json.loads(fetch_places(c, Path(tmp), catalog).read_text())
+    finally:
+        if client is None:
+            c.close()
+    keep = {"53", "41", "16", "02"}
+    rows = [r for r in raw if r["locationid"][:2] in keep or r["locationid"] in {"06037", "36061"}]
+    out = FIXTURES / f"places_{PLACES_RELEASE}_sample.json"
+    out.write_text(json.dumps(rows, indent=0) + "\n")
+    return out
+
+
+def _record_chr_file(
+    c: httpx.Client, year: int, wanted: list[str], keep: Callable[[str], bool]
+) -> Path:
+    catalog = load_catalog()
+    with tempfile.TemporaryDirectory() as tmp:
+        src = fetch_chr(c, Path(tmp), catalog, year)
+        with src.open(newline="", encoding="latin-1") as fh:
+            reader = csv.reader(fh)
+            labels = next(reader)
+            names = next(reader)
+            index = [names.index(w) if w in names else None for w in wanted]
+            fips_at = names.index("fipscode")
+            rows = [
+                [row[i] if i is not None else "" for i in index]
+                for row in reader
+                if keep(row[fips_at])
+            ]
+        labels_out = [labels[i] if i is not None else "" for i in index]
+    out = FIXTURES / f"chr_{year}_sample.csv"
+    with out.open("w", newline="", encoding="latin-1") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerows([labels_out, wanted, *rows])
+    return out
+
+
+def record_chr_sample(client: httpx.Client | None = None) -> list[Path]:
+    """Save the CHR header rows and the catalog's columns for the current and legacy files.
+
+    The current file keeps PNW and sample counties; the 2023 file keeps only the retired
+    Valdez-Cordova row (02261), the Alaska state row and one Washington county.
+    """
+    wanted = ["statecode", "countycode", "fipscode", "state", "county", "year"]
+    for ind in load_catalog():
+        if ind.source == "chr":
+            stem = ind.source_field.removesuffix("_rawvalue")
+            wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh", f"{stem}_flag"]
+    keep_states = {"53", "41", "16", "02"}
+    keep_fips = {"06037", "36061", "53000", "00000"}
+    c = client or make_client()
+    try:
+        current = _record_chr_file(
+            c, CHR_YEAR, wanted, lambda f: f[:2] in keep_states or f in keep_fips
+        )
+        legacy = _record_chr_file(
+            c, CHR_LEGACY_YEAR, wanted, lambda f: f in {"02261", "02000", "53033"}
+        )
+    finally:
+        if client is None:
+            c.close()
+    return [current, legacy]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("what", choices=["variables", "acs"])
+    parser.add_argument("what", choices=["variables", "acs", "places", "chr"])
     args = parser.parse_args()
-    print(record_variables() if args.what == "variables" else record_acs_sample())
+    recorders = {
+        "variables": record_variables,
+        "acs": record_acs_sample,
+        "places": record_places_sample,
+        "chr": record_chr_sample,
+    }
+    result = recorders[args.what]()
+    for path in result if isinstance(result, list) else [result]:
+        print(path)
 
 
 if __name__ == "__main__":

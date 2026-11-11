@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
 from pnw_health.validate import DataValidationError, validate_display
@@ -115,3 +116,56 @@ def test_collects_all_problems() -> None:
     found = problems(v, set(fips))
     assert len(found) == 2  # AK count, out-of-range
     assert "\n" in str(DataValidationError(found))
+
+
+def years_indicator() -> Indicator:
+    return indicator("life", "years")
+
+
+@pytest.mark.parametrize("bad", [-1.0, 121.0])
+def test_years_out_of_range(bad: float) -> None:
+    fips = pnw_fips()
+    catalog = [years_indicator()]
+    v = valid_values(fips)
+    v = v[v.indicator_id == "pct"].assign(indicator_id="life", value=65.0)
+    v.loc[v.index[0], "value"] = bad
+    with pytest.raises(DataValidationError) as err:
+        validate_display(v, set(fips), catalog)
+    assert any("outside [0, 120]" in p for p in err.value.problems)
+
+
+def test_years_in_range() -> None:
+    fips = pnw_fips()
+    v = valid_values(fips)
+    v = v[v.indicator_id == "pct"].assign(indicator_id="life", value=65.0)
+    validate_display(v, set(fips), [years_indicator()])
+
+
+def legacy_row(indicator_id: str, value: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "fips": "02063",
+                "indicator_id": indicator_id,
+                "legacy_fips": "02261",
+                "legacy_name": "Valdez-Cordova Census Area (former)",
+                "year": 2023,
+                "value": value,
+                "ci_low": None,
+                "ci_high": None,
+            }
+        ],
+        columns=LEGACY_COLUMNS,
+    )
+
+
+def test_legacy_out_of_range() -> None:
+    fips = pnw_fips()
+    with pytest.raises(DataValidationError) as err:
+        validate_display(valid_values(fips), set(fips), CATALOG, legacy_row("pct", 447.0))
+    assert err.value.problems == ["pct legacy: 1 value(s) outside [0, 100] (e.g. 02063=447.0)"]
+
+
+def test_legacy_in_range_passes() -> None:
+    fips = pnw_fips()
+    validate_display(valid_values(fips), set(fips), CATALOG, legacy_row("pct", 4.5))

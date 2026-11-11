@@ -130,6 +130,7 @@ def parse_acs(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
                     "ci_low": ci_low,
                     "ci_high": ci_high,
                     "source": "acs",
+                    "unreliable": False,
                 }
             )
         )

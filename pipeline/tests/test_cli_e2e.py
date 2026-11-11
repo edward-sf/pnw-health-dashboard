@@ -1,3 +1,4 @@
+import csv
 import json
 from collections.abc import Callable
 from pathlib import Path
@@ -8,16 +9,21 @@ from typer.testing import CliRunner, Result
 
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
-from pnw_health.config import Paths
+from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
 from pnw_health.contract import Manifest, ValuesFile
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.sources.acs import acs_cache_path
+from pnw_health.sources.chr import chr_cache_path
+from pnw_health.sources.places import places_cache_path
 from pnw_health.validate import DataValidationError
 from tests.helpers import make_boundary_zip
 
 FIXTURES = Path(__file__).parent / "fixtures"
 ACS_SAMPLE = FIXTURES / "acs_profile_2024_sample.json"
+PLACES_SAMPLE = FIXTURES / "places_2025_sample.json"
+CHR_SAMPLE = FIXTURES / "chr_2025_sample.csv"
+CHR_LEGACY_SAMPLE = FIXTURES / "chr_2023_sample.csv"
 
 
 def sample_pnw_fips() -> list[str]:
@@ -30,6 +36,11 @@ def transport(boundary_zip: Path) -> Callable[[httpx.Request], httpx.Response]:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "api.census.gov":
             return httpx.Response(200, content=ACS_SAMPLE.read_bytes())
+        if request.url.host == "data.cdc.gov":
+            return httpx.Response(200, content=PLACES_SAMPLE.read_bytes())
+        if request.url.host == "www.countyhealthrankings.org":
+            sample = CHR_LEGACY_SAMPLE if request.url.path.endswith("2023_0.csv") else CHR_SAMPLE
+            return httpx.Response(200, content=sample.read_bytes())
         if request.url.path.endswith("cb_2024_us_county_5m.zip"):
             return httpx.Response(200, content=boundary_zip.read_bytes())
         return httpx.Response(404)
@@ -57,12 +68,26 @@ def test_full_run_produces_valid_exports(tmp_path: Path, full_zip: Path) -> None
     manifest = Manifest.model_validate_json((paths.out / "manifest.json").read_text())
     values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
     topo = json.loads((paths.out / "counties.topojson").read_text())
-    assert len(manifest.indicators) == 6
-    assert {s.source for s in manifest.sources} == {"acs", "boundaries"}
-    assert len(values.root) == 6
+    assert len(manifest.indicators) == 37
+    assert {s.source for s in manifest.sources} == {"acs", "places", "chr", "boundaries"}
+    assert sorted(s.year for s in manifest.sources if s.source == "chr") == [2023, 2025]
+    assert len(values.root) == 37
     assert all(len(entries) == 149 for entries in values.root.values())
     assert len(topo["objects"]["counties"]["geometries"]) == 149
     assert (paths.interim / "warnings.txt").exists()
+
+
+def test_chugach_gets_labeled_legacy(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
+    for fips in ("02063", "02066"):
+        entry = values.root["life_expectancy"][fips]
+        assert entry.v is None
+        assert entry.legacy is not None
+        assert entry.legacy.year == 2023
+        assert entry.legacy.fips == "02261"
 
 
 def test_validation_failure_writes_nothing(tmp_path: Path) -> None:
@@ -124,11 +149,19 @@ def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path
 
 
 def write_acs_cache(paths: Paths, rows_edit: Callable[[list[list[str]]], list[list[str]]]) -> None:
-    """Put the recorded ACS sample in the cache, after editing its data rows."""
+    """Put the recorded ACS sample (edited) and PLACES and CHR samples in the cache."""
     header, *rows = json.loads(ACS_SAMPLE.read_text())
     cache = acs_cache_path(paths.raw, load_catalog())
     cache.parent.mkdir(parents=True)
     cache.write_text(json.dumps([header, *rows_edit(rows)]))
+    places_cache = places_cache_path(paths.raw, load_catalog())
+    places_cache.parent.mkdir(parents=True)
+    places_cache.write_bytes(PLACES_SAMPLE.read_bytes())
+    chr_cache = chr_cache_path(paths.raw, CHR_YEAR)
+    chr_cache.parent.mkdir(parents=True)
+    chr_cache.write_bytes(CHR_SAMPLE.read_bytes())
+    legacy_cache = chr_cache_path(paths.raw, CHR_LEGACY_YEAR)
+    legacy_cache.write_bytes(CHR_LEGACY_SAMPLE.read_bytes())
 
 
 def run_harmonize_cli(root: Path) -> Result:
@@ -179,6 +212,34 @@ def test_harmonize_reports_warning_count(
     write_acs_cache(paths, report_only_valdez_cordova)
     with client_for(failing) as client:
         run_pipeline(paths, Stage.harmonize, client=client)
-    # One legacy-only warning per catalog indicator.
-    assert "6 warning(s)" in capsys.readouterr().err
-    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 6
+    # One legacy-only warning per ACS indicator (14) plus one per CHR indicator the 2023
+    # fixture reports for 02261 where 2025 has no successor value (4); PLACES has none.
+    assert "18 warning(s)" in capsys.readouterr().err
+    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 18
+
+
+def test_unreliable_flag_reaches_values_json(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
+    assert values.root["low_birth_weight"]["41063"].unreliable is True  # Wallowa, flag 1
+    assert values.root["low_birth_weight"]["53033"].unreliable is False
+
+
+def test_bad_legacy_value_stops_export(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    cache = chr_cache_path(paths.raw, CHR_LEGACY_YEAR)
+    rows = list(csv.reader(cache.read_text(encoding="latin-1").splitlines()))
+    fips_at, life_at = rows[1].index("fipscode"), rows[1].index("v147_rawvalue")
+    next(r for r in rows if r[fips_at] == "02261")[life_at] = "780"
+    with cache.open("w", newline="", encoding="latin-1") as fh:
+        csv.writer(fh, lineterminator="\n").writerows(rows)
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        with pytest.raises(DataValidationError) as err:
+            run_pipeline(paths, Stage.export, client=client)
+    assert any(p.startswith("life_expectancy legacy:") for p in err.value.problems)
+    assert not paths.out.exists() or not any(paths.out.iterdir())

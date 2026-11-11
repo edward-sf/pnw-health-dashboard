@@ -55,7 +55,7 @@ def test_parse_shape() -> None:
     assert set(df.columns) == set(LONG_COLUMNS)
     assert df.fips.str.len().eq(5).all()
     assert df.fips.nunique() == 151
-    assert len(df) == 151 * 6
+    assert len(df) == 151 * 14
     assert set(df.source) == {"acs"}
     assert set(df.year) == {2024}
     assert df[df.fips.str.startswith("02")].fips.nunique() == 30

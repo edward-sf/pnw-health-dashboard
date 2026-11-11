@@ -44,11 +44,16 @@
             }
           ],
           "title": "V"
+        },
+        "year": {
+          "title": "Year",
+          "type": "integer"
         }
       },
       "required": [
         "fips",
         "name",
+        "year",
         "v",
         "lo",
         "hi"
@@ -113,6 +118,11 @@
             }
           ],
           "title": "State Rank"
+        },
+        "unreliable": {
+          "default": false,
+          "title": "Unreliable",
+          "type": "boolean"
         },
         "v": {
           "anyOf": [
