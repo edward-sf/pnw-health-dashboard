@@ -1,18 +1,18 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { formatBound, formatValue } from "../color/formatValue";
-import type { Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
+import type { County, CountyModel, Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
+import { ModelCard } from "./ModelCard";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
 import { WhoLivesHere } from "./WhoLivesHere";
-
-export type County = { fips: string; name: string; state: string };
 
 type Props = {
   county: County;
   indicator: Indicator;
   entries: Record<string, ValueEntry>;
   counties: County[];
+  modelEntry: CountyModel;
   manifest: Manifest;
   values: ValuesFile;
   focusRequested: boolean;
@@ -25,6 +25,7 @@ export function CountyPanel({
   indicator,
   entries,
   counties,
+  modelEntry,
   manifest,
   values,
   focusRequested,
@@ -94,6 +95,7 @@ export function CountyPanel({
         </p>
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
+      <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
       <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
     </aside>
   );

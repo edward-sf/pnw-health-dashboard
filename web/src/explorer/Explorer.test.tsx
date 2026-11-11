@@ -227,3 +227,15 @@ test("picking an indicator in model mode keeps mode=model", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
   expect(router.state.location.search).toBe("?mode=model&i=median_household_income");
 });
+
+test("focusRequested is cleared when a selection renders no panel", async () => {
+  const router = setup();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "King");
+  await act(async () => {
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await router.navigate("/?c=bogus");
+  });
+  expect(screen.queryByRole("complementary", { name: "County details" })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("Multnomah, OR"));
+  expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
+});

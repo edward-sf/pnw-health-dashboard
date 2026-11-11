@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { formatTick, formatValue } from "../color/formatValue";
 import type { Indicator, Unit, ValueEntry } from "../types";
 import { buildStripData } from "./buildStripData";
-import type { County } from "./CountyPanel";
+import type { County } from "../types";
 
 type Props = {
   county: County;

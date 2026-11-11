@@ -1,5 +1,4 @@
-import type { ValueEntry } from "../types";
-import type { County } from "../panel/CountyPanel";
+import type { County, ValueEntry } from "../types";
 
 export type Row = County & { entry: ValueEntry | undefined };
 export type SortKey = "name" | "state" | "value" | "rank" | "state_rank";
