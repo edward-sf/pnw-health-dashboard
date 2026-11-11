@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
 import type { AppData } from "../data/loadData";
 import { buildMapPaths } from "../map/buildMapPaths";
 import { CountyMap } from "../map/CountyMap";
+import { CountyPanel, type County } from "../panel/CountyPanel";
 import { IndicatorPicker } from "./IndicatorPicker";
 import { useExplorerParams } from "./useExplorerParams";
 
@@ -22,6 +23,12 @@ export function Explorer({ data }: { data: AppData }) {
   );
   const { params, setIndicator, setCounty } = useExplorerParams(manifest, fipsSet);
 
+  const counties = useMemo<County[]>(
+    () => paths.map(({ fips, name, state }) => ({ fips, name, state })),
+    [paths],
+  );
+  const onClosePanel = useCallback(() => setCounty(null), [setCounty]);
+
   const indicator = manifest.indicators.find((x) => x.id === params.indicator);
   const entries = indicator ? values[indicator.id] : undefined;
   const scale = useMemo(
@@ -29,9 +36,10 @@ export function Explorer({ data }: { data: AppData }) {
     [indicator, entries],
   );
   if (!indicator || !scale) return null;
+  const selectedCounty = counties.find((c) => c.fips === params.county);
 
   return (
-    <div className="explorer">
+    <div className={selectedCounty ? "explorer explorer--panel" : "explorer"}>
       <aside className="explorer-picker">
         <IndicatorPicker
           indicators={manifest.indicators}
@@ -53,6 +61,18 @@ export function Explorer({ data }: { data: AppData }) {
         />
         <Legend scale={scale} unit={indicator.unit} />
       </section>
+      {selectedCounty && (
+        <CountyPanel
+          county={selectedCounty}
+          indicator={indicator}
+          entries={entries ?? {}}
+          counties={counties}
+          manifest={manifest}
+          values={values}
+          focusToken={0}
+          onClose={onClosePanel}
+        />
+      )}
     </div>
   );
 }

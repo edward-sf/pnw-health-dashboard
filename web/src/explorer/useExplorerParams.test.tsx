@@ -69,3 +69,9 @@ test("setIndicator with the current indicator does not push", async () => {
   expect(router.state.location.key).toBe(key);
   expect(router.state.historyAction).toBe("POP");
 });
+
+test("setCounty(null) deletes only c", async () => {
+  const router = setup("/?i=pct_asian&c=53033");
+  await act(async () => api.setCounty(null));
+  expect(router.state.location.search).toBe("?i=pct_asian");
+});

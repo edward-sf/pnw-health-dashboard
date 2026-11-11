@@ -9,7 +9,7 @@ export function useExplorerParams(
 ): {
   params: ExplorerParams;
   setIndicator: (id: string) => void;
-  setCounty: (fips: string) => void;
+  setCounty: (fips: string | null) => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.toString();
@@ -43,11 +43,12 @@ export function useExplorerParams(
     [setSearchParams, params.indicator],
   );
   const setCounty = useCallback(
-    (fips: string) => {
+    (fips: string | null) => {
       if (fips === params.county) return;
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        next.set("c", fips);
+        if (fips === null) next.delete("c");
+        else next.set("c", fips);
         return next;
       });
     },
