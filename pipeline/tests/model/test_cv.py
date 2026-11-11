@@ -110,3 +110,30 @@ def test_score_regions_splits_pnw() -> None:
     assert regions.national.n == len(frame)
     assert regions.pnw.n == int(frame["state"].isin(["53", "41", "16", "02"]).sum())
     assert regions.pnw.mae == pytest.approx(1.0)
+
+
+def test_additivity() -> None:
+    frame = _frame()
+    oof = fit_lightgbm_oof(frame, ALL_FEATURES, assign_folds(frame["state"]))
+    total = oof.base_value + oof.contributions.sum(axis=1)
+    assert oof.contributions.index.equals(frame.index)
+    assert list(oof.contributions.columns) == ALL_FEATURES
+    assert total.to_numpy() == pytest.approx(oof.predicted.to_numpy(), abs=1e-6)
+
+
+def test_base_value_comes_from_own_fold() -> None:
+    frame = _frame()
+    oof = fit_lightgbm_oof(frame, ALL_FEATURES, assign_folds(frame["state"]))
+    assert oof.base_value.nunique() > 1
+
+
+def test_explanation_ignores_own_state_target() -> None:
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    base = fit_lightgbm_oof(frame, ALL_FEATURES, folds)
+    shifted = frame.copy()
+    in_state = shifted["state"] == "53"
+    shifted.loc[in_state, "target"] += 100.0
+    after = fit_lightgbm_oof(shifted, ALL_FEATURES, folds)
+    pd.testing.assert_frame_equal(base.contributions[in_state], after.contributions[in_state])
+    pd.testing.assert_series_equal(base.base_value[in_state], after.base_value[in_state])
