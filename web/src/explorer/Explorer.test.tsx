@@ -2,7 +2,8 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
-import { manifest, topology, values } from "../test/fixtures";
+import { HATCH_FILL } from "../color/makeColorScale";
+import { manifest, model, topology, values } from "../test/fixtures";
 import { Explorer } from "./Explorer";
 
 function setup(url = "/") {
@@ -11,7 +12,7 @@ function setup(url = "/") {
       {
         path: "/",
         element: (
-          <Explorer data={{ manifest, values, topology }} />
+          <Explorer data={{ manifest, values, topology, model }} />
         ),
       },
     ],
@@ -201,4 +202,28 @@ test("close of a map-opened panel focuses the title", async () => {
   await userEvent.click(screen.getByLabelText("King, WA"));
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(title()).toHaveFocus();
+});
+
+test("Model toggle sets mode, fills the map by tier, and shows the model title and source", async () => {
+  const router = setup();
+  await userEvent.click(screen.getByRole("button", { name: "Model" }));
+  expect(router.state.location.search).toBe("?mode=model");
+  expect(screen.getByRole("button", { name: "Model" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Values" })).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByLabelText("King, WA").getAttribute("fill")).toBe("#0571b0");
+  expect(screen.getByLabelText("Chugach, AK").getAttribute("fill")).toBe(HATCH_FILL);
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Life expectancy: compared with expected" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Source: County Health Rankings, 2025 release.")).toBeInTheDocument();
+  expect(
+    screen.getByText(/Model mode shows life expectancy compared with what the model expects\./),
+  ).toBeInTheDocument();
+  expect(document.querySelectorAll(".legend li")).toHaveLength(6);
+});
+
+test("picking an indicator in model mode keeps mode=model", async () => {
+  const router = setup("/?mode=model");
+  await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
+  expect(router.state.location.search).toBe("?mode=model&i=median_household_income");
 });

@@ -41,3 +41,13 @@ export function formatValue(v: number | null, unit: Unit): string {
       return whole(v);
   }
 }
+
+export function formatSigned(v: number, unit: Unit, digits = 1): string {
+  const body = Math.abs(v).toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  const isZero = Number(body.replace(/,/g, "")) === 0;
+  const sign = isZero ? "" : v > 0 ? "+" : "\u2212";
+  return `${sign}${body} ${unit}`;
+}

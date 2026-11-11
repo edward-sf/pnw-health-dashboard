@@ -2,13 +2,20 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useLocation } from "react-router";
 import App from "./App";
-import { manifest, topology, values } from "./test/fixtures";
+import { manifest, model, topology, values } from "./test/fixtures";
+
+function LocationProbe({ onChange }: { onChange: (search: string) => void }) {
+  onChange(useLocation().search);
+  return null;
+}
 
 const bodies: Record<string, unknown> = {
   "manifest.json": manifest,
   "values.json": values,
   "counties.topojson": topology,
+  "model.json": model,
 };
 
 beforeEach(() => {
@@ -59,6 +66,22 @@ describe("App", () => {
   it("an unknown path redirects to the explorer", async () => {
     at("/nope");
     expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();
+  });
+
+  it("the Explorer nav link restores the Explorer query (#85)", async () => {
+    const user = userEvent.setup();
+    let search = "";
+    render(
+      <MemoryRouter initialEntries={["/?i=poverty_rate&c=53033&mode=model&view=table"]}>
+        <App />
+        <LocationProbe onChange={(s) => (search = s)} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("heading", { level: 2, name: "Life expectancy: compared with expected" });
+    await user.click(screen.getByRole("link", { name: "Methodology" }));
+    expect(search).toBe("");
+    await user.click(screen.getByRole("link", { name: "Explorer" }));
+    expect(search).toBe("?i=poverty_rate&c=53033&mode=model&view=table");
   });
 
   it("nav links reach each route", async () => {

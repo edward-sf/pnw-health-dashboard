@@ -430,3 +430,20 @@ main {
 .county-table th[aria-sort="descending"] .sort-button::after {
   content: " \25BC";
 }
+
+.indicator-picker--dimmed button {
+  opacity: 0.6;
+}
+
+.picker-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.legend-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}

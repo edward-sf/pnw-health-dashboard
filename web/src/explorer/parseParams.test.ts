@@ -36,6 +36,16 @@ test("view=table is valid", () => {
 test("view=bogus is invalid and defaults to map", () => {
   expect(parse("?view=bogus")).toMatchObject({ view: "map", invalid: ["view"] });
 });
-test("unbuilt mode is invalid", () => {
-  expect(parse("?mode=model").invalid).toEqual(["mode"]);
+test("mode=model is accepted", () => {
+  expect(parse("?mode=model")).toMatchObject({ mode: "model", invalid: [] });
+});
+test("mode=Model and an empty mode are invalid and default to values, keeping the rest", () => {
+  for (const s of ["?i=pct_asian&c=53033&mode=Model", "?i=pct_asian&c=53033&mode="]) {
+    expect(parse(s)).toMatchObject({
+      mode: "values",
+      indicator: "pct_asian",
+      county: "53033",
+      invalid: ["mode"],
+    });
+  }
 });

@@ -17,10 +17,12 @@ test("groups by category in catalog order", () => {
   expect(groups.map((g) => within(g).getByRole("heading").textContent)).toEqual([
     "Social & Economic",
     "Demographics",
+    "Outcomes",
   ]);
   expect(within(groups[0]!).getAllByRole("button").map((b) => b.textContent)).toEqual([
     "Poverty rate",
     "Median household income",
+    "Bachelor's degree or higher",
   ]);
 });
 
@@ -63,4 +65,24 @@ test("is operable by keyboard", async () => {
   await userEvent.tab(); // first option
   await userEvent.keyboard("{Enter}");
   expect(onSelect).toHaveBeenCalledWith("poverty_rate");
+});
+
+test("dimmed adds the class, shows the note, and stays interactive", async () => {
+  const onSelect = vi.fn();
+  render(
+    <IndicatorPicker
+      indicators={manifest.indicators}
+      selectedId="poverty_rate"
+      onSelect={onSelect}
+      dimmed
+    />,
+  );
+  expect(
+    screen.getByText(
+      "Model mode shows life expectancy compared with what the model expects. Your indicator choice is kept for values mode.",
+    ),
+  ).toBeInTheDocument();
+  expect(document.querySelector(".indicator-picker--dimmed")).not.toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
+  expect(onSelect).toHaveBeenCalledWith("pct_asian");
 });

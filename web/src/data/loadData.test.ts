@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { manifest, topology, values } from "../test/fixtures";
+import { manifest, model, topology, values } from "../test/fixtures";
 import { loadData } from "./loadData";
 
 const bodies: Record<string, unknown> = {
   "manifest.json": manifest,
   "values.json": values,
   "counties.topojson": topology,
+  "model.json": model,
 };
 
 let fetched: string[];
@@ -37,6 +38,17 @@ describe("loadData", () => {
         "/pnw-health-dashboard/data/counties.topojson",
       ]),
     );
+  });
+
+  it("fetches model.json with the other files", async () => {
+    const data = await loadData("/pnw-health-dashboard/");
+    expect(fetched).toContain("/pnw-health-dashboard/data/model.json");
+    expect(data.model).toEqual(model);
+  });
+
+  it("rejects when model.json fails", async () => {
+    stubFetch({ "model.json": new Response("nope", { status: 404 }) });
+    await expect(loadData("/")).rejects.toThrow(/model\.json/);
   });
 
   it("returns the parsed files", async () => {
