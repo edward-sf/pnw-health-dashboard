@@ -70,7 +70,7 @@ From the current export (`web/public/data/model.json`, 76 KB):
 The card sits in the county panel in both modes, between the strip plot and "Who lives here", under the heading **"Life expectancy model"**. It has two parts, separated by a divider.
 
 ### Part 1: "How this county compares"
-- Actual {80.8} years · Expected {77.1} years · Difference **{+3.7} years**.
+- Actual {80.8} years · Expected {77.1} years · Difference **{+3.7} years**. A small note follows: "Figures are rounded." (Actual − Expected can differ from the Difference by 0.1.)
 - A tier badge in the tier colour with the tier label.
 - **Range graphic:** a number line centred on 0 with a light band for ±`threshold_75`, a darker band for ±`threshold_90`, and a dot at the residual. Its screen-reader text states the difference and both ranges.
 - **Range sentence:** "A difference beyond ±{2.4} years is flagged as somewhat better or worse, and beyond ±{3.4} years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty." If `se` is null, the second sentence ends "…and a typical county's measurement uncertainty, since this county's estimate has no confidence interval," matching the parent §5 fallback.
