@@ -31,6 +31,6 @@ describe("App", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "PNW Health Dashboard",
     );
-    expect(await screen.findByText(/3 indicators loaded/)).toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();
   });
 });
