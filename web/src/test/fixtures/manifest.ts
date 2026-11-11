@@ -1,0 +1,51 @@
+import type { Manifest } from "../../types";
+
+export const manifest: Manifest = {
+  schema_version: "1.0.0",
+  built_at: "2026-01-01T00:00:00Z",
+  sources: [
+    { source: "acs", year: 2023, url: "https://example.test/acs" },
+    { source: "places", year: 2023, url: "https://example.test/places" },
+  ],
+  indicators: [
+    {
+      id: "poverty_rate",
+      label: "Poverty rate",
+      unit: "percent",
+      source: "acs",
+      source_field: "S1701_C03_001E",
+      moe_field: "S1701_C03_001M",
+      ci_level: 90,
+      year: 2023,
+      category: "Social & Economic",
+      direction: "higher_is_worse",
+      description: "Share of residents living below the poverty line.",
+    },
+    {
+      id: "median_household_income",
+      label: "Median household income",
+      unit: "dollars",
+      source: "acs",
+      source_field: "B19013_001E",
+      moe_field: "B19013_001M",
+      ci_level: 90,
+      year: 2023,
+      category: "Social & Economic",
+      direction: "higher_is_better",
+      description: "Median annual household income.",
+    },
+    {
+      id: "pct_asian",
+      label: "Asian population",
+      unit: "percent",
+      source: "acs",
+      source_field: "B02001_005E",
+      moe_field: null,
+      ci_level: null,
+      year: 2023,
+      category: "Demographics",
+      direction: "neutral",
+      description: "Share of residents identifying as Asian.",
+    },
+  ],
+};
