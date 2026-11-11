@@ -348,7 +348,7 @@ test("load, pick an indicator, select a county", async ({ page }) => {
 - [ ] **Step 3:** Write `build-deploy.yml`:
   - Triggers: `push` to `main` and `milestone/**`; `schedule` `cron: "0 9 1 * *"`; `workflow_dispatch`.
   - `concurrency: { group: build-deploy-${{ github.ref }}, cancel-in-progress: false }`; workflow `permissions: contents: read`.
-  - Job `build`: setup-uv and setup-node; `actions/cache` on `data/raw` with key `raw-${{ hashFiles('pipeline/src/pnw_health/config.py', 'pipeline/src/pnw_health/indicators.yaml') }}`; `uv run pnw-health run` in `pipeline/` with `CENSUS_API_KEY` from secrets; `npm ci`, `npm run build`, `npx playwright install --with-deps chromium`, `npm run test:e2e`; `actions/upload-pages-artifact` with `path: web/dist`.
+  - Job `build`: setup-uv and setup-node; `actions/cache` on `data/raw` with key `raw-${{ hashFiles('pipeline/src/pnw_health/config.py', 'pipeline/src/pnw_health/indicators.yaml') }}`; `uv run pnw-health run --root ..` in `pipeline/` with `CENSUS_API_KEY` from secrets; `npm ci`, `npm run build`, `npx playwright install --with-deps chromium`, `npm run test:e2e`; `actions/upload-pages-artifact` with `path: web/dist`.
   - Job `deploy`: `needs: build`, `if: github.ref == 'refs/heads/main'`, `permissions: { pages: write, id-token: write }`, `environment: github-pages`, `actions/deploy-pages`.
 - [ ] **Step 4:** Commit: `ci: build, smoke-test, and deploy to GitHub Pages`. Squash-merge per `CONTRIBUTING.md`.
 - [ ] **Step 5:** Run `gh run list --workflow build-deploy.yml --branch milestone/m2 --limit 1`, then inspect that run. Expected: `build` succeeds and `deploy` is skipped.
