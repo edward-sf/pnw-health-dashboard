@@ -40,6 +40,7 @@ export function Explorer({ data }: { data: AppData }) {
         />
       </aside>
       <section className="explorer-main">
+        <h2 className="indicator-title">{indicator.label}</h2>
         <CountyMap
           paths={paths}
           fillFor={(fips) => scale.fill(entries?.[fips]?.v ?? null)}

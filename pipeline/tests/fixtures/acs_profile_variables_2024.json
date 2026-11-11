@@ -46,5 +46,69 @@
     "label": "Percent!!PERCENTAGE OF FAMILIES AND PEOPLE WHOSE INCOME IN THE PAST 12 MONTHS IS BELOW THE POVERTY LEVEL!!All people",
     "limit": 0,
     "predicateType": "float"
+  },
+  "DP05_0024PE": {
+    "attributes": "DP05_0024PEA,DP05_0024PM,DP05_0024PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!SEX AND AGE!!Total population!!65 years and over",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0090PE": {
+    "attributes": "DP05_0090PEA,DP05_0090PM,DP05_0090PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Hispanic or Latino (of any race)",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0096PE": {
+    "attributes": "DP05_0096PEA,DP05_0096PM,DP05_0096PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!White alone",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0097PE": {
+    "attributes": "DP05_0097PEA,DP05_0097PM,DP05_0097PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!Black or African American alone",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0098PE": {
+    "attributes": "DP05_0098PEA,DP05_0098PM,DP05_0098PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!American Indian and Alaska Native alone",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0099PE": {
+    "attributes": "DP05_0099PEA,DP05_0099PM,DP05_0099PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!Asian alone",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0100PE": {
+    "attributes": "DP05_0100PEA,DP05_0100PM,DP05_0100PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!Native Hawaiian and Other Pacific Islander alone",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0102PE": {
+    "attributes": "DP05_0102PEA,DP05_0102PM,DP05_0102PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!HISPANIC OR LATINO AND RACE!!Total population!!Not Hispanic or Latino!!Two or More Races",
+    "limit": 0,
+    "predicateType": "float"
   }
 }

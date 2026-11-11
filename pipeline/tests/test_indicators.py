@@ -12,13 +12,21 @@ EXPECTED_LABEL_FRAGMENTS = {
     "bachelors_or_higher": "Bachelor's degree or higher",
     "uninsured_rate": "Civilian noninstitutionalized population!!No health insurance coverage",
     "broadband_households": "With a broadband Internet subscription",
+    "age_65_plus": "Total population!!65 years and over",
+    "pct_hispanic": "Hispanic or Latino (of any race)",
+    "pct_white": "Not Hispanic or Latino!!White alone",
+    "pct_black": "Not Hispanic or Latino!!Black or African American alone",
+    "pct_aian": "Not Hispanic or Latino!!American Indian and Alaska Native alone",
+    "pct_asian": "Not Hispanic or Latino!!Asian alone",
+    "pct_nhpi": "Not Hispanic or Latino!!Native Hawaiian and Other Pacific Islander alone",
+    "pct_two_or_more": "Not Hispanic or Latino!!Two or More Races",
 }
 
 
 def test_catalog_loads_and_ids_unique() -> None:
     cat = load_catalog()
-    assert len(cat) == 29
-    assert len({i.id for i in cat}) == 29
+    assert len(cat) == 37
+    assert len({i.id for i in cat}) == 37
     assert set(EXPECTED_LABEL_FRAGMENTS) <= {i.id for i in cat}
     assert cat[0].id == "median_household_income"  # default indicator stays first
 
@@ -78,3 +86,9 @@ def test_chr_entries() -> None:
     assert scales["life_expectancy"] == 1.0
     assert scales["low_birth_weight"] == 100.0
     assert scales["dentists"] == 100000.0
+
+
+def test_demographics_are_neutral() -> None:
+    demo = [i for i in load_catalog() if i.category == "Demographics"]
+    assert demo
+    assert all(i.direction == "neutral" for i in demo)
