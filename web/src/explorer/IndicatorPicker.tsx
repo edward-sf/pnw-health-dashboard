@@ -32,9 +32,9 @@ export function IndicatorPicker({ indicators, selectedId, onSelect }: Props) {
         onChange={(e) => setFilter(e.target.value)}
       />
       {shown.length === 0 && <p className="picker-empty">No indicators match</p>}
-      {[...groups].map(([category, items]) => (
-        <section key={category} role="group" aria-labelledby={`${inputId}-${category}`}>
-          <h2 id={`${inputId}-${category}`}>{category}</h2>
+      {[...groups].map(([category, items], n) => (
+        <section key={category} role="group" aria-labelledby={`${inputId}-group-${n}`}>
+          <h2 id={`${inputId}-group-${n}`}>{category}</h2>
           <ul>
             {items.map((ind) => (
               <li key={ind.id}>

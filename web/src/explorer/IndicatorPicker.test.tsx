@@ -24,6 +24,12 @@ test("groups by category in catalog order", () => {
   ]);
 });
 
+test("each group has an accessible name from its category", () => {
+  setup();
+  expect(screen.getByRole("group", { name: "Social & Economic" })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "Demographics" })).toBeInTheDocument();
+});
+
 test("filters case-insensitively by label", async () => {
   setup();
   await userEvent.type(screen.getByLabelText("Filter indicators"), "INCOME");
