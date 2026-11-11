@@ -582,3 +582,12 @@ main {
 .methodology-dl dd {
   margin: 0;
 }
+
+.about {
+  max-width: 60rem;
+  line-height: 1.5;
+}
+
+.about [tabindex="-1"]:focus {
+  outline: 2px solid #2b6cb0;
+}

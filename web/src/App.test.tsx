@@ -57,7 +57,8 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "At a glance" })).toBeInTheDocument();
   });
 
-  it("/about renders the stub", () => {
+  it("/about renders while the data fails to load", () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("offline"))));
     at("/about");
     expect(
       screen.getByRole("heading", { level: 2, name: "About" }),
