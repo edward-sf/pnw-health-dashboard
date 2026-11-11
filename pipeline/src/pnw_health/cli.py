@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -49,6 +50,9 @@ from pnw_health.validate import DataValidationError, validate_display, validate_
 app = typer.Typer(add_completion=False, help=__doc__)
 
 
+MODEL_INPUT_DIGEST = "model.input.sha256"
+
+
 class StageInputError(Exception):
     """A stage's input is missing because an earlier stage has not run."""
 
@@ -93,10 +97,16 @@ def _harmonize(paths: Paths) -> None:
     typer.echo(f"harmonize: {len(result.warnings)} warning(s), see {warnings_path}", err=True)
 
 
+def _digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _model(paths: Paths) -> None:
-    long = pd.read_parquet(_require(paths.interim / "long.parquet", "harmonize"))
-    model = run_model(long, load_catalog())
+    long_path = _require(paths.interim / "long.parquet", "harmonize")
+    model = run_model(pd.read_parquet(long_path), load_catalog())
     model_path = write_model(paths.interim / "model.json", model)
+    # Lets export reject a model trained on other data, including non-PNW counties.
+    (paths.interim / MODEL_INPUT_DIGEST).write_text(_digest(long_path) + "\n")
     dropped = len(model.model_card.excluded_counties)
     typer.echo(f"model: {dropped} dropped county(ies), see {model_path}", err=True)
 
@@ -109,9 +119,14 @@ def _export(paths: Paths) -> None:
     legacy = pnw_only(pd.read_parquet(_require(paths.interim / "legacy.parquet", "harmonize")))
 
     validate_display(values, county_fips, catalog, legacy)
-    model = ModelFile.model_validate_json(
-        _require(paths.interim / "model.json", "model").read_text()
-    )
+    model_path = _require(paths.interim / "model.json", "model")
+    digest = _require(paths.interim / MODEL_INPUT_DIGEST, "model").read_text().strip()
+    if digest != _digest(paths.interim / "long.parquet"):
+        raise StageInputError(
+            f"{model_path} was trained on a different long.parquet; "
+            "run `pnw-health run --stage model` first"
+        )
+    model = ModelFile.model_validate_json(model_path.read_text())
     validate_model(model, values, county_fips, catalog)
 
     manifest = Manifest(

@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import httpx
+import pandas as pd
 import pytest
 from typer.testing import CliRunner, Result
 
@@ -313,4 +314,24 @@ def test_model_validation_failure_writes_nothing(tmp_path: Path, full_zip: Path)
         with pytest.raises(DataValidationError) as err:
             run_pipeline(paths, Stage.export, client=client)
     assert any("do not sum to the prediction" in p for p in err.value.problems)
+    assert not paths.out.exists() or not any(paths.out.iterdir())
+
+
+def test_export_rejects_model_built_from_other_national_data(
+    tmp_path: Path, full_zip: Path
+) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        long_path = paths.interim / "long.parquet"
+        long = pd.read_parquet(long_path)
+        outside_pnw = (long.fips.str[:2] == "06") & (long.indicator_id == "life_expectancy")
+        assert outside_pnw.any()
+        long.loc[outside_pnw, "value"] += 5.0
+        long.to_parquet(long_path)
+        with pytest.raises(StageInputError, match="--stage model"):
+            run_pipeline(paths, Stage.export, client=client)
     assert not paths.out.exists() or not any(paths.out.iterdir())
