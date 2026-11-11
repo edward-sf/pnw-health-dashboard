@@ -30,6 +30,12 @@ test("a bad param is flagged alone, the rest kept", () => {
 test("an unpadded fips is invalid", () => {
   expect(parse("?c=2016")).toMatchObject({ county: null, invalid: ["c"] });
 });
-test("unbuilt mode and view are invalid in M2", () => {
-  expect(parse("?mode=model&view=table").invalid).toEqual(["mode", "view"]);
+test("view=table is valid", () => {
+  expect(parse("?view=table")).toMatchObject({ view: "table", invalid: [] });
+});
+test("view=bogus is invalid and defaults to map", () => {
+  expect(parse("?view=bogus")).toMatchObject({ view: "map", invalid: ["view"] });
+});
+test("unbuilt mode is invalid", () => {
+  expect(parse("?mode=model").invalid).toEqual(["mode"]);
 });
