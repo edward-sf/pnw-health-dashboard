@@ -95,7 +95,7 @@ Defined once as Pydantic models in `contract.py`. JSON Schema generated from tho
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
-| `model.json` | Metrics (national + PNW subset) for ridge, LightGBM, and the behaviors-included comparison model; global feature importance; flag thresholds (`sigma_model`, `z` per tier); and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
+| `model.json` | Metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
@@ -105,13 +105,13 @@ All files are small enough to load up front.
 
 **Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally — and which factors are associated with the gap?
 
-- **Training population:** all US counties with non-null target (~3,100). Explanation and display: the 149 PNW counties.
+- **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
 - **Target:** CHR life expectancy. Target is configurable; v1 ships one target.
 - **Features:** social/economic only, from ACS and CHR — median household income, poverty rate, uninsured rate, educational attainment, unemployment, age structure (% 65+), rurality, severe housing cost burden, broadband access. Final list lives in config.
   - **Excluded:** health behaviors (on the causal path; would restate the outcome) and race/ethnicity shares (proxies for structural factors; SHAP attributions would mislead). Rationale documented on the methodology page.
   - Missing feature values: median imputation fitted within each training fold.
 - **Models:** ridge regression baseline (standardized features) and LightGBM. Both reported.
-- **Behaviors comparison:** a second LightGBM model with PLACES health-behavior measures (smoking, obesity, physical inactivity, binge drinking) added to the features. Only its CV metrics are reported — on the methodology page, as "how much do behaviors add?" — never its SHAP values or predictions.
+- **Behaviors comparison:** a second LightGBM model with PLACES health-behavior measures (smoking, obesity, physical inactivity, binge drinking) added to the features. It and the main model are refit on the same counties (those with every behavior measure) so the difference is like for like. Only its CV metrics are reported — on the methodology page, as "how much do behaviors add?" — never its SHAP values or predictions.
 - **Validation:** 5-fold CV grouped by state. Metrics: RMSE, MAE, R² — national and PNW subset.
 - **Residuals:** `residual = actual − predicted`, from out-of-fold predictions of the main LightGBM model only.
 - **Flags (two tiers):** each county gets its own threshold combining model error and its own measurement uncertainty.
@@ -120,7 +120,7 @@ All files are small enough to load up front.
   - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
   - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign: positive residual = better.
   - `insufficient_data` when the target is null.
-- **Explanations:** SHAP TreeExplainer on the final LightGBM model (trained on all counties); top-5 contributions per PNW county plus global mean |SHAP| importance.
+- **Explanations:** TreeSHAP through LightGBM's built-in `pred_contrib`, from the fold model that produced each county's out-of-fold prediction, so `base_value` plus contributions equals `predicted`; top-5 contributions per PNW county plus global mean |SHAP| importance across all out-of-fold explanations.
 - **Reproducibility:** fixed seeds, pinned dependencies (uv lockfile), auto-generated model card rendered on the methodology page.
 - **Framing:** UI and docs use "factors associated with," never "drivers" or causal language.
 
