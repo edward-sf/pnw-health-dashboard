@@ -32,9 +32,20 @@ export const model: ModelFile = {
       national: { mae: 1.1, n: 3000, r2: 0.8, rmse: 1.5 },
       pnw: { mae: 1.2, n: 139, r2: 0.7, rmse: 1.6 },
     },
-    excluded_states: [],
+    excluded_states: [
+      {
+        state_fips: "21",
+        counties: 120,
+        reason: "PLACES does not report these behavior measures for this state's counties.",
+      },
+    ],
   },
-  global_importance: [{ feature: "bachelors_or_higher", mean_abs_shap: 1.2 }],
+  global_importance: [
+    { feature: "bachelors_or_higher", mean_abs_shap: 1.2 },
+    { feature: "median_household_income", mean_abs_shap: 0.5 },
+    { feature: "unemployment_rate", mean_abs_shap: 0.1 },
+    { feature: "poverty_rate", mean_abs_shap: 0.9 },
+  ],
   thresholds: { sigma_model: 1.2, z_75: 1.15, z_90: 1.64 },
   counties: {
     "53033": {
@@ -88,10 +99,17 @@ export const model: ModelFile = {
     "02063": insufficient,
   },
   model_card: {
-    excluded_counties: [],
-    excluded_feature_groups: [],
+    excluded_counties: [
+      { fips: "09001", reason: "Connecticut reports planning regions, not counties." },
+      { fips: "09003", reason: "Connecticut reports planning regions, not counties." },
+      { fips: "15005", reason: "No features available." },
+    ],
+    excluded_feature_groups: [
+      { category: "Behaviors", reason: "Health behaviors closely restate the outcome." },
+      { category: "Demographics", reason: "Race and ethnicity shares act as proxies." },
+    ],
     features: ["bachelors_or_higher", "poverty_rate", "median_household_income"],
-    lightgbm_params: {},
+    lightgbm_params: { learning_rate: 0.03, deterministic: true },
     lightgbm_version: "4.0.0",
     n_folds: 5,
     seed: 1,

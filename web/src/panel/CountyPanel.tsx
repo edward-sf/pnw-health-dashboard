@@ -82,7 +82,7 @@ export function CountyPanel({
           {entry?.unreliable && (
             <p className="panel-unreliable">
               The data source marks this estimate as unreliable, so read it and its rank with
-              caution. <Link to="/methodology">Methodology</Link>
+              caution. <Link to="/methodology#unreliable">Methodology</Link>
             </p>
           )}
         </>
@@ -91,7 +91,7 @@ export function CountyPanel({
           {legacy
             ? `Reported only for the former Valdez-Cordova Census Area (combined area, CHR ${legacy.year}): ${formatValue(legacy.v, indicator.unit)}`
             : "Suppressed or not available"}{" "}
-          <Link to="/methodology">Methodology</Link>
+          <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
         </p>
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />

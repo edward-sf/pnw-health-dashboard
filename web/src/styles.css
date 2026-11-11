@@ -516,3 +516,69 @@ main {
   font-size: 0.8rem;
   color: #4b5563;
 }
+
+.methodology {
+  max-width: 60rem;
+  line-height: 1.5;
+}
+
+.methodology [tabindex="-1"]:focus {
+  outline: 2px solid #2b6cb0;
+}
+
+.at-a-glance {
+  padding: 4px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.methodology-toc ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.methodology-table-wrap {
+  overflow-x: auto;
+}
+
+.methodology-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.methodology-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 4px;
+}
+
+.methodology-table th,
+.methodology-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+.methodology-table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.methodology-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+}
+
+.methodology-dl div {
+  display: contents;
+}
+
+.methodology-dl dd {
+  margin: 0;
+}
