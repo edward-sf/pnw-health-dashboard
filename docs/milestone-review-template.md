@@ -105,7 +105,7 @@ Deferrals I'm pulling back in:
 
 **M3 Full data + county panel**
 - [ ] Each new source's suppression and missing values show as "not available", not as zero
-- [ ] The legacy Valdez-Cordova message shows where expected
+- [ ] The legacy Valdez-Cordova message shows on Chugach and Copper River for measures CHR 2025 leaves blank and CHR 2023 reports
 - [ ] "Who lives here" is visually and textually separate from any model content
 
 **M4 ML pipeline: checkpoint (closes the `checkpoint` issue)**

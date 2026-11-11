@@ -75,7 +75,7 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 ### Harmonization rules
 - **Geography:** 2020 Census vintage FIPS, zero-padded 5-character strings.
 - **Alaska renames:** Wade Hampton (02270) → Kusilvak (02158) is remapped.
-- **Alaska split:** Valdez-Cordova (02261) → Chugach (02063) + Copper River (02066). Values reported only for 02261 are **not** copied to successors; successors are null (`v: null`) for that indicator/vintage and carry a `legacy` reference instead: `{fips: "02261", name: "Valdez-Cordova Census Area (former)", v, lo, hi}`. The pipeline logs a warning. Legacy rows are excluded from model training and from ranks.
+- **Alaska split:** Valdez-Cordova (02261) → Chugach (02063) + Copper River (02066). Values reported only for 02261 are **not** copied to successors; successors are null (`v: null`) for that indicator/vintage and carry a `legacy` reference instead: `{fips: "02261", name: "Valdez-Cordova Census Area (former)", year, v, lo, hi}`. Current sources no longer report 02261, so its values come from CHR 2023 and carry that vintage in `year`. The pipeline logs a warning. Legacy rows are excluded from model training and from ranks.
 - **Suppressed/missing values** stay null — never imputed for display.
 - **Confidence intervals** are carried through wherever the source provides them.
 
@@ -93,7 +93,7 @@ Defined once as Pydantic models in `contract.py`. JSON Schema generated from tho
 |---|---|
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
-| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` per §3 |
+| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3 |
 | `model.json` | Metrics (national + PNW subset) for ridge, LightGBM, and the behaviors-included comparison model; global feature importance; flag thresholds (`sigma_model`, `z` per tier); and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
@@ -144,7 +144,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
   - Hover tooltip; click selects county.
 - **County panel** (right drawer on desktop, bottom sheet on mobile), in this order:
-  - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area): {v}" with a methodology link.
+  - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
   - Model card: actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart labeled "factors associated with."
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
