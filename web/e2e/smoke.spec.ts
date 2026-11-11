@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
-  await expect(page.locator("path[data-fips]")).toHaveCount(150); // THROWAWAY: prove artifact upload
+  await expect(page.locator("path[data-fips]")).toHaveCount(149);
   await page.getByRole("button", { name: "Poverty rate" }).click();
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await page.locator('path[data-fips="53033"]').click();
