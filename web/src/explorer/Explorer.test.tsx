@@ -52,7 +52,7 @@ test("changing indicator re-renders the panel", async () => {
   expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
   expect(screen.getByText("14.2%")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
-  expect(screen.queryByText(/of \d+ counties/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
   expect(screen.queryByText("14.2%")).not.toBeInTheDocument();
   expect(screen.getByText("5.0%", { selector: ".panel-value" })).toBeInTheDocument();
 });

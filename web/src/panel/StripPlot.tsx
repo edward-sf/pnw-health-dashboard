@@ -48,7 +48,7 @@ export function StripPlot({ county, indicator, entries }: Props) {
       {nullCount > 0 && (
         <p className="strip-plot-missing">{nullCount} counties not shown (no data)</p>
       )}
-      {selected && indicator.direction !== "neutral" && (
+      {selected && (
         <p className="visually-hidden">
           {county.name}: {formatValue(selected.v, unit)}. Higher than {below} of {points.length}{" "}
           counties with data.
