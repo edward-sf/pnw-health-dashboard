@@ -13,11 +13,13 @@ from pnw_health.contract import Manifest, ValuesFile
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.sources.acs import acs_cache_path
+from pnw_health.sources.places import places_cache_path
 from pnw_health.validate import DataValidationError
 from tests.helpers import make_boundary_zip
 
 FIXTURES = Path(__file__).parent / "fixtures"
 ACS_SAMPLE = FIXTURES / "acs_profile_2024_sample.json"
+PLACES_SAMPLE = FIXTURES / "places_2025_sample.json"
 
 
 def sample_pnw_fips() -> list[str]:
@@ -30,6 +32,8 @@ def transport(boundary_zip: Path) -> Callable[[httpx.Request], httpx.Response]:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "api.census.gov":
             return httpx.Response(200, content=ACS_SAMPLE.read_bytes())
+        if request.url.host == "data.cdc.gov":
+            return httpx.Response(200, content=PLACES_SAMPLE.read_bytes())
         if request.url.path.endswith("cb_2024_us_county_5m.zip"):
             return httpx.Response(200, content=boundary_zip.read_bytes())
         return httpx.Response(404)
@@ -57,9 +61,9 @@ def test_full_run_produces_valid_exports(tmp_path: Path, full_zip: Path) -> None
     manifest = Manifest.model_validate_json((paths.out / "manifest.json").read_text())
     values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
     topo = json.loads((paths.out / "counties.topojson").read_text())
-    assert len(manifest.indicators) == 6
-    assert {s.source for s in manifest.sources} == {"acs", "boundaries"}
-    assert len(values.root) == 6
+    assert len(manifest.indicators) == 18
+    assert {s.source for s in manifest.sources} == {"acs", "places", "boundaries"}
+    assert len(values.root) == 18
     assert all(len(entries) == 149 for entries in values.root.values())
     assert len(topo["objects"]["counties"]["geometries"]) == 149
     assert (paths.interim / "warnings.txt").exists()
@@ -124,11 +128,14 @@ def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path
 
 
 def write_acs_cache(paths: Paths, rows_edit: Callable[[list[list[str]]], list[list[str]]]) -> None:
-    """Put the recorded ACS sample in the cache, after editing its data rows."""
+    """Put the recorded ACS sample (edited) and PLACES sample in the cache."""
     header, *rows = json.loads(ACS_SAMPLE.read_text())
     cache = acs_cache_path(paths.raw, load_catalog())
     cache.parent.mkdir(parents=True)
     cache.write_text(json.dumps([header, *rows_edit(rows)]))
+    places_cache = places_cache_path(paths.raw, load_catalog())
+    places_cache.parent.mkdir(parents=True)
+    places_cache.write_bytes(PLACES_SAMPLE.read_bytes())
 
 
 def run_harmonize_cli(root: Path) -> Result:
@@ -179,6 +186,6 @@ def test_harmonize_reports_warning_count(
     write_acs_cache(paths, report_only_valdez_cordova)
     with client_for(failing) as client:
         run_pipeline(paths, Stage.harmonize, client=client)
-    # One legacy-only warning per catalog indicator.
+    # One legacy-only warning per ACS indicator; PLACES has no Valdez-Cordova rows.
     assert "6 warning(s)" in capsys.readouterr().err
     assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 6

@@ -17,15 +17,26 @@ EXPECTED_LABEL_FRAGMENTS = {
 
 def test_catalog_loads_and_ids_unique() -> None:
     cat = load_catalog()
-    assert len(cat) == 6
-    assert {i.id for i in cat} == set(EXPECTED_LABEL_FRAGMENTS)
+    assert len(cat) == 18
+    assert len({i.id for i in cat}) == 18
+    assert set(EXPECTED_LABEL_FRAGMENTS) <= {i.id for i in cat}
+    assert cat[0].id == "median_household_income"  # default indicator stays first
 
 
 def test_catalog_acs_defaults() -> None:
-    for ind in load_catalog():
-        assert ind.source == "acs"
+    for ind in (i for i in load_catalog() if i.source == "acs"):
         assert ind.year == 2024
         assert ind.ci_level == 0.9
+
+
+def test_places_defaults() -> None:
+    places = [i for i in load_catalog() if i.source == "places"]
+    assert len(places) == 12
+    for ind in places:
+        assert ind.unit == "percent"
+        assert ind.moe_field is None
+        assert ind.ci_level == 0.95
+        assert "age-adjusted" in ind.description.lower()
 
 
 def test_duplicate_ids_rejected(tmp_path: Path) -> None:
@@ -49,7 +60,7 @@ def test_duplicate_ids_rejected(tmp_path: Path) -> None:
 
 
 def test_acs_fields_exist_and_labels_match(acs_variables: dict[str, Any]) -> None:
-    for ind in load_catalog():
+    for ind in (i for i in load_catalog() if i.source == "acs"):
         var = acs_variables[ind.source_field]
         assert EXPECTED_LABEL_FRAGMENTS[ind.id] in var["label"], ind.id
         assert var["label"].startswith("Percent!!" if ind.unit == "percent" else "Estimate!!")
