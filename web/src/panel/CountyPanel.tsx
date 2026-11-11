@@ -36,8 +36,12 @@ export function CountyPanel({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const bodyId = useId();
   const isPhone = useMediaQuery(PHONE_QUERY);
-  // The county the sheet was expanded for, so selecting another county drops back to peek.
+  // The county the sheet was expanded for. It is cleared once another county is selected or the
+  // viewport goes wide, so the sheet always opens in peek and never comes back expanded.
   const [expandedFips, setExpandedFips] = useState<string | null>(null);
+  if (expandedFips !== null && (expandedFips !== county.fips || !isPhone)) {
+    setExpandedFips(null);
+  }
   const expanded = isPhone && expandedFips === county.fips;
 
   useEffect(() => {

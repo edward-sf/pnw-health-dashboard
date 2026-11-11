@@ -225,6 +225,27 @@ describe("phone sheet", () => {
     expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
   });
 
+  test("returning to a county after another opens it in peek", async () => {
+    mockMatchMedia(true);
+    const { rerender } = render(panel("53033"));
+    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
+    rerender(panel("02016"));
+    rerender(panel("53033"));
+    expect(screen.getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("going wide and back to a phone reopens the sheet in peek", async () => {
+    const mm = mockMatchMedia(true);
+    render(panel("53033"));
+    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
+    act(() => mm.set(false));
+    act(() => mm.set(true));
+    expect(aside()).toHaveClass("county-panel--sheet");
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+  });
+
   test("crossing to a wide viewport drops the sheet and keeps the county", () => {
     const mm = mockMatchMedia(true);
     render(panel("53033"));

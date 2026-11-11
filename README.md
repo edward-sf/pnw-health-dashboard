@@ -77,7 +77,7 @@ cd web && npm run lint && npm run typecheck
 cd web && npm run build && npm run test:e2e   # Playwright
 ```
 
-To refresh the README screenshot after a data or UI change, run `cd web && npm run build && npm run screenshot`.
+To refresh the README screenshot after a data or UI change, run `cd web && npm run screenshot`. It builds the site first.
 
 ## Development
 
