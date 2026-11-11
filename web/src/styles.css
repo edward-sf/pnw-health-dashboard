@@ -88,6 +88,13 @@ main {
   gap: 8px;
 }
 
+@media (min-width: 721px) {
+  .picker {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+  }
+}
+
 .picker input {
   padding: 6px 8px;
   font: inherit;

@@ -40,3 +40,9 @@ test("clicking a county sets c and marks it selected", async () => {
   expect(router.state.location.search).toBe("?c=53033");
   expect(screen.getByLabelText("King, WA")).toHaveAttribute("aria-current", "true");
 });
+
+test("indicator title survives filtering", async () => {
+  setup("/?i=poverty_rate");
+  await userEvent.type(screen.getByLabelText("Filter indicators"), "zzz");
+  expect(screen.getByRole("heading", { name: "Poverty rate" })).toBeInTheDocument();
+});

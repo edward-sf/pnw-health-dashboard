@@ -361,3 +361,99 @@
   category: Social & Economic
   direction: neutral
   description: Percent of the population living in a rural area.
+
+- id: age_65_plus
+  label: Age 65 and older
+  unit: percent
+  source: acs
+  source_field: DP05_0024PE
+  moe_field: DP05_0024PM
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: neutral
+  description: Percent of the total population that is age 65 or older.
+
+- id: pct_hispanic
+  label: Hispanic or Latino (any race)
+  unit: percent
+  source: acs
+  source_field: DP05_0090PE
+  moe_field: DP05_0090PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is Hispanic or Latino, of any race.
+
+- id: pct_white
+  label: White, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0096PE
+  moe_field: DP05_0096PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports White alone.
+
+- id: pct_black
+  label: Black, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0097PE
+  moe_field: DP05_0097PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports Black or African American alone.
+
+- id: pct_aian
+  label: American Indian and Alaska Native, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0098PE
+  moe_field: DP05_0098PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports American Indian and Alaska Native alone.
+
+- id: pct_asian
+  label: Asian, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0099PE
+  moe_field: DP05_0099PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports Asian alone.
+
+- id: pct_nhpi
+  label: Native Hawaiian and Pacific Islander, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0100PE
+  moe_field: DP05_0100PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports Native Hawaiian and Other Pacific Islander alone.
+
+- id: pct_two_or_more
+  label: Two or more races, not Hispanic
+  unit: percent
+  source: acs
+  source_field: DP05_0102PE
+  moe_field: DP05_0102PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is not Hispanic or Latino and reports two or more races.
