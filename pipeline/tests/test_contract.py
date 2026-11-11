@@ -11,7 +11,11 @@ REPO_SCHEMA = Path(__file__).resolve().parents[2] / "schema"
 
 def test_write_schemas_files(tmp_path: Path) -> None:
     paths = write_schemas(tmp_path)
-    assert sorted(p.name for p in paths) == ["manifest.schema.json", "values.schema.json"]
+    assert sorted(p.name for p in paths) == [
+        "manifest.schema.json",
+        "model.schema.json",
+        "values.schema.json",
+    ]
 
 
 def test_committed_schema_matches_models(tmp_path: Path) -> None:

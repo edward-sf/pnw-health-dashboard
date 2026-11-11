@@ -9,8 +9,11 @@ from typing import Any
 
 import pandas as pd
 
-from pnw_health.contract import Legacy, Manifest, ValueEntry, ValuesFile
+from pnw_health.contract import Legacy, Manifest, ModelFile, ValueEntry, ValuesFile
 from pnw_health.indicators import Indicator
+from pnw_health.model.config import TOP_N
+
+MODEL_DECIMALS = 4
 
 
 def _num(x: object) -> float | None:
@@ -72,12 +75,45 @@ def _write_json(path: Path, data: Any) -> Path:
     return path
 
 
+def _rounded(data: Any) -> Any:
+    if isinstance(data, float):
+        return round(data, MODEL_DECIMALS)
+    if isinstance(data, dict):
+        return {key: _rounded(value) for key, value in data.items()}
+    if isinstance(data, list):
+        return [_rounded(value) for value in data]
+    return data
+
+
+def finalize_model(model: ModelFile) -> ModelFile:
+    """Keep each county's top factors, ranked at full precision, then round every float."""
+    counties = {
+        fips: county.model_copy(
+            update={
+                "shap": sorted(county.shap, key=lambda e: (-abs(e.contribution), e.feature))[:TOP_N]
+            }
+        )
+        for fips, county in model.counties.items()
+    }
+    trimmed = model.model_copy(update={"counties": counties})
+    return ModelFile.model_validate(_rounded(trimmed.model_dump()))
+
+
+def write_model(path: Path, model: ModelFile) -> Path:
+    return _write_json(path, model.model_dump(mode="json"))
+
+
 def write_exports(
-    out_dir: Path, manifest: Manifest, values: ValuesFile, topology: dict[str, Any]
+    out_dir: Path,
+    manifest: Manifest,
+    values: ValuesFile,
+    topology: dict[str, Any],
+    model: ModelFile,
 ) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     return [
         _write_json(out_dir / "manifest.json", manifest.model_dump(mode="json")),
         _write_json(out_dir / "values.json", values.model_dump(mode="json")),
         _write_json(out_dir / "counties.topojson", topology),
+        write_model(out_dir / "model.json", model),
     ]

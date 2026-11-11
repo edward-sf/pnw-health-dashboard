@@ -1,4 +1,4 @@
-"""`pnw-health run`: fetch -> harmonize -> export, each stage resumable from disk."""
+"""`pnw-health run`: fetch -> harmonize -> model -> export, each stage resumable from disk."""
 
 from __future__ import annotations
 
@@ -21,11 +21,12 @@ from pnw_health.config import (
     Paths,
     census_api_key,
 )
-from pnw_health.contract import Manifest, SourceVintage
-from pnw_health.export import build_values_file, write_exports
+from pnw_health.contract import Manifest, ModelFile, SourceVintage
+from pnw_health.export import build_values_file, finalize_model, write_exports, write_model
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.harmonize import harmonize, pnw_only
 from pnw_health.indicators import load_catalog
+from pnw_health.model.run import run_model
 from pnw_health.ranks import add_ranks
 from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs, profile_url
 from pnw_health.sources.chr import (
@@ -43,7 +44,7 @@ from pnw_health.sources.geo import (
     to_topojson,
 )
 from pnw_health.sources.places import fetch_places, parse_places, places_cache_path, places_url
-from pnw_health.validate import DataValidationError, validate_display
+from pnw_health.validate import DataValidationError, validate_display, validate_model
 
 app = typer.Typer(add_completion=False, help=__doc__)
 
@@ -61,6 +62,7 @@ def _require(path: Path, stage: str) -> Path:
 class Stage(StrEnum):
     fetch = "fetch"
     harmonize = "harmonize"
+    model = "model"
     export = "export"
     all = "all"
 
@@ -91,6 +93,14 @@ def _harmonize(paths: Paths) -> None:
     typer.echo(f"harmonize: {len(result.warnings)} warning(s), see {warnings_path}", err=True)
 
 
+def _model(paths: Paths) -> None:
+    long = pd.read_parquet(_require(paths.interim / "long.parquet", "harmonize"))
+    model = run_model(long, load_catalog())
+    model_path = write_model(paths.interim / "model.json", model)
+    dropped = len(model.model_card.excluded_counties)
+    typer.echo(f"model: {dropped} dropped county(ies), see {model_path}", err=True)
+
+
 def _export(paths: Paths) -> None:
     catalog = load_catalog()
     counties = load_pnw_counties(_require(boundaries_cache_path(paths.raw), "fetch"))
@@ -99,6 +109,10 @@ def _export(paths: Paths) -> None:
     legacy = pnw_only(pd.read_parquet(_require(paths.interim / "legacy.parquet", "harmonize")))
 
     validate_display(values, county_fips, catalog, legacy)
+    model = ModelFile.model_validate_json(
+        _require(paths.interim / "model.json", "model").read_text()
+    )
+    validate_model(model, values, county_fips, catalog)
 
     manifest = Manifest(
         schema_version=SCHEMA_VERSION,
@@ -114,7 +128,8 @@ def _export(paths: Paths) -> None:
     )
     values_file = build_values_file(add_ranks(values, catalog), legacy, county_fips, catalog)
     topology = to_topojson(counties)
-    write_exports(paths.out, manifest, values_file, topology)  # only after validation passed
+    # Only after validation passed, and rounded only now: validation needs full precision.
+    write_exports(paths.out, manifest, values_file, topology, finalize_model(model))
 
 
 def run_pipeline(
@@ -127,14 +142,16 @@ def run_pipeline(
 ) -> None:
     """Run one stage, or all of them in order.
 
-    Only ``fetch`` uses the network; ``harmonize`` and ``export`` read what earlier stages
-    wrote and raise StageInputError if it is missing. Also raises FetchError and
+    Only ``fetch`` uses the network; the later stages read what earlier stages wrote and
+    raise StageInputError if it is missing. Also raises FetchError and
     DataValidationError.
     """
     if stage in (Stage.fetch, Stage.all):
         _fetch(paths, client, api_key, refresh)
     if stage in (Stage.harmonize, Stage.all):
         _harmonize(paths)
+    if stage in (Stage.model, Stage.all):
+        _model(paths)
     if stage in (Stage.export, Stage.all):
         _export(paths)
 

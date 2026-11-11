@@ -7,9 +7,12 @@ from collections import Counter
 import pandas as pd
 
 from pnw_health.config import EXPECTED_COUNTY_COUNTS, state_abbr
+from pnw_health.contract import CountyModel, ModelFile
 from pnw_health.indicators import Indicator
+from pnw_health.model.config import ALLOWED_CATEGORIES, TARGET
 
 NON_NEGATIVE_UNITS = frozenset({"dollars", "count", "rate_per_100k"})
+ADDITIVITY_TOLERANCE = 1e-6
 
 
 class DataValidationError(Exception):
@@ -72,6 +75,55 @@ def validate_display(
         if legacy is not None:
             old = legacy[(legacy.indicator_id == ind.id) & legacy.value.notna()]
             problems += _range_problems(f"{ind.id} legacy", old, ind)
+
+    if problems:
+        raise DataValidationError(problems)
+
+
+def _adds_up(county: CountyModel) -> bool:
+    if county.base_value is None or county.predicted is None:
+        return False
+    total = county.base_value + sum(entry.contribution for entry in county.shap)
+    return abs(total - county.predicted) <= ADDITIVITY_TOLERANCE
+
+
+def validate_model(
+    model: ModelFile,
+    values: pd.DataFrame,
+    county_fips: set[str],
+    catalog: list[Indicator],
+) -> None:
+    """Check a full-precision model against PNW display data; collect every problem, then raise."""
+    problems: list[str] = []
+
+    missing = sorted(county_fips - set(model.counties))
+    if missing:
+        problems.append(f"model is missing counties: {', '.join(missing)}")
+
+    targets = values[(values.indicator_id == TARGET) & values.value.notna()]
+    has_target = set(targets.fips)
+    insufficient = {f for f, c in model.counties.items() if c.flag == "insufficient_data"}
+    unflagged = sorted(insufficient & has_target)
+    if unflagged:
+        problems.append(
+            f"model flags counties insufficient_data despite a target: {', '.join(unflagged)}"
+        )
+    overflagged = sorted(set(model.counties) - insufficient - has_target)
+    if overflagged:
+        problems.append(
+            f"model is not insufficient_data for counties with no target: {', '.join(overflagged)}"
+        )
+
+    broken = sorted(
+        f for f, c in model.counties.items() if f not in insufficient and not _adds_up(c)
+    )
+    if broken:
+        problems.append(f"model contributions do not sum to the prediction: {', '.join(broken)}")
+
+    categories = {ind.id: ind.category for ind in catalog}
+    excluded = [f for f in model.model_card.features if categories.get(f) not in ALLOWED_CATEGORIES]
+    if excluded:
+        problems.append(f"model uses features outside allowed categories: {', '.join(excluded)}")
 
     if problems:
         raise DataValidationError(problems)
