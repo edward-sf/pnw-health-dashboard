@@ -56,6 +56,12 @@ def validate_display(values: pd.DataFrame, county_fips: set[str], catalog: list[
                 problems.append(
                     f"{ind.id}: {len(bad)} value(s) outside [0, 100] (e.g. {_example(bad)})"
                 )
+        elif ind.unit == "years":
+            bad = present[(present.value < 0) | (present.value > 120)]
+            if not bad.empty:
+                problems.append(
+                    f"{ind.id}: {len(bad)} value(s) outside [0, 120] (e.g. {_example(bad)})"
+                )
         elif ind.unit in NON_NEGATIVE_UNITS:
             bad = present[present.value < 0]
             if not bad.empty:

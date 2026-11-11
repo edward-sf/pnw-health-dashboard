@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 
 Unit = Literal["percent", "dollars", "years", "rate_per_100k", "count"]
 Category = Literal["Outcomes", "Behaviors", "Access", "Social & Economic", "Demographics"]
@@ -28,6 +29,7 @@ class Indicator(BaseModel):
     moe_field: str | None
     ci_level: float | None
     year: int
+    source_scale: SkipJsonSchema[float] = Field(default=1.0, exclude=True)
     category: Category
     direction: Direction
     description: str

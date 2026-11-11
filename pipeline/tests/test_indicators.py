@@ -17,8 +17,8 @@ EXPECTED_LABEL_FRAGMENTS = {
 
 def test_catalog_loads_and_ids_unique() -> None:
     cat = load_catalog()
-    assert len(cat) == 18
-    assert len({i.id for i in cat}) == 18
+    assert len(cat) == 29
+    assert len({i.id for i in cat}) == 29
     assert set(EXPECTED_LABEL_FRAGMENTS) <= {i.id for i in cat}
     assert cat[0].id == "median_household_income"  # default indicator stays first
 
@@ -65,3 +65,16 @@ def test_acs_fields_exist_and_labels_match(acs_variables: dict[str, Any]) -> Non
         assert EXPECTED_LABEL_FRAGMENTS[ind.id] in var["label"], ind.id
         assert var["label"].startswith("Percent!!" if ind.unit == "percent" else "Estimate!!")
         assert ind.moe_field in var["attributes"].split(","), ind.id
+
+
+def test_chr_entries() -> None:
+    chr_ = [i for i in load_catalog() if i.source == "chr"]
+    assert len(chr_) == 11
+    for ind in chr_:
+        assert ind.year == 2025
+        assert ind.moe_field is None
+        assert ind.source_field.endswith("_rawvalue")
+    scales = {i.id: i.source_scale for i in chr_}
+    assert scales["life_expectancy"] == 1.0
+    assert scales["low_birth_weight"] == 100.0
+    assert scales["dentists"] == 100000.0

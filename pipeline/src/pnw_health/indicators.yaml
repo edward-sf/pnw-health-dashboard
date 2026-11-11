@@ -221,3 +221,143 @@
   category: Access
   direction: higher_is_better
   description: Age-adjusted percent of adults with a dental visit in the past year.
+
+
+- id: life_expectancy
+  label: Life expectancy
+  unit: years
+  source: chr
+  source_field: v147_rawvalue
+  moe_field: null
+  ci_level: 0.95
+  year: 2025
+  category: Outcomes
+  direction: higher_is_better
+  description: Average number of years a person can expect to live.
+
+- id: premature_death
+  label: Premature death (years lost)
+  unit: rate_per_100k
+  source: chr
+  source_field: v001_rawvalue
+  moe_field: null
+  ci_level: 0.95
+  year: 2025
+  category: Outcomes
+  direction: higher_is_worse
+  description: Years of potential life lost before age 75 per 100,000 population (age-adjusted).
+
+- id: low_birth_weight
+  label: Low birth weight
+  unit: percent
+  source: chr
+  source_field: v037_rawvalue
+  moe_field: null
+  ci_level: 0.95
+  year: 2025
+  source_scale: 100
+  category: Outcomes
+  direction: higher_is_worse
+  description: Percent of live births with low birth weight (under 2,500 grams).
+
+- id: injury_deaths
+  label: Injury deaths
+  unit: rate_per_100k
+  source: chr
+  source_field: v135_rawvalue
+  moe_field: null
+  ci_level: 0.95
+  year: 2025
+  category: Outcomes
+  direction: higher_is_worse
+  description: Number of deaths due to injury per 100,000 population.
+
+- id: primary_care_physicians
+  label: Primary care physicians
+  unit: rate_per_100k
+  source: chr
+  source_field: v004_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  source_scale: 100000
+  category: Access
+  direction: higher_is_better
+  description: Primary care physicians per 100,000 population.
+
+- id: mental_health_providers
+  label: Mental health providers
+  unit: rate_per_100k
+  source: chr
+  source_field: v062_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  source_scale: 100000
+  category: Access
+  direction: higher_is_better
+  description: Mental health providers per 100,000 population.
+
+- id: dentists
+  label: Dentists
+  unit: rate_per_100k
+  source: chr
+  source_field: v088_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  source_scale: 100000
+  category: Access
+  direction: higher_is_better
+  description: Dentists per 100,000 population.
+
+- id: preventable_hospital_stays
+  label: Preventable hospital stays
+  unit: rate_per_100k
+  source: chr
+  source_field: v005_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  category: Access
+  direction: higher_is_worse
+  description: Hospital stays for ambulatory-care sensitive conditions per 100,000 Medicare enrollees.
+
+- id: food_insecurity
+  label: Food insecurity
+  unit: percent
+  source: chr
+  source_field: v139_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  source_scale: 100
+  category: Social & Economic
+  direction: higher_is_worse
+  description: Percent of the population who lack adequate access to food.
+
+- id: severe_housing_cost_burden
+  label: Severe housing cost burden
+  unit: percent
+  source: chr
+  source_field: v154_rawvalue
+  moe_field: null
+  ci_level: 0.95
+  year: 2025
+  source_scale: 100
+  category: Social & Economic
+  direction: higher_is_worse
+  description: Percent of households spending more than 50% of income on housing.
+
+- id: percent_rural
+  label: Percent rural
+  unit: percent
+  source: chr
+  source_field: v058_rawvalue
+  moe_field: null
+  ci_level: null
+  year: 2025
+  source_scale: 100
+  category: Social & Economic
+  direction: neutral
+  description: Percent of the population living in a rural area.
