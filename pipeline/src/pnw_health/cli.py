@@ -11,7 +11,14 @@ import httpx
 import pandas as pd
 import typer
 
-from pnw_health.config import ACS_YEAR, GEO_YEAR, SCHEMA_VERSION, Paths, census_api_key
+from pnw_health.config import (
+    ACS_YEAR,
+    GEO_YEAR,
+    PLACES_RELEASE,
+    SCHEMA_VERSION,
+    Paths,
+    census_api_key,
+)
 from pnw_health.contract import Manifest, SourceVintage
 from pnw_health.export import build_values_file, write_exports
 from pnw_health.fetch import FetchError, make_client
@@ -26,6 +33,7 @@ from pnw_health.sources.geo import (
     load_pnw_counties,
     to_topojson,
 )
+from pnw_health.sources.places import fetch_places, parse_places, places_cache_path, places_url
 from pnw_health.validate import DataValidationError, validate_display
 
 app = typer.Typer(add_completion=False, help=__doc__)
@@ -49,14 +57,17 @@ class Stage(StrEnum):
 
 
 def _fetch(paths: Paths, client: httpx.Client, api_key: str | None, refresh: bool) -> None:
-    fetch_acs(client, paths.raw, load_catalog(), api_key=api_key, refresh=refresh)
+    catalog = load_catalog()
+    fetch_acs(client, paths.raw, catalog, api_key=api_key, refresh=refresh)
+    fetch_places(client, paths.raw, catalog, refresh=refresh)
     fetch_boundaries(client, paths.raw, refresh=refresh)
 
 
 def _harmonize(paths: Paths) -> None:
     catalog = load_catalog()
     acs = parse_acs(_require(acs_cache_path(paths.raw, catalog), "fetch"), catalog)
-    result = harmonize([acs])
+    places = parse_places(_require(places_cache_path(paths.raw, catalog), "fetch"), catalog)
+    result = harmonize([acs, places])
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
     result.legacy.to_parquet(paths.interim / "legacy.parquet", index=False)
@@ -79,6 +90,7 @@ def _export(paths: Paths) -> None:
         built_at=datetime.now(UTC),
         sources=[
             SourceVintage(source="acs", year=ACS_YEAR, url=profile_url(ACS_YEAR)),
+            SourceVintage(source="places", year=PLACES_RELEASE, url=places_url()),
             SourceVintage(source="boundaries", year=GEO_YEAR, url=boundary_url(GEO_YEAR)),
         ],
         indicators=catalog,

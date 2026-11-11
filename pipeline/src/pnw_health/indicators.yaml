@@ -74,3 +74,150 @@
   category: Access
   direction: higher_is_better
   description: Percent of households with a broadband Internet subscription.
+
+# CDC PLACES county estimates: age-adjusted prevalence, 95% confidence intervals.
+# PLACES 2025 release; the measure years (BRFSS 2023, or 2022 for dental) are pinned per entry.
+
+- id: diabetes
+  label: Diabetes
+  unit: percent
+  source: places
+  source_field: DIABETES
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults diagnosed with diabetes.
+
+- id: coronary_heart_disease
+  label: Coronary heart disease
+  unit: percent
+  source: places
+  source_field: CHD
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults with coronary heart disease.
+
+- id: copd
+  label: COPD
+  unit: percent
+  source: places
+  source_field: COPD
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults with chronic obstructive pulmonary disease.
+
+- id: depression
+  label: Depression
+  unit: percent
+  source: places
+  source_field: DEPRESSION
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults ever told they have a depressive disorder.
+
+- id: high_blood_pressure
+  label: High blood pressure
+  unit: percent
+  source: places
+  source_field: BPHIGH
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults with high blood pressure.
+
+- id: frequent_mental_distress
+  label: Frequent mental distress
+  unit: percent
+  source: places
+  source_field: MHLTH
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Outcomes
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults reporting 14 or more days of poor mental health in the past 30 days.
+
+- id: current_smoking
+  label: Current smoking
+  unit: percent
+  source: places
+  source_field: CSMOKING
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Behaviors
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults who currently smoke cigarettes.
+
+- id: obesity
+  label: Obesity
+  unit: percent
+  source: places
+  source_field: OBESITY
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Behaviors
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults with obesity.
+
+- id: physical_inactivity
+  label: Physical inactivity
+  unit: percent
+  source: places
+  source_field: LPA
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Behaviors
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults with no leisure-time physical activity.
+
+- id: binge_drinking
+  label: Binge drinking
+  unit: percent
+  source: places
+  source_field: BINGE
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Behaviors
+  direction: higher_is_worse
+  description: Age-adjusted percent of adults who report binge drinking.
+
+- id: routine_checkup
+  label: Routine checkup
+  unit: percent
+  source: places
+  source_field: CHECKUP
+  moe_field: null
+  ci_level: 0.95
+  year: 2023
+  category: Access
+  direction: higher_is_better
+  description: Age-adjusted percent of adults with a routine checkup in the past year.
+
+- id: dental_visit
+  label: Dental visit
+  unit: percent
+  source: places
+  source_field: DENTAL
+  moe_field: null
+  ci_level: 0.95
+  year: 2022
+  category: Access
+  direction: higher_is_better
+  description: Age-adjusted percent of adults with a dental visit in the past year.

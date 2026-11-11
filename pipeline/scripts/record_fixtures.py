@@ -5,19 +5,22 @@ indicator catalog changes:
 
     uv run python scripts/record_fixtures.py variables
     uv run python scripts/record_fixtures.py acs   # needs CENSUS_API_KEY (env or repo .env)
+    uv run python scripts/record_fixtures.py places   # public API, no key
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import tempfile
 from pathlib import Path
 
 import httpx
 
-from pnw_health.config import ACS_YEAR, census_api_key
+from pnw_health.config import ACS_YEAR, PLACES_RELEASE, census_api_key
 from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
+from pnw_health.sources.places import fetch_places
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = REPO_ROOT / "pipeline" / "tests" / "fixtures"
@@ -69,11 +72,33 @@ def record_acs_sample(client: httpx.Client | None = None) -> Path:
     return out
 
 
+def record_places_sample(client: httpx.Client | None = None) -> Path:
+    """Save catalog PLACES rows for all PNW counties plus two non-PNW counties."""
+    catalog = load_catalog()
+    c = client or make_client()
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = json.loads(fetch_places(c, Path(tmp), catalog).read_text())
+    finally:
+        if client is None:
+            c.close()
+    keep = {"53", "41", "16", "02"}
+    rows = [r for r in raw if r["locationid"][:2] in keep or r["locationid"] in {"06037", "36061"}]
+    out = FIXTURES / f"places_{PLACES_RELEASE}_sample.json"
+    out.write_text(json.dumps(rows, indent=0) + "\n")
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("what", choices=["variables", "acs"])
+    parser.add_argument("what", choices=["variables", "acs", "places"])
     args = parser.parse_args()
-    print(record_variables() if args.what == "variables" else record_acs_sample())
+    recorders = {
+        "variables": record_variables,
+        "acs": record_acs_sample,
+        "places": record_places_sample,
+    }
+    print(recorders[args.what]())
 
 
 if __name__ == "__main__":

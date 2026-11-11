@@ -10,6 +10,8 @@ STATES: dict[str, str] = {"53": "WA", "41": "OR", "16": "ID", "02": "AK"}
 EXPECTED_COUNTY_COUNTS: dict[str, int] = {"WA": 39, "OR": 36, "ID": 44, "AK": 30}
 
 ACS_YEAR = 2024
+PLACES_RELEASE = 2025
+PLACES_DATASET = "swc5-untb"
 GEO_YEAR = 2024
 SCHEMA_VERSION = "1.0.0"
 
