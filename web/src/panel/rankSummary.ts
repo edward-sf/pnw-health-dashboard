@@ -1,7 +1,7 @@
 import type { ValueEntry } from "../types";
 import type { County } from "./CountyPanel";
 
-const STATE_NAMES: Record<string, string> = {
+export const STATE_NAMES: Record<string, string> = {
   WA: "Washington",
   OR: "Oregon",
   ID: "Idaho",

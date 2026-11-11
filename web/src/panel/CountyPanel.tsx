@@ -15,16 +15,29 @@ type Props = {
   counties: County[];
   manifest: Manifest;
   values: ValuesFile;
-  focusToken: number;
+  focusRequested: boolean;
+  onFocusHandled: () => void;
   onClose: () => void;
 };
 
-export function CountyPanel({ county, indicator, entries, counties, manifest, values, focusToken, onClose }: Props) {
+export function CountyPanel({
+  county,
+  indicator,
+  entries,
+  counties,
+  manifest,
+  values,
+  focusRequested,
+  onFocusHandled,
+  onClose,
+}: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (focusToken > 0) headingRef.current?.focus();
-  }, [focusToken]);
+    if (!focusRequested) return;
+    headingRef.current?.focus();
+    onFocusHandled();
+  }, [focusRequested, onFocusHandled]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,6 +72,7 @@ export function CountyPanel({ county, indicator, entries, counties, manifest, va
           Close
         </button>
       </div>
+      <p className="panel-measure">{indicator.label}</p>
       {v !== null ? (
         <>
           <p className="panel-value">{formatValue(v, indicator.unit)}</p>

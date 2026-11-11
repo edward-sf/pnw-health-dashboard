@@ -45,7 +45,9 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
             {header("name", "County")}
             {header("state", "State")}
             {header("value", "Value")}
-            <th scope="col">CI</th>
+            <th scope="col">
+              {indicator.ci_level !== null ? `${Math.round(indicator.ci_level * 100)}% CI` : "CI"}
+            </th>
             {!neutral && header("rank", "Rank")}
             {!neutral && header("state_rank", "State rank")}
           </tr>
@@ -64,6 +66,7 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
                   <button
                     type="button"
                     className="table-county"
+                    aria-label={`${r.name}, ${r.state}`}
                     aria-current={r.fips === selected ? "true" : undefined}
                     onClick={(ev) => onSelect(r.fips, ev.currentTarget)}
                   >

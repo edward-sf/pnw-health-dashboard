@@ -89,10 +89,10 @@ test("close returns focus to opener", async () => {
 
 test("close returns focus to the table row button", async () => {
   setup("/?view=table");
-  await userEvent.click(screen.getByRole("button", { name: "Ada" }));
+  await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
   expect(screen.getByRole("heading", { name: "Ada" })).toHaveFocus();
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
-  expect(screen.getByRole("button", { name: "Ada" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Ada, ID" })).toHaveFocus();
 });
 
 test("map clicks do not move focus", async () => {
@@ -140,4 +140,65 @@ test("back restores view and county", async () => {
   expect(router.state.location.search).toBe("?c=53033");
   expect(document.querySelector(".county-map")).not.toBeNull();
   expect(screen.getByRole("heading", { name: "King" })).toBeInTheDocument();
+});
+
+const title = () => screen.getByRole("heading", { level: 2, name: "Poverty rate" });
+
+test("shows the indicator description and source under the title", () => {
+  setup("/?i=poverty_rate");
+  expect(screen.getByText("Share of residents living below the poverty line.")).toBeInTheDocument();
+  expect(screen.getByText("Source: Census ACS 5-year, 2023.")).toBeInTheDocument();
+});
+
+test("search, close, then a map click leaves the heading unfocused", async () => {
+  setup();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  expect(screen.getByRole("heading", { name: "King" })).not.toHaveFocus();
+});
+
+test("a remount from history does not focus the heading", async () => {
+  const router = setup();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  await act(async () => {
+    await router.navigate(-1);
+  });
+  expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
+});
+
+test("searching for the open county focuses the heading again", async () => {
+  setup("/?c=41051");
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
+  await userEvent.keyboard("{Enter}");
+  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
+  await userEvent.keyboard("{Enter}");
+  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+});
+
+test("table select, switch to map, close focuses the title", async () => {
+  setup("/?view=table");
+  await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
+  await userEvent.click(screen.getByRole("button", { name: "Map" }));
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(title()).toHaveFocus();
+});
+
+test("indicator change remounts the table, close focuses the new title", async () => {
+  setup("/?view=table");
+  await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
+  await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.getByRole("heading", { level: 2, name: "Asian population" })).toHaveFocus();
+});
+
+test("close of a map-opened panel focuses the title", async () => {
+  setup();
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(title()).toHaveFocus();
 });
