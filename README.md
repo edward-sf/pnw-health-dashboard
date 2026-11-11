@@ -9,4 +9,4 @@ Requires [uv](https://docs.astral.sh/uv/) and a free [Census API key](https://ap
 cd pipeline && uv run pnw-health run --root ..
 ```
 
-Stages can run separately (`--stage fetch|harmonize|export`). Raw downloads are cached in `data/raw/` (use `--refresh` to re-download), and the web artifacts are written to `web/public/data/`. Run the tests with `cd pipeline && uv run pytest`.
+Stages can run separately (`--stage fetch|harmonize|model|export`). Raw downloads are cached in `data/raw/` (use `--refresh` to re-download), and the web artifacts are written to `web/public/data/`. Run the tests with `cd pipeline && uv run pytest`.

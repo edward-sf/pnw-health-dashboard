@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pnw_health.contract import ModelFile
+from pnw_health.contract import ModelFile, ShapEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
@@ -183,25 +183,30 @@ NO_TARGET = "02063"
 MODEL_COUNTIES = {WITH_TARGET, NO_TARGET}
 
 
-def target_rows() -> pd.DataFrame:
-    rows = [
-        {
+def target_rows(feature_value: float | None = 10.0) -> pd.DataFrame:
+    def row(fips: str, indicator_id: str, value: float | None) -> dict[str, object]:
+        return {
             "fips": fips,
-            "indicator_id": "life_expectancy",
+            "indicator_id": indicator_id,
             "year": 2025,
             "value": value,
             "ci_low": None,
             "ci_high": None,
             "source": "chr",
         }
-        for fips, value in ((WITH_TARGET, 78.0), (NO_TARGET, float("nan")))
+
+    rows = [
+        row(WITH_TARGET, "life_expectancy", 78.0),
+        row(NO_TARGET, "life_expectancy", float("nan")),
+        row(WITH_TARGET, "poverty_rate", feature_value),
     ]
     return pd.DataFrame(rows, columns=LONG_COLUMNS)
 
 
-def model_problems(model: ModelFile) -> list[str]:
+def model_problems(model: ModelFile, values: pd.DataFrame | None = None) -> list[str]:
+    values = target_rows() if values is None else values
     with pytest.raises(DataValidationError) as err:
-        validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
+        validate_model(model, values, MODEL_COUNTIES, MODEL_CATALOG)
     return err.value.problems
 
 
@@ -259,3 +264,65 @@ def test_model_excluded_feature_present(feature: str) -> None:
         features=["poverty_rate", feature],
     )
     assert model_problems(model) == [f"model uses features outside allowed categories: {feature}"]
+
+
+RERUN = "re-run `pnw-health run --stage model`"
+
+
+def valid_model() -> ModelFile:
+    return make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
+
+
+def test_model_actual_differs_from_data() -> None:
+    model = make_model_file(
+        {
+            WITH_TARGET: make_county_model(actual=83.0, residual=6.0),
+            NO_TARGET: make_null_county_model(),
+        }
+    )
+    assert model_problems(model) == [
+        f"model actual does not match the current data for: {WITH_TARGET}; {RERUN}"
+    ]
+
+
+def test_model_shap_value_differs_from_data() -> None:
+    assert model_problems(valid_model(), target_rows(feature_value=5.0)) == [
+        f"model SHAP feature values do not match the current data for: {WITH_TARGET}; {RERUN}"
+    ]
+
+
+def test_model_shap_null_value_needs_missing_feature() -> None:
+    model = make_model_file(
+        {
+            WITH_TARGET: make_county_model(
+                shap=[ShapEntry(feature="poverty_rate", value=None, contribution=1.0)]
+            ),
+            NO_TARGET: make_null_county_model(),
+        }
+    )
+    assert model_problems(model) == [
+        f"model SHAP feature values do not match the current data for: {WITH_TARGET}; {RERUN}"
+    ]
+
+
+def test_model_shap_null_value_matches_missing_feature() -> None:
+    model = make_model_file(
+        {
+            WITH_TARGET: make_county_model(
+                shap=[ShapEntry(feature="poverty_rate", value=None, contribution=1.0)]
+            ),
+            NO_TARGET: make_null_county_model(),
+        }
+    )
+    validate_model(model, target_rows(feature_value=None), MODEL_COUNTIES, MODEL_CATALOG)
+
+
+def test_model_has_county_outside_the_pnw() -> None:
+    model = make_model_file(
+        {
+            WITH_TARGET: make_county_model(),
+            NO_TARGET: make_null_county_model(),
+            "06037": make_null_county_model(),
+        }
+    )
+    assert model_problems(model) == [f"model has counties outside the PNW: 06037; {RERUN}"]
