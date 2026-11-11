@@ -174,8 +174,8 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 ## 8. CI/CD
 
-- **`ci.yml`** (every push/PR): pipeline lint, typecheck, tests; web lint, typecheck, unit tests. No real data fetched.
-- **`build-deploy.yml`** (push to `main`, monthly cron, manual dispatch): run full pipeline with raw-data cache keyed by source vintage → build site → Playwright smoke test → deploy to GitHub Pages. Any failure means no deploy; last good site stays live.
+- **`ci.yml`** (PRs into and pushes to `main` and `milestone/**`): pipeline lint, typecheck, tests; web lint, typecheck, unit tests. No real data fetched.
+- **`build-deploy.yml`** (push to `main` or `milestone/**`, monthly cron, manual dispatch): run full pipeline with raw-data cache keyed by source vintage → build site → Playwright smoke test → deploy to GitHub Pages. The deploy step runs only on `main`, so milestone pushes prove everything except the publish before the milestone PR is approved. Any failure means no deploy; last good site stays live.
 - Secrets: `CENSUS_API_KEY` (required — free key from https://api.census.gov/data/key_signup.html).
 
 ## 9. Build order (vertical slices)

@@ -185,3 +185,10 @@ cython_debug/
 
 # Superpowers execution workspace
 .superpowers/
+
+# Web app
+web/node_modules/
+web/src/types/generated/
+web/playwright-report/
+web/test-results/
+*.tsbuildinfo
