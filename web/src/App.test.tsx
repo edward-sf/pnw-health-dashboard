@@ -15,7 +15,3 @@ describe("App", () => {
     );
   });
 });
-
-it("TEMPORARY gate proof", () => {
-  expect(1).toBe(2);
-});
