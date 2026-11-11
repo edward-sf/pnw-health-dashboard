@@ -103,7 +103,7 @@ All files are small enough to load up front.
 
 ## 5. Machine learning
 
-**Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally — and which factors are associated with the gap?
+**Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of life expectancy the features leave unexplained.
 
 - **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
 - **Target:** CHR life expectancy. Target is configurable; v1 ships one target.
@@ -120,7 +120,7 @@ All files are small enough to load up front.
   - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
   - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign: positive residual = better.
   - `insufficient_data` when the target is null.
-- **Explanations:** TreeSHAP through LightGBM's built-in `pred_contrib`, from the fold model that produced each county's out-of-fold prediction, so `base_value` plus contributions equals `predicted`; top-5 contributions per PNW county plus global mean |SHAP| importance across all out-of-fold explanations.
+- **Explanations:** TreeSHAP through LightGBM's built-in `pred_contrib`, from the fold model that produced each county's out-of-fold prediction, so `base_value` plus contributions equals `predicted`; top-5 contributions per PNW county plus global mean |SHAP| importance across all out-of-fold explanations. Contributions explain the expected value relative to the base value, not the residual.
 - **Reproducibility:** fixed seeds, pinned dependencies (uv lockfile), auto-generated model card rendered on the methodology page.
 - **Framing:** UI and docs use "factors associated with," never "drivers" or causal language.
 
@@ -147,7 +147,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
 - **County panel** (right drawer on desktop, bottom sheet on mobile), in this order:
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
-  - Model card: actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart labeled "factors associated with."
+  - Model card: actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
 - **Table view:** sortable table of the current indicator across all counties; together with a county search box, this is the keyboard and screen-reader path to every county.
 

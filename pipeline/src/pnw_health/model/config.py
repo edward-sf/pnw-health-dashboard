@@ -26,16 +26,17 @@ Z_75 = 1.150
 Z_90 = 1.645
 TOP_N = 5
 
+# Smaller trees chosen at the M4 checkpoint; see M4 spec §3 "Checkpoint outcome".
 LGBM_PARAMS: dict[str, Any] = {
     "objective": "regression",
-    "n_estimators": 400,
+    "n_estimators": 200,
     "learning_rate": 0.03,
-    "num_leaves": 15,
+    "num_leaves": 8,
     "min_child_samples": 20,
     "subsample": 0.8,
     "subsample_freq": 1,
     "colsample_bytree": 0.8,
-    "reg_lambda": 1.0,
+    "reg_lambda": 10.0,
     "random_state": SEED,
     "deterministic": True,
     "force_row_wise": True,

@@ -47,9 +47,17 @@ Checked against the current interim data while designing M4. The model figures c
 
 Global importance is mean |SHAP| across all out-of-fold explanations for the training population.
 
+**What SHAP explains.** Contributions explain why a county's expected value differs from the base value: what the model expects for a county like it. They do not explain the residual, which is by definition the part of life expectancy these features do not account for. Labels in the UI and docs must keep the two apart.
+
 **SHAP calculation.** LightGBM's built-in `predict(pred_contrib=True)`, the same TreeSHAP algorithm as `shap.TreeExplainer`. It returns the base value as well, and it avoids adding `shap` as a dependency.
 
 **LightGBM settings.** Fixed, conservative settings chosen before results are seen and stored in `model/config.py`, with no tuning. Tuning against the folds that produce the reported metrics would inflate them. Training uses a fixed seed, `deterministic=True` and one thread. If LightGBM does not clearly beat ridge at the checkpoint, tuning is reconsidered then.
+
+**Checkpoint outcome.** With the first settings (15 leaves, 400 trees), LightGBM tied ridge nationally and trailed it on the PNW. Two throwaway checks on real data, run outside the pipeline over 5 different state-fold assignments, settled the choice:
+- Nested state-grouped tuning chose smaller trees almost every time. LightGBM now uses 8 leaves, 200 trees, `min_child_samples` 20 and `reg_lambda` 10. This improved PNW RMSE by about 0.03 with no national loss. Accuracy against ridge is then effectively tied.
+- Ridge and LightGBM flag noticeably different PNW counties: the flagged sets overlap about 64% between models, against 83–93% for one model across fold assignments. The main cause is college towns, where students raise the poverty rate and lower income. Ridge reads that as a high-risk profile, giving the 40 US counties with a college-town profile a mean residual of +2.15 years against +0.84 for LightGBM. Benton, OR goes from "notably better" under ridge to no flag.
+
+LightGBM stays the main model because comparing a county with counties like it is the question. Ridge remains the reported baseline. College towns are improved, not solved; a college-enrollment feature is the direct fix and is not in v1. About 12 PNW counties' flags change with the fold assignment, so model-card wording should not overstate a single flag.
 
 **Behaviors comparison.** The main and behaviors LightGBM models are both refit on the same counties, using the same state fold assignments. Counties missing any behavior measure are excluded from both, which today removes Kentucky and Pennsylvania. The reported difference is therefore like for like and involves no state-wide imputation.
 
