@@ -66,3 +66,36 @@ test("strip plot axis text does not overlap", async ({ page }) => {
   });
   expect(overlaps).toBe(0);
 });
+
+test("model mode: map, card, table and back", async ({ page }) => {
+  await page.goto("./?i=poverty_rate");
+  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await page.getByRole("button", { name: "Model", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page).toHaveURL(/[?&]i=poverty_rate/);
+  await expect(page.locator(".legend li")).toHaveCount(6);
+  await page.locator('path[data-fips="53033"]').click();
+  await expect(page).toHaveURL(/[?&]c=53033/);
+  const panel = page.getByRole("complementary", { name: "County details" });
+  await expect(
+    panel.getByRole("heading", { name: "Life expectancy model" }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("heading", {
+      name: "Factors associated with the expected value",
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]view=table/);
+  await expect(page.getByRole("button", { name: "Result" })).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await page.goBack();
+  await expect(page).not.toHaveURL(/[?&]view=table/);
+  await page.goBack();
+  await expect(page).not.toHaveURL(/[?&]c=53033/);
+  await page.goBack();
+  await expect(page).not.toHaveURL(/[?&]mode=/);
+  await expect(page).toHaveURL(/[?&]i=poverty_rate/);
+  await expect(page.locator(".legend")).toContainText("%");
+  await expect(page.locator(".legend")).not.toContainText("Not enough data");
+});
