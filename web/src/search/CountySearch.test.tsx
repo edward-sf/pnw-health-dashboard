@@ -141,3 +141,8 @@ test("aria-controls is absent while the listbox is closed and points at it when 
   await userEvent.type(input, "king");
   expect(input).toHaveAttribute("aria-controls", screen.getByRole("listbox").id);
 });
+
+test("inputId sets the input id and keeps its label", () => {
+  render(<CountySearch counties={counties} onSelect={() => {}} inputId="x" />);
+  expect(screen.getByRole("combobox", { name: "Search counties" })).toHaveAttribute("id", "x");
+});

@@ -19,6 +19,8 @@ import { IndicatorPicker } from "./IndicatorPicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
+const SEARCH_INPUT_ID = "county-search";
+
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology, model } = data;
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
@@ -99,6 +101,17 @@ export function Explorer({ data }: { data: AppData }) {
           : "explorer"
       }
     >
+      <a
+        className="skip-link"
+        href={`#${SEARCH_INPUT_ID}`}
+        onClick={(e) => {
+          // Focus the search without adding a hash to the URL.
+          e.preventDefault();
+          document.getElementById(SEARCH_INPUT_ID)?.focus();
+        }}
+      >
+        Skip to county search
+      </a>
       <aside className="explorer-picker">
         <IndicatorPicker
           indicators={manifest.indicators}
@@ -109,7 +122,11 @@ export function Explorer({ data }: { data: AppData }) {
         />
       </aside>
       <section className="explorer-main">
-        <CountySearch counties={counties} onSelect={onSelectWithOpener} />
+        <CountySearch
+          counties={counties}
+          onSelect={onSelectWithOpener}
+          inputId={SEARCH_INPUT_ID}
+        />
         <div className="view-toggle" role="group" aria-label="Mode">
           <button type="button" aria-pressed={!modelMode} onClick={() => setMode("values")}>
             Values

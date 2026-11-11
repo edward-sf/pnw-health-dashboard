@@ -294,3 +294,23 @@ test("the indicator title is the route focus target", () => {
     "data-page-heading",
   );
 });
+
+test("the first Tab reaches the skip link, and Enter focuses the search", async () => {
+  const router = setup("/?i=poverty_rate");
+  const user = userEvent.setup();
+  await user.tab();
+  expect(screen.getByRole("link", { name: "Skip to county search" })).toHaveFocus();
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("combobox", { name: "Search counties" })).toHaveFocus();
+  expect(router.state.location.search).toBe("?i=poverty_rate");
+  expect(router.state.location.hash).toBe("");
+});
+
+test("the skip link works in model table view with a county open, and keeps c", async () => {
+  const router = setup("/?view=table&c=53033&mode=model");
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("link", { name: "Skip to county search" }));
+  expect(screen.getByRole("combobox", { name: "Search counties" })).toHaveFocus();
+  expect(router.state.location.search).toContain("c=53033");
+  expect(router.state.location.hash).toBe("");
+});

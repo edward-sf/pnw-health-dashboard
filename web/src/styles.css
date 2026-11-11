@@ -87,6 +87,7 @@ main {
 }
 
 .explorer {
+  position: relative;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 24px;
@@ -354,6 +355,22 @@ main {
 .strip-plot-missing {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
+}
+
+/* Off-screen until focused, then laid over the Explorer's top-left corner. It stays out of
+   the grid flow either way, so focusing it never shifts the picker or the map. */
+.skip-link {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  z-index: 10;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #1a1a1a;
+}
+
+.skip-link:focus {
+  left: 0;
 }
 
 .visually-hidden {
