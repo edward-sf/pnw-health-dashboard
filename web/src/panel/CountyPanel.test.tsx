@@ -80,7 +80,10 @@ test("suppressed county", () => {
     </MemoryRouter>,
   );
   expect(screen.getAllByText("Suppressed or not available")).toHaveLength(1);
-  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute("href", "/methodology");
+  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+    "href",
+    "/methodology#suppression",
+  );
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
 });
 
@@ -92,7 +95,10 @@ test("legacy county", () => {
       { exact: false },
     ),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute("href", "/methodology");
+  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+    "href",
+    "/methodology#legacy",
+  );
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
 });
 
@@ -141,6 +147,10 @@ test("strip plot summary omitted for a null selection", () => {
 test("cautions about an estimate the source marks unreliable", () => {
   setup("02016", "poverty_rate");
   expect(screen.getByText(/marks this estimate as unreliable/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+    "href",
+    "/methodology#unreliable",
+  );
 });
 
 test("shows no caution on a reliable estimate", () => {

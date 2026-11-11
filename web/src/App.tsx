@@ -36,7 +36,7 @@ export default function App() {
             </>
           }
         />
-        <Route path="/methodology" element={<Methodology />} />
+        <Route path="/methodology" element={<Methodology state={state} />} />
         <Route path="/about" element={<About />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

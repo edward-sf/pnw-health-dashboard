@@ -49,11 +49,12 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-  it("/methodology renders the stub", () => {
+  it("/methodology renders the page once the data loads", async () => {
     at("/methodology");
     expect(
       screen.getByRole("heading", { level: 2, name: "Methodology" }),
     ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "At a glance" })).toBeInTheDocument();
   });
 
   it("/about renders the stub", () => {

@@ -55,7 +55,10 @@ test("no model result", () => {
       /The model has no result for this county because its life expectancy isn't reported\./,
     ),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute("href", "/methodology");
+  expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute(
+    "href",
+    "/methodology#model",
+  );
   expect(screen.queryByText(/Factors associated/)).not.toBeInTheDocument();
 });
 
