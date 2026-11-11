@@ -27,7 +27,14 @@ from pnw_health.model.features import ModelDataError, impute_fold
 
 @dataclass(frozen=True)
 class LgbmOof:
+    """Out-of-fold predictions with the SHAP contributions of the fold model behind each one.
+
+    For every county, ``base_value`` plus its row of ``contributions`` equals ``predicted``.
+    """
+
     predicted: pd.Series
+    contributions: pd.DataFrame
+    base_value: pd.Series
 
 
 def assign_folds(states: Iterable[str], seed: int = SEED, n_folds: int = N_FOLDS) -> dict[str, int]:
@@ -44,6 +51,7 @@ def _oof(
     features: Sequence[str],
     folds: dict[str, int],
     make_model: Callable[[], Any],
+    on_fold: Callable[[Any, pd.DataFrame, pd.Index], None] | None = None,
 ) -> pd.Series:
     fold_of = frame["state"].map(folds)
     if fold_of.isna().any():
@@ -59,6 +67,8 @@ def _oof(
         model = make_model()
         model.fit(train, frame.loc[~test_mask, "target"])
         predicted[test_mask] = model.predict(test)
+        if on_fold is not None:
+            on_fold(model, test, frame.index[test_mask])
     return predicted
 
 
@@ -75,8 +85,24 @@ def fit_ridge_oof(frame: pd.DataFrame, features: Sequence[str], folds: dict[str,
 def fit_lightgbm_oof(
     frame: pd.DataFrame, features: Sequence[str], folds: dict[str, int]
 ) -> LgbmOof:
-    """Out-of-fold LightGBM predictions, one held-out fold of states at a time."""
-    return LgbmOof(predicted=_oof(frame, features, folds, lambda: LGBMRegressor(**LGBM_PARAMS)))
+    """Out-of-fold LightGBM predictions and the factors associated with each one.
+
+    Each county is explained by the fold model that predicted it, on the same imputed
+    held-out rows, so no explanation has seen its own county's life expectancy.
+    """
+    columns = list(features)
+    parts: list[pd.DataFrame] = []
+    bases: list[pd.Series] = []
+
+    def explain(model: Any, test: pd.DataFrame, index: pd.Index) -> None:
+        raw = np.asarray(model.predict(test, pred_contrib=True), dtype=float)
+        parts.append(pd.DataFrame(raw[:, :-1], index=index, columns=columns))
+        bases.append(pd.Series(raw[:, -1], index=index))
+
+    predicted = _oof(frame, features, folds, lambda: LGBMRegressor(**LGBM_PARAMS), explain)
+    contributions = pd.concat(parts).reindex(frame.index)
+    base_value = pd.concat(bases).reindex(frame.index).rename("base_value")
+    return LgbmOof(predicted=predicted, contributions=contributions, base_value=base_value)
 
 
 def score(actual: pd.Series, predicted: pd.Series) -> Metrics:

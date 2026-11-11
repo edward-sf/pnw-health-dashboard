@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -110,3 +111,59 @@ def test_score_regions_splits_pnw() -> None:
     assert regions.national.n == len(frame)
     assert regions.pnw.n == int(frame["state"].isin(["53", "41", "16", "02"]).sum())
     assert regions.pnw.mae == pytest.approx(1.0)
+
+
+def test_additivity() -> None:
+    frame = _frame()
+    oof = fit_lightgbm_oof(frame, ALL_FEATURES, assign_folds(frame["state"]))
+    total = oof.base_value + oof.contributions.sum(axis=1)
+    assert oof.contributions.index.equals(frame.index)
+    assert list(oof.contributions.columns) == ALL_FEATURES
+    assert total.to_numpy() == pytest.approx(oof.predicted.to_numpy(), abs=1e-6)
+
+
+def test_base_value_comes_from_own_fold() -> None:
+    frame = _frame()
+    oof = fit_lightgbm_oof(frame, ALL_FEATURES, assign_folds(frame["state"]))
+    assert oof.base_value.nunique() > 1
+
+
+def test_explanation_ignores_own_state_target() -> None:
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    base = fit_lightgbm_oof(frame, ALL_FEATURES, folds)
+    shifted = frame.copy()
+    in_state = shifted["state"] == "53"
+    shifted.loc[in_state, "target"] += 100.0
+    after = fit_lightgbm_oof(shifted, ALL_FEATURES, folds)
+    pd.testing.assert_frame_equal(base.contributions[in_state], after.contributions[in_state])
+    pd.testing.assert_series_equal(base.base_value[in_state], after.base_value[in_state])
+
+
+def _missing_and_prefilled() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int], str]:
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    fold_of = frame["state"].map(folds)
+    county = "53001"
+    cols = ["poverty_rate", "median_household_income", "percent_rural"]
+    missing = frame.copy()
+    missing.loc[county, cols] = np.nan
+    prefilled = missing.copy()
+    train = fold_of != fold_of[county]
+    prefilled.loc[county, cols] = frame.loc[train, cols].median()
+    return missing, prefilled, folds, county
+
+
+def test_additivity_with_missing_values() -> None:
+    missing, _, folds, _ = _missing_and_prefilled()
+    oof = fit_lightgbm_oof(missing, ALL_FEATURES, folds)
+    total = oof.base_value + oof.contributions.sum(axis=1)
+    assert total.to_numpy() == pytest.approx(oof.predicted.to_numpy(), abs=1e-6)
+
+
+def test_missing_values_are_explained_as_training_medians() -> None:
+    missing, prefilled, folds, county = _missing_and_prefilled()
+    a = fit_lightgbm_oof(missing, ALL_FEATURES, folds)
+    b = fit_lightgbm_oof(prefilled, ALL_FEATURES, folds)
+    pd.testing.assert_series_equal(a.contributions.loc[county], b.contributions.loc[county])
+    assert a.predicted[county] == b.predicted[county]
