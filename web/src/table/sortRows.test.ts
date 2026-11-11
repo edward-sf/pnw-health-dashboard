@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { sortRows, type Row } from "./sortRows";
+import { compareNullable, sortRows, type Row } from "./sortRows";
 
 const e = (v: number | null, rank: number | null = null) => ({
   v,
@@ -48,4 +48,12 @@ test("does not mutate its input", () => {
   const copy = [...rows];
   sortRows(rows, "name", "asc");
   expect(rows).toEqual(copy);
+});
+
+test("compareNullable puts nulls last in both directions", () => {
+  expect(compareNullable(null, 1, 1)).toBe(1);
+  expect(compareNullable(null, 1, -1)).toBe(1);
+  expect(compareNullable(1, null, -1)).toBe(-1);
+  expect(compareNullable(null, null, 1)).toBe(0);
+  expect(compareNullable(1, 2, -1)).toBeGreaterThan(0);
 });

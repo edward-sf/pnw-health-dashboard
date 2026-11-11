@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { County } from "../types";
 import { STATE_NAMES } from "../panel/rankSummary";
 
@@ -12,6 +12,7 @@ const MAX_OPTIONS = 8;
 export function CountySearch({ counties, onSelect }: Props) {
   const id = useId();
   const listId = `${id}-list`;
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -74,13 +75,14 @@ export function CountySearch({ counties, onSelect }: Props) {
         Search counties
       </label>
       <input
+        ref={inputRef}
         id={`${id}-input`}
         type="text"
         role="combobox"
         placeholder="Search counties"
         autoComplete="off"
         aria-expanded={expanded}
-        aria-controls={listId}
+        aria-controls={expanded ? listId : undefined}
         aria-autocomplete="list"
         aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
         value={text}
@@ -103,8 +105,7 @@ export function CountySearch({ counties, onSelect }: Props) {
               className={i === active ? "is-active" : undefined}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
-                const input = document.getElementById(`${id}-input`);
-                if (input) choose(i, input);
+                if (inputRef.current) choose(i, inputRef.current);
               }}
             >
               {o.label}

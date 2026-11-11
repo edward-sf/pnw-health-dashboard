@@ -239,3 +239,18 @@ test("focusRequested is cleared when a selection renders no panel", async () => 
   await userEvent.click(screen.getByLabelText("Multnomah, OR"));
   expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
 });
+
+test("model table replaces the value table, keeps c and view, and back restores values", async () => {
+  const router = setup("/?c=53033&view=table");
+  expect(screen.getByRole("columnheader", { name: "Rank" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Model" }));
+  expect(router.state.location.search).toBe("?c=53033&view=table&mode=model");
+  expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
+  expect(screen.queryByRole("columnheader", { name: "Rank" })).not.toBeInTheDocument();
+  await act(async () => {
+    await router.navigate(-1);
+  });
+  expect(screen.getByRole("columnheader", { name: "Rank" })).toBeInTheDocument();
+  expect(screen.queryByRole("columnheader", { name: "Result" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "King, WA" })).toHaveAttribute("aria-current", "true");
+});

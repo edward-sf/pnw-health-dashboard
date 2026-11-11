@@ -11,6 +11,8 @@ import { CountyPanel } from "../panel/CountyPanel";
 import type { County } from "../types";
 import { CountySearch } from "../search/CountySearch";
 import { CountyTable } from "../table/CountyTable";
+import { ModelTable } from "../table/ModelTable";
+import type { ModelRow } from "../table/sortModelRows";
 import type { Row } from "../table/sortRows";
 import { IndicatorPicker } from "./IndicatorPicker";
 import { sourceLine } from "./sourceLine";
@@ -71,8 +73,15 @@ export function Explorer({ data }: { data: AppData }) {
     () => (indicator ? makeColorScale(indicator, entries ?? {}) : null),
     [indicator, entries],
   );
+  const rows = useMemo<Row[]>(
+    () => counties.map((c) => ({ ...c, entry: entries?.[c.fips] })),
+    [counties, entries],
+  );
+  const modelRows = useMemo<ModelRow[]>(
+    () => counties.map((c) => ({ ...c, model: countyModel(model, c.fips) })),
+    [counties, model],
+  );
   if (!indicator || !scale) return null;
-  const rows: Row[] = counties.map((c) => ({ ...c, entry: entries?.[c.fips] }));
   const modelMode = params.mode === "model";
   const lifeExpectancy = manifest.indicators.find((x) => x.id === "life_expectancy");
   const counts = tierCounts(
@@ -122,13 +131,17 @@ export function Explorer({ data }: { data: AppData }) {
           <p className="indicator-source">{sourceLine(indicator)}</p>
         )}
         {params.view === "table" ? (
-          <CountyTable
-            key={indicator.id}
-            rows={rows}
-            indicator={indicator}
-            selected={params.county}
-            onSelect={onSelectWithOpener}
-          />
+          modelMode ? (
+            <ModelTable rows={modelRows} selected={params.county} onSelect={onSelectWithOpener} />
+          ) : (
+            <CountyTable
+              key={indicator.id}
+              rows={rows}
+              indicator={indicator}
+              selected={params.county}
+              onSelect={onSelectWithOpener}
+            />
+          )
         ) : (
           <>
             <CountyMap
