@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
@@ -68,4 +68,76 @@ test("Escape clears only c", async () => {
   const router = setup("/?i=poverty_rate&c=53033");
   await userEvent.keyboard("{Escape}");
   expect(router.state.location.search).toBe("?i=poverty_rate");
+});
+
+test("select from search moves focus to panel heading", async () => {
+  const router = setup();
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  expect(router.state.location.search).toBe("?c=41051");
+  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+});
+
+test("close returns focus to opener", async () => {
+  setup();
+  const input = screen.getByRole("combobox", { name: "Search counties" });
+  await userEvent.type(input, "Multnomah");
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(input).toHaveFocus();
+});
+
+test("close returns focus to the table row button", async () => {
+  setup("/?view=table");
+  await userEvent.click(screen.getByRole("button", { name: "Ada" }));
+  expect(screen.getByRole("heading", { name: "Ada" })).toHaveFocus();
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(screen.getByRole("button", { name: "Ada" })).toHaveFocus();
+});
+
+test("map clicks do not move focus", async () => {
+  setup();
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  expect(screen.getByRole("heading", { name: "King" })).not.toHaveFocus();
+});
+
+test("Escape in the open search list closes the list, not the panel", async () => {
+  const router = setup("/?c=53033");
+  await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "ada");
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(router.state.location.search).toBe("?c=53033");
+  await userEvent.keyboard("{Escape}");
+  expect(router.state.location.search).toBe("");
+});
+
+test("close in table view keeps view", async () => {
+  const router = setup("/?view=table&c=53033");
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(router.state.location.search).toBe("?view=table");
+});
+
+test("toggle switches between map and table and legend is map-only", async () => {
+  const router = setup();
+  expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
+  await userEvent.click(screen.getByRole("button", { name: "Table" }));
+  expect(router.state.location.search).toBe("?view=table");
+  expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "true");
+  expect(document.querySelector(".legend")).toBeNull();
+  expect(document.querySelectorAll("tbody tr")).toHaveLength(5);
+  await userEvent.click(screen.getByRole("button", { name: "Map" }));
+  expect(router.state.location.search).toBe("");
+  expect(document.querySelector(".legend")).not.toBeNull();
+});
+
+test("back restores view and county", async () => {
+  const router = setup("/?c=53033");
+  await userEvent.click(screen.getByRole("button", { name: "Table" }));
+  expect(router.state.location.search).toBe("?c=53033&view=table");
+  await act(async () => {
+    await router.navigate(-1);
+  });
+  expect(router.state.location.search).toBe("?c=53033");
+  expect(document.querySelector(".county-map")).not.toBeNull();
+  expect(screen.getByRole("heading", { name: "King" })).toBeInTheDocument();
 });

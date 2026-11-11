@@ -302,3 +302,92 @@ main {
   font-size: 0.8rem;
   color: #555;
 }
+
+.county-search {
+  position: relative;
+  max-width: 320px;
+  margin-bottom: 0.5rem;
+}
+
+.county-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem 0.5rem;
+}
+
+.county-search-list {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #bbb;
+}
+
+.county-search-list li {
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+
+.county-search-list li.is-active,
+.county-search-list li:hover {
+  background: #e6eef8;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.view-toggle button[aria-pressed="true"] {
+  font-weight: 700;
+  background: #222;
+  color: #fff;
+}
+
+.county-table-wrap {
+  overflow-x: auto;
+}
+
+.county-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.county-table th,
+.county-table td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.sort-button,
+.table-county {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.table-county {
+  text-decoration: underline;
+}
+
+.table-county[aria-current="true"] {
+  font-weight: 700;
+}
+
+.county-table th[aria-sort="ascending"] .sort-button::after {
+  content: " \25B2";
+}
+
+.county-table th[aria-sort="descending"] .sort-button::after {
+  content: " \25BC";
+}

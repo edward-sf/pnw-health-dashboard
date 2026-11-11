@@ -10,6 +10,7 @@ export function useExplorerParams(
   params: ExplorerParams;
   setIndicator: (id: string) => void;
   setCounty: (fips: string | null) => void;
+  setView: (view: "map" | "table") => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.toString();
@@ -55,5 +56,18 @@ export function useExplorerParams(
     [setSearchParams, params.county],
   );
 
-  return { params, setIndicator, setCounty };
+  const setView = useCallback(
+    (view: "map" | "table") => {
+      if (view === params.view) return;
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (view === "map") next.delete("view");
+        else next.set("view", view);
+        return next;
+      });
+    },
+    [setSearchParams, params.view],
+  );
+
+  return { params, setIndicator, setCounty, setView };
 }
