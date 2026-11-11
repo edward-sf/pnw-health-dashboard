@@ -10,9 +10,10 @@ from typer.testing import CliRunner, Result
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
 from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
-from pnw_health.contract import Manifest, ValuesFile
+from pnw_health.contract import Manifest, ModelFile, ValuesFile
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
+from pnw_health.model.config import TOP_N
 from pnw_health.sources.acs import acs_cache_path
 from pnw_health.sources.chr import chr_cache_path
 from pnw_health.sources.places import places_cache_path
@@ -106,8 +107,50 @@ def test_stages_are_resumable(tmp_path: Path, full_zip: Path) -> None:
         run_pipeline(paths, Stage.fetch, client=client, api_key="K")
     with client_for(failing) as client:
         run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        assert (paths.interim / "model.json").exists()
         run_pipeline(paths, Stage.export, client=client)
     assert (paths.out / "values.json").exists()
+    assert (paths.out / "model.json").exists()
+
+
+def test_full_run_writes_model(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
+    assert len(model.counties) == 149
+    assert "02013" in model.counties
+    assert all(len(county.shap) <= TOP_N for county in model.counties.values())
+
+
+def test_legacy_counties_are_insufficient_data(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
+    for fips in ("02063", "02066"):
+        assert model.counties[fips].flag == "insufficient_data"
+        assert model.counties[fips].actual is None
+
+
+def test_two_runs_are_byte_identical(tmp_path: Path, full_zip: Path) -> None:
+    outputs = []
+    for name in ("one", "two"):
+        paths = Paths.default(tmp_path / name)
+        with client_for(transport(full_zip)) as client:
+            run_pipeline(paths, Stage.all, client=client, api_key="K")
+        outputs.append((paths.out / "model.json").read_bytes())
+    assert outputs[0] == outputs[1]
+
+
+def test_model_stage_reports_dropped_counties(
+    tmp_path: Path, full_zip: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    assert "model: 0 dropped county(ies)" in capsys.readouterr().err
 
 
 def test_fetch_error_propagates(tmp_path: Path) -> None:
@@ -136,6 +179,16 @@ def test_export_before_harmonize_says_run_harmonize(tmp_path: Path, full_zip: Pa
         run_pipeline(paths, Stage.fetch, client=client, api_key="K")
     with client_for(failing) as client, pytest.raises(StageInputError, match="--stage harmonize"):
         run_pipeline(paths, Stage.export, client=client)
+
+
+def test_export_before_model_says_run_model(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        with pytest.raises(StageInputError, match="--stage model"):
+            run_pipeline(paths, Stage.export, client=client)
 
 
 def test_cli_reports_stage_input_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -242,4 +295,22 @@ def test_bad_legacy_value_stops_export(tmp_path: Path, full_zip: Path) -> None:
         with pytest.raises(DataValidationError) as err:
             run_pipeline(paths, Stage.export, client=client)
     assert any(p.startswith("life_expectancy legacy:") for p in err.value.problems)
+    assert not paths.out.exists() or not any(paths.out.iterdir())
+
+
+def test_model_validation_failure_writes_nothing(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        model_path = paths.interim / "model.json"
+        model = ModelFile.model_validate_json(model_path.read_text())
+        county = next(c for c in model.counties.values() if c.predicted is not None)
+        county.predicted = county.predicted + 1.0
+        model_path.write_text(model.model_dump_json())
+        with pytest.raises(DataValidationError) as err:
+            run_pipeline(paths, Stage.export, client=client)
+    assert any("do not sum to the prediction" in p for p in err.value.problems)
     assert not paths.out.exists() or not any(paths.out.iterdir())
