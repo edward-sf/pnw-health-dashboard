@@ -43,6 +43,12 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
   return (
     <div className="county-map">
       <svg viewBox={`0 0 ${MAP_LAYOUT.width} ${MAP_LAYOUT.height}`} role="group" aria-label="County map">
+        <defs>
+          <pattern id="hatch-null" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="4" height="4" fill="#f2f2f2" />
+            <line x1="0" y1="0" x2="0" y2="4" stroke="#999" strokeWidth="1.5" />
+          </pattern>
+        </defs>
         <g className="map-main">{renderGroup(paths.filter((p) => p.state !== "AK"))}</g>
         <rect className="inset-frame" x={ix0} y={iy0} width={ix1 - ix0} height={iy1 - iy0} fill="none" />
         <text className="inset-label" x={ix0 + 6} y={iy0 + 16}>
