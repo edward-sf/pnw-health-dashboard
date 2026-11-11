@@ -26,3 +26,10 @@ test("renders a captioned table with two rows per model", () => {
     "LightGBMPacific Northwest0.701.601.20139",
   ]);
 });
+
+test("the scrolling wrapper is a named, focusable region", () => {
+  render(<MetricsTable caption="Accuracy" rows={[]} />);
+  const region = screen.getByRole("region", { name: "Accuracy" });
+  expect(region).toHaveAttribute("tabindex", "0");
+  expect(region).toContainElement(screen.getByRole("table", { name: "Accuracy" }));
+});

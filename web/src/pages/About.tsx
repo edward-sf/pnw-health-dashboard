@@ -1,9 +1,13 @@
 import { Link } from "react-router";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export function About() {
+  usePageTitle("About · PNW Health Dashboard");
   return (
     <section className="about">
-      <h2 tabIndex={-1}>About</h2>
+      <h2 tabIndex={-1} data-page-heading>
+        About
+      </h2>
 
       <h3>What this is</h3>
       <p>

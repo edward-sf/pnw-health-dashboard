@@ -12,9 +12,9 @@ export function ModelSection({ model, indicators }: { model: ModelFile; indicato
   const ranked = [...model.global_importance].sort((a, b) => b.mean_abs_shap - a.mean_abs_shap);
   return (
     <section aria-labelledby="model">
-      <h2 id="model" tabIndex={-1}>
+      <h3 id="model" tabIndex={-1}>
         The life expectancy model
-      </h2>
+      </h3>
       <dl className="methodology-dl">
         <dt>Target</dt>
         <dd>{label(card.target)}</dd>
@@ -42,7 +42,7 @@ export function ModelSection({ model, indicators }: { model: ModelFile; indicato
           { model: "LightGBM", ...model.metrics.lightgbm },
         ]}
       />
-      <h3 id="model-importance">Factors by importance</h3>
+      <h4 id="model-importance">Factors by importance</h4>
       <p>
         Each factor's average contribution to the expected values, in years, across all counties
         (mean absolute SHAP value).
@@ -54,7 +54,7 @@ export function ModelSection({ model, indicators }: { model: ModelFile; indicato
           </li>
         ))}
       </ol>
-      <h3>Better or worse than expected</h3>
+      <h4>Better or worse than expected</h4>
       <p>
         A county's difference is its actual life expectancy minus the model's expected value. A
         positive difference means better than expected, and a negative one worse.
@@ -68,20 +68,20 @@ export function ModelSection({ model, indicators }: { model: ModelFile; indicato
         expected, and beyond the range with z = {formatZ(z_90)} (a two-sided 90% range) as notably
         better or worse.
       </p>
-      <h3>Counties with no result</h3>
+      <h4>Counties with no result</h4>
       <p>
         A county whose life expectancy isn't reported has no model result, because there is nothing
         to compare its expected value with. In model mode these counties are hatched and marked "Not
         enough data".
       </p>
-      <h3>Factors that stand in for others</h3>
+      <h4>Factors that stand in for others</h4>
       <p>
         Some factors stand in for others the model doesn't see. For example, high housing costs
         often go with expensive metro areas and college towns, where lives tend to be longer, so a
         higher housing cost burden can raise the expected value. A factor's contribution shows what
         the model has learned goes with it, not what would happen if it changed.
       </p>
-      <h3>Associations, not effects</h3>
+      <h4>Associations, not effects</h4>
       <p>
         The factors are associated with the expected value. They describe what the model expects
         for a county with that profile. They say nothing about why a county's actual life

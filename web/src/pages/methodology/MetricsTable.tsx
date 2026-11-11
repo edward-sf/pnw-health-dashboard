@@ -1,3 +1,4 @@
+import { TableScroll } from "./TableScroll";
 import { formatCount, formatMetric, type MetricSet } from "./format";
 
 type Row = { model: string; national: MetricSet; pnw: MetricSet };
@@ -9,7 +10,7 @@ const AREAS = [
 
 export function MetricsTable({ caption, rows }: { caption: string; rows: Row[] }) {
   return (
-    <div className="methodology-table-wrap">
+    <TableScroll label={caption}>
       <table className="methodology-table">
         <caption>{caption}</caption>
         <thead>
@@ -40,6 +41,6 @@ export function MetricsTable({ caption, rows }: { caption: string; rows: Row[] }
           )}
         </tbody>
       </table>
-    </div>
+    </TableScroll>
   );
 }

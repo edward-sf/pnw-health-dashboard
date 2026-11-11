@@ -5,7 +5,7 @@ import { SourcesSection } from "./SourcesSection";
 
 test("one row per manifest source, with the CHR legacy row labelled", () => {
   render(<SourcesSection sources={manifest.sources} />);
-  expect(screen.getByRole("heading", { level: 2, name: "Sources and vintages" })).toHaveAttribute(
+  expect(screen.getByRole("heading", { level: 3, name: "Sources and vintages" })).toHaveAttribute(
     "id",
     "sources",
   );

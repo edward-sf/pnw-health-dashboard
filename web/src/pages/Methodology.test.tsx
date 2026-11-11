@@ -75,3 +75,16 @@ test("wording guard: no causal language anywhere on the page", () => {
   expect(document.body.textContent).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
   expect(document.body.textContent).not.toMatch(/explains? the difference/i);
 });
+
+test("the outline nests: one page h2, sections at h3, sub-anchors at h4", () => {
+  at(ready);
+  const h2s = screen.getAllByRole("heading", { level: 2 });
+  expect(h2s.map((h) => h.textContent)).toEqual(["Methodology"]);
+  expect(h2s[0]).toHaveAttribute("data-page-heading");
+  for (const id of ["at-a-glance", "sources", "indicators", "harmonization", "missing-data", "model", "exclusions", "model-card"]) {
+    expect(document.getElementById(id)?.tagName, id).toBe("H3");
+  }
+  for (const id of ["legacy", "suppression", "unreliable"]) {
+    expect(document.getElementById(id)?.tagName, id).toBe("H4");
+  }
+});

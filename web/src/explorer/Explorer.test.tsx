@@ -287,3 +287,10 @@ test("wide viewport: no sheet-open class and no picker disclosure", () => {
   expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
   expect(screen.queryByRole("button", { name: /^Indicator:/ })).not.toBeInTheDocument();
 });
+
+test("the indicator title is the route focus target", () => {
+  setup("/?i=poverty_rate");
+  expect(screen.getByRole("heading", { level: 2, name: "Poverty rate" })).toHaveAttribute(
+    "data-page-heading",
+  );
+});

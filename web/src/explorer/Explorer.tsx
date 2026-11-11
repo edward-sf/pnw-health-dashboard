@@ -126,7 +126,7 @@ export function Explorer({ data }: { data: AppData }) {
             Table
           </button>
         </div>
-        <h2 ref={titleRef} className="indicator-title" tabIndex={-1}>
+        <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
           {modelMode ? "Life expectancy: compared with expected" : indicator.label}
         </h2>
         <p className="indicator-description">

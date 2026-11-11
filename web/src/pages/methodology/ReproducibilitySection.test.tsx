@@ -5,7 +5,7 @@ import { ReproducibilitySection } from "./ReproducibilitySection";
 
 test("seed, folds, LightGBM version and parameters, and build date", () => {
   render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
-  expect(screen.getByRole("heading", { level: 2 })).toHaveAttribute("id", "model-card");
+  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "model-card");
   const text = document.body.textContent ?? "";
   expect(text).toContain("Random seed1");
   expect(text).toContain("Cross-validation folds5");

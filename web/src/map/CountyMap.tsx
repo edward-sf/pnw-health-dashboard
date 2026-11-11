@@ -34,6 +34,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
         d={p.d}
         fill={fillFor(p.fips)}
         className="county"
+        role="img"
         aria-label={`${p.name}, ${p.state}`}
         aria-current={p.fips === selected ? "true" : undefined}
         onClick={() => onSelect(p.fips)}

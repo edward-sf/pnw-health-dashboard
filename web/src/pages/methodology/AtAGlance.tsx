@@ -16,7 +16,7 @@ export function AtAGlance({ data }: { data: AppData }) {
   const target = featureLabel(model.model_card.target, manifest.indicators).toLowerCase();
   return (
     <section className="at-a-glance" aria-labelledby="at-a-glance">
-      <h2 id="at-a-glance">At a glance</h2>
+      <h3 id="at-a-glance">At a glance</h3>
       <p>
         This dashboard covers {formatCount(fips.length)} counties in {joinList(states)}, with
         data from the CDC, the Census Bureau and County Health Rankings & Roadmaps.
