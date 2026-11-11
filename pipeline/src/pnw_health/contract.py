@@ -94,6 +94,22 @@ class RegionMetrics(BaseModel):
     pnw: Metrics
 
 
+class ExcludedState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state_fips: str
+    counties: int
+    reason: str
+
+
+class BehaviorsComparison(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    main: RegionMetrics
+    behaviors: RegionMetrics
+    excluded_states: list[ExcludedState]
+
+
 SCHEMAS: dict[str, type[BaseModel]] = {
     "manifest.schema.json": Manifest,
     "values.schema.json": ValuesFile,
