@@ -62,6 +62,22 @@ test("reruns when the hash changes", async () => {
   expect(screen.getByRole("heading", { name: "B" })).toHaveFocus();
 });
 
+test("refocuses when the same link is clicked twice", async () => {
+  const user = userEvent.setup();
+  at("/methodology");
+  const link = screen.getByRole("link", { name: "Go to b" });
+  const b = screen.getByRole("heading", { name: "B" });
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
+  await user.click(link);
+  expect(b).toHaveFocus();
+  // The second click moves focus to the link first; only a rerun of the hook moves it back.
+  await user.click(link);
+  expect(b).toHaveFocus();
+  expect(scroll).toHaveBeenCalledTimes(2);
+  delete (Element.prototype as Partial<Element>).scrollIntoView;
+});
+
 test("ignores a hash with no match", () => {
   at("/methodology#nope");
   expect(document.body).toHaveFocus();

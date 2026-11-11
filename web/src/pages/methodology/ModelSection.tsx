@@ -68,7 +68,9 @@ export function ModelSection({ model, indicators }: { model: ModelFile; indicato
         expected, and beyond the range with z = {formatZ(z_90)} (a two-sided 90% range) as notably
         better or worse.
       </p>
-      <h4>Counties with no result</h4>
+      <h4 id="no-result" tabIndex={-1}>
+        Counties with no result
+      </h4>
       <p>
         A county whose life expectancy isn't reported has no model result, because there is nothing
         to compare its expected value with. In model mode these counties are hatched and marked "Not

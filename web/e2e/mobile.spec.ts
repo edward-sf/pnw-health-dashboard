@@ -28,11 +28,13 @@ test("the indicator picker opens, chooses and closes", async ({ page }) => {
   const toggle = page.getByRole("button", { name: /^Indicator: / });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.tap();
-  await page.getByRole("button", { name: "Median household income" }).tap();
+  await page.getByRole("button", { name: "Median household income", exact: true }).tap();
   await expect(page).toHaveURL(/[?&]i=median_household_income/);
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByLabel("Filter indicators")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Median household income" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Median household income", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("the sheet header stays in view while the sheet scrolls", async ({ page }) => {

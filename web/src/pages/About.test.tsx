@@ -50,3 +50,10 @@ test("the page heading is the route focus target", () => {
     "data-page-heading",
   );
 });
+
+test("names all four states the data covers", () => {
+  renderAbout();
+  expect(
+    screen.getByText(/across Washington, Oregon, Idaho and Alaska/),
+  ).toBeInTheDocument();
+});
