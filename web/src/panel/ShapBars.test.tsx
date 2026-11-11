@@ -36,3 +36,19 @@ test("each bar shows its label and value as visible text", () => {
   expect(svgText).toContain("−0.68 years");
   expect(container.querySelectorAll(".shap-value")).toHaveLength(bars.length);
 });
+
+test("the hidden list separates label and value with a comma", () => {
+  const { container } = render(<ShapBars bars={bars} />);
+  const items = [...container.querySelectorAll(".visually-hidden li")].map((l) => l.textContent);
+  expect(items[0]).toBe("Bachelor's degree or higher: 43.0%, +2.58 years");
+});
+
+test("the zero rule is drawn per bar row, not through label text", () => {
+  const { container } = render(<ShapBars bars={bars} />);
+  const rules = container.querySelectorAll(".shap-zero");
+  expect(rules).toHaveLength(bars.length);
+  rules.forEach((r, i) => {
+    expect(Number(r.getAttribute("y1"))).toBe(i * 38 + 18 - 2);
+    expect(Number(r.getAttribute("y2"))).toBe(i * 38 + 18 + 14 + 2);
+  });
+});

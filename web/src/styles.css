@@ -172,6 +172,8 @@ main {
   flex: none;
   width: 16px;
   height: 16px;
+  border: 1px solid #9ca3af;
+  box-sizing: border-box;
 }
 
 .legend-end {
@@ -492,4 +494,19 @@ main {
 .residual-range svg {
   max-width: 100%;
   height: auto;
+}
+
+.shap-bars-chart {
+  max-width: 100%;
+  height: auto;
+}
+
+.county-table td.num {
+  white-space: nowrap;
+}
+
+.model-rounded-note {
+  margin: 0.125rem 0 0.5rem;
+  font-size: 0.8rem;
+  color: #4b5563;
 }

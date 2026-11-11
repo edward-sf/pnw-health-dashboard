@@ -74,14 +74,14 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
                   </button>
                 </td>
                 <td>{r.state}</td>
-                <td>
+                <td className="num">
                   {v !== null
                     ? `${formatValue(v, indicator.unit)}${e?.unreliable ? " (unreliable)" : ""}`
                     : e?.legacy
                       ? "Former-area value in panel"
                       : formatValue(null, indicator.unit)}
                 </td>
-                <td>{ci}</td>
+                <td className="num">{ci}</td>
                 {!neutral && <td>{e?.rank ?? ""}</td>}
                 {!neutral && <td>{e?.state_rank ?? ""}</td>}
               </tr>

@@ -109,7 +109,7 @@ export function Explorer({ data }: { data: AppData }) {
             Model
           </button>
         </div>
-        <div className="view-toggle">
+        <div className="view-toggle" role="group" aria-label="View">
           <button type="button" aria-pressed={params.view === "map"} onClick={() => setView("map")}>
             Map
           </button>

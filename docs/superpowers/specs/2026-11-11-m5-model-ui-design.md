@@ -70,14 +70,14 @@ From the current export (`web/public/data/model.json`, 76 KB):
 The card sits in the county panel in both modes, between the strip plot and "Who lives here", under the heading **"Life expectancy model"**. It has two parts, separated by a divider.
 
 ### Part 1: "How this county compares"
-- Actual {80.8} years · Expected {77.1} years · Difference **{+3.7} years**.
+- Actual {80.8} years · Expected {77.1} years · Difference **{+3.7} years**. A small note follows: "Figures are rounded." (Actual − Expected can differ from the Difference by 0.1.)
 - A tier badge in the tier colour with the tier label.
 - **Range graphic:** a number line centred on 0 with a light band for ±`threshold_75`, a darker band for ±`threshold_90`, and a dot at the residual. Its screen-reader text states the difference and both ranges.
 - **Range sentence:** "A difference beyond ±{2.4} years is flagged as somewhat better or worse, and beyond ±{3.4} years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty." If `se` is null, the second sentence ends "…and a typical county's measurement uncertainty, since this county's estimate has no confidence interval," matching the parent §5 fallback.
 
 ### Part 2: "Factors associated with the expected value"
 Its own subheading. It uses one neutral hue and never the tier colours, so it never reads as explaining the gap.
-- **Lead line:** "These factors moved the model's expected value from a starting point of {75.0} to {77.1} years. They describe what the model expects for a county with this profile; they don't explain the difference above."
+- **Lead line:** "These factors moved the model's expected value from a starting point of {75.00} to {77.10} years. They describe what the model expects for a county with this profile; they don't explain the difference above."
 - **Bars:** five horizontal bars on a zero axis, direction shown by side. Each has a label like "Bachelor's degree or higher: 43.0%" and a value like "+2.58 years". Labels and units come from the manifest. A null `value` reads "value not reported; estimated".
 - **"All other factors" row:** `predicted − base_value − Σ top 5`, drawn the same way, so the card reconciles.
 - **Implementation:** `buildShapBars()` returns the rows; an inline SVG renders them, like `ResidualRange`. A text list gives screen readers the same content.

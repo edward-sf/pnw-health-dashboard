@@ -41,3 +41,21 @@ test("an unknown feature falls back to its id and the raw value", () => {
 test("no result gives no bars", () => {
   expect(buildShapBars(model.counties["02063"]!, indicators)).toEqual([]);
 });
+
+test("displayed numbers reconcile exactly at 2 decimals (02130-like values)", () => {
+  const entry: CountyModel = {
+    ...model.counties["53033"]!,
+    base_value: 75.1902,
+    predicted: 77.5448,
+    shap: [
+      { feature: "bachelors_or_higher", value: 43.0, contribution: 2.5849 },
+      { feature: "poverty_rate", value: 9.5, contribution: -0.6851 },
+      { feature: "foo", value: 1, contribution: 0.0049 },
+    ],
+  };
+  const bars = buildShapBars(entry, indicators);
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+  const total = round2(entry.base_value!) + bars.reduce((t, b) => t + b.contribution, 0);
+  expect(total).toBeCloseTo(round2(entry.predicted!), 9);
+  expect(bars[3]!.contribution).toBeCloseTo(0.46, 9);
+});

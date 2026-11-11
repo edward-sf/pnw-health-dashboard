@@ -9,6 +9,18 @@ export function rangeDomain(residual: number, threshold90: number): number {
   return Math.max(threshold90, Math.abs(residual)) * 1.15;
 }
 
+export function rangeMeaning(residual: number, t75: number, t90: number): string {
+  const r = formatSigned(residual, "years");
+  const a = formatBound(t75, "years");
+  const b = formatBound(t90, "years");
+  const abs = Math.abs(residual);
+  if (abs > t90) return `${r} is beyond the ±${b}-year range for notably better or worse.`;
+  if (abs > t75) {
+    return `${r} is beyond ±${a} but within ±${b} years, somewhat better or worse than expected.`;
+  }
+  return `${r} is within ±${a} years, about as expected.`;
+}
+
 type Props = { residual: number; threshold75: number; threshold90: number; flag: Flag };
 
 export function ResidualRange({ residual, threshold75, threshold90, flag }: Props) {
@@ -32,9 +44,7 @@ export function ResidualRange({ residual, threshold75, threshold90, flag }: Prop
         <circle cx={x(residual)} cy={20} r={5} fill={tierFill(flag)} stroke="#111" strokeWidth={1} />
       </svg>
       <p className="visually-hidden">
-        Difference {formatSigned(residual, "years")}. Light band: within {"±"}
-        {formatBound(threshold75, "years")} years. Darker band: within {"±"}
-        {formatBound(threshold90, "years")} years.
+        {rangeMeaning(residual, threshold75, threshold90)}
       </p>
     </div>
   );
