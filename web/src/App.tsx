@@ -1,8 +1,16 @@
 import ErrorPage from "./data/ErrorPage";
+import { useMemo, useState } from "react";
 import { useData } from "./data/useData";
+import { buildMapPaths } from "./map/buildMapPaths";
+import { CountyMap } from "./map/CountyMap";
+
+const fillFor = () => "#9ecae1";
 
 export default function App() {
   const state = useData();
+  const topology = state.status === "ready" ? state.data.topology : null;
+  const paths = useMemo(() => (topology ? buildMapPaths(topology) : []), [topology]);
+  const [selected, setSelected] = useState<string | null>(null);
   return (
     <main>
       <h1>PNW Health Dashboard</h1>
@@ -11,7 +19,13 @@ export default function App() {
         <ErrorPage message={state.message} onRetry={state.retry} />
       )}
       {state.status === "ready" && (
-        <p>{state.data.manifest.indicators.length} indicators loaded.</p>
+        <CountyMap
+          paths={paths}
+          fillFor={fillFor}
+          tooltipFor={(fips) => paths.find((p) => p.fips === fips)?.name ?? fips}
+          selected={selected}
+          onSelect={setSelected}
+        />
       )}
     </main>
   );
