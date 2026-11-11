@@ -216,6 +216,11 @@ main {
   cursor: pointer;
 }
 
+.panel-measure {
+  margin: 0;
+  color: #555;
+}
+
 .panel-value {
   margin: 0;
   font-size: 1.75rem;
@@ -335,6 +340,35 @@ main {
 .county-search-list li.is-active,
 .county-search-list li:hover {
   background: #e6eef8;
+}
+
+.county-search-status {
+  margin: 0;
+}
+
+.county-search-empty {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  background: #fff;
+  border: 1px solid #bbb;
+}
+
+.indicator-title:focus {
+  outline: 2px solid #2b6cb0;
+}
+
+.indicator-description,
+.indicator-source {
+  margin: 0 0 0.25rem;
+}
+
+.indicator-source {
+  color: #555;
+  font-size: 0.85rem;
 }
 
 .view-toggle {

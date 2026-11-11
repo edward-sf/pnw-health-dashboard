@@ -9,8 +9,15 @@ import { CountyPanel, type County } from "../panel/CountyPanel";
 import { CountySearch } from "../search/CountySearch";
 import { CountyTable } from "../table/CountyTable";
 import type { Row } from "../table/sortRows";
+import type { Indicator } from "../types";
 import { IndicatorPicker } from "./IndicatorPicker";
 import { useExplorerParams } from "./useExplorerParams";
+
+const SOURCE_NAMES: Record<Indicator["source"], string> = {
+  acs: "Census ACS 5-year",
+  places: "CDC PLACES",
+  chr: "County Health Rankings",
+};
 
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
@@ -31,18 +38,21 @@ export function Explorer({ data }: { data: AppData }) {
     [paths],
   );
   const openerRef = useRef<HTMLElement | null>(null);
-  const [focusToken, setFocusToken] = useState(0);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [focusRequested, setFocusRequested] = useState(false);
+  const onFocusHandled = useCallback(() => setFocusRequested(false), []);
   const onClosePanel = useCallback(() => {
     setCounty(null);
     const opener = openerRef.current;
     openerRef.current = null;
     if (opener?.isConnected) opener.focus();
+    else titleRef.current?.focus();
   }, [setCounty]);
   const onSelectWithOpener = useCallback(
     (fips: string, opener: HTMLElement) => {
       openerRef.current = opener;
       setCounty(fips);
-      setFocusToken((t) => t + 1);
+      setFocusRequested(true);
     },
     [setCounty],
   );
@@ -83,7 +93,13 @@ export function Explorer({ data }: { data: AppData }) {
             Table
           </button>
         </div>
-        <h2 className="indicator-title">{indicator.label}</h2>
+        <h2 ref={titleRef} className="indicator-title" tabIndex={-1}>
+          {indicator.label}
+        </h2>
+        <p className="indicator-description">{indicator.description}</p>
+        <p className="indicator-source">
+          Source: {SOURCE_NAMES[indicator.source]}, {indicator.year}.
+        </p>
         {params.view === "table" ? (
           <CountyTable
             key={indicator.id}
@@ -116,7 +132,8 @@ export function Explorer({ data }: { data: AppData }) {
           counties={counties}
           manifest={manifest}
           values={values}
-          focusToken={focusToken}
+          focusRequested={focusRequested}
+          onFocusHandled={onFocusHandled}
           onClose={onClosePanel}
         />
       )}

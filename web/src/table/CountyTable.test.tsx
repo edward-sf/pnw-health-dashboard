@@ -77,12 +77,27 @@ test("a row with no data and no legacy says not available", () => {
 
 test("clicking a county name selects it and passes the button", async () => {
   const onSelect = setup();
-  const btn = screen.getByRole("button", { name: "King" });
+  const btn = screen.getByRole("button", { name: "King, WA" });
   await userEvent.click(btn);
   expect(onSelect).toHaveBeenCalledWith("53033", btn);
 });
 
 test("marks the selected row", () => {
   setup("poverty_rate", "53033");
-  expect(screen.getByRole("button", { name: "King" })).toHaveAttribute("aria-current", "true");
+  expect(screen.getByRole("button", { name: "King, WA" })).toHaveAttribute("aria-current", "true");
+});
+
+test("county buttons are named with their state", () => {
+  setup();
+  expect(screen.getByRole("button", { name: "Aleutians West, AK" })).toBeInTheDocument();
+});
+
+test("CI header states the level", () => {
+  setup();
+  expect(screen.getByRole("columnheader", { name: "90% CI" })).toBeInTheDocument();
+});
+
+test("CI header has no level when the indicator has none", () => {
+  setup("pct_asian");
+  expect(screen.getByRole("columnheader", { name: "CI" })).toBeInTheDocument();
 });

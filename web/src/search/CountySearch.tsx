@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from "react";
 import type { County } from "../panel/CountyPanel";
+import { STATE_NAMES } from "../panel/rankSummary";
 
 type Props = {
   counties: County[];
@@ -18,13 +19,19 @@ export function CountySearch({ counties, onSelect }: Props) {
   const options = useMemo(() => {
     const q = text.trim().toLowerCase();
     if (!q) return [];
-    return counties
-      .map((c) => ({ c, label: `${c.name}, ${c.state}` }))
-      .filter((o) => o.label.toLowerCase().includes(q))
-      .slice(0, MAX_OPTIONS);
+    const all = counties.map((c) => ({ c, label: `${c.name}, ${c.state}` }));
+    const byLabel = all.filter((o) => o.label.toLowerCase().includes(q));
+    // State-name matches go last so "Washington" keeps Washington County within the cap.
+    const byStateName = all.filter(
+      (o) =>
+        !o.label.toLowerCase().includes(q) &&
+        `${o.c.name}, ${STATE_NAMES[o.c.state] ?? o.c.state}`.toLowerCase().includes(q),
+    );
+    return [...byLabel, ...byStateName].slice(0, MAX_OPTIONS);
   }, [counties, text]);
 
   const expanded = open && options.length > 0;
+  const noMatches = open && text.trim() !== "" && options.length === 0;
   const optionId = (i: number) => `${id}-opt-${i}`;
 
   const choose = (i: number, opener: HTMLElement) => {
@@ -48,9 +55,9 @@ export function CountySearch({ counties, onSelect }: Props) {
       setOpen(true);
       setActive((a) => (a <= 0 ? options.length - 1 : a - 1));
     } else if (e.key === "Enter") {
-      if (expanded && active >= 0) {
+      if (expanded) {
         e.preventDefault();
-        choose(active, e.currentTarget);
+        choose(Math.max(active, 0), e.currentTarget);
       }
     } else if (e.key === "Escape") {
       if (expanded) {
@@ -105,6 +112,9 @@ export function CountySearch({ counties, onSelect }: Props) {
           ))}
         </ul>
       )}
+      <p role="status" className={noMatches ? "county-search-empty" : "county-search-status"}>
+        {noMatches ? "No matching counties" : ""}
+      </p>
     </div>
   );
 }

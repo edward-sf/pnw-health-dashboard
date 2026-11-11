@@ -23,7 +23,8 @@ function setup(fips: string, indicatorId: string) {
         counties={counties}
         manifest={manifest}
         values={values}
-        focusToken={0}
+        focusRequested={false}
+        onFocusHandled={() => {}}
         onClose={() => {}}
       />
     </MemoryRouter>,
@@ -39,6 +40,18 @@ test("shows header, value, CI and ranks", () => {
   expect(screen.getByText("90% CI 9.1–9.9")).toBeInTheDocument();
   expect(screen.getByText(/2nd of 2 counties/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+});
+
+test("names the measure directly above the value", () => {
+  setup("53033", "poverty_rate");
+  const measure = screen.getByText("Poverty rate");
+  expect(measure.nextElementSibling).toBe(screen.getByText("9.5%"));
+});
+
+test("names the measure directly above the missing-data message", () => {
+  setup("02063", "poverty_rate");
+  const measure = screen.getByText("Poverty rate");
+  expect(measure.nextElementSibling).toHaveTextContent(/Reported only for the former/);
 });
 
 test("no CI text when lo is null", () => {
@@ -57,7 +70,8 @@ test("suppressed county", () => {
         counties={counties}
         manifest={manifest}
         values={values}
-        focusToken={0}
+        focusRequested={false}
+        onFocusHandled={() => {}}
         onClose={() => {}}
       />
     </MemoryRouter>,
@@ -110,7 +124,8 @@ test("strip plot summary omitted for a null selection", () => {
         counties={counties}
         manifest={manifest}
         values={values}
-        focusToken={0}
+        focusRequested={false}
+        onFocusHandled={() => {}}
         onClose={() => {}}
       />
     </MemoryRouter>,
