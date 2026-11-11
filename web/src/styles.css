@@ -505,6 +505,12 @@ main {
   white-space: nowrap;
 }
 
+.model-factors-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
 .model-rounded-note {
   margin: 0.125rem 0 0.5rem;
   font-size: 0.8rem;

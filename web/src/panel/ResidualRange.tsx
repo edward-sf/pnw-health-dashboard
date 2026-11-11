@@ -3,7 +3,13 @@ import { tierFill } from "../model/modelView";
 import type { Flag } from "../types";
 
 const W = 320;
-const H = 40;
+const H = 54;
+const LABEL_Y = 48;
+/** Closest two neighbouring labels may sit, in viewBox units, before the inner pair is dropped. */
+const MIN_LABEL_GAP = 28;
+
+const signedBound = (v: number) =>
+  v === 0 ? "0" : `${v > 0 ? "+" : "−"}${formatBound(Math.abs(v), "years")}`;
 
 export function rangeDomain(residual: number, threshold90: number): number {
   return Math.max(threshold90, Math.abs(residual)) * 1.15;
@@ -29,6 +35,10 @@ export function ResidualRange({ residual, threshold75, threshold90, flag }: Prop
   const band = (t: number) => ({ x: x(-t), width: x(t) - x(-t) });
   const b90 = band(threshold90);
   const b75 = band(threshold75);
+  const showInner = x(threshold90) - x(threshold75) >= MIN_LABEL_GAP;
+  const ticks = showInner
+    ? [-threshold90, -threshold75, 0, threshold75, threshold90]
+    : [-threshold90, 0, threshold90];
   return (
     <div className="residual-range">
       <svg
@@ -42,6 +52,19 @@ export function ResidualRange({ residual, threshold75, threshold90, flag }: Prop
         <rect x={b75.x} y={10} width={b75.width} height={20} fill="#e6e9ee" />
         <line x1={x(0)} x2={x(0)} y1={6} y2={34} stroke="#374151" strokeWidth={1} />
         <circle cx={x(residual)} cy={20} r={5} fill={tierFill(flag)} stroke="#111" strokeWidth={1} />
+        {ticks.map((t) => (
+          <text
+            key={t}
+            className="range-label"
+            x={x(t)}
+            y={LABEL_Y}
+            fontSize={10}
+            fill="#4b5563"
+            textAnchor="middle"
+          >
+            {signedBound(t)}
+          </text>
+        ))}
       </svg>
       <p className="visually-hidden">
         {rangeMeaning(residual, threshold75, threshold90)}
