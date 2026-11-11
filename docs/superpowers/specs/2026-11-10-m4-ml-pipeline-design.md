@@ -113,7 +113,7 @@ All offline, using real LightGBM on small synthetic data, with no mocks of proje
 - **Comparison:** both models use identical county sets.
 - **Contract and CLI:** schema drift guard; each §6 check has a failing-input test; a missing interim file raises `StageInputError`; two runs are byte-identical.
 
-The existing end-to-end fixture holds exactly 5 states (the four PNW states and one California county), the minimum for 5 folds.
+The existing end-to-end fixture holds 6 states (the four PNW states plus one county each in California and New York), enough for 5 folds.
 
 ## 8. Tasks and checkpoint
 
