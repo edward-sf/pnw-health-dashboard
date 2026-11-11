@@ -55,6 +55,7 @@ def test_legacy_attached_to_successor() -> None:
                 "indicator_id": "x",
                 "legacy_fips": "02261",
                 "legacy_name": "Valdez-Cordova Census Area (former)",
+                "year": 2023,
                 "value": 78.2,
                 "ci_low": 77.0,
                 "ci_high": 79.4,
@@ -106,3 +107,27 @@ def test_write_exports_round_trip(tmp_path: Path) -> None:
     assert (
         Manifest.model_validate_json((tmp_path / "out" / "manifest.json").read_text()) == manifest
     )
+
+
+def test_legacy_exported_with_year() -> None:
+    legacy = pd.DataFrame(
+        [
+            {
+                "fips": "02063",
+                "indicator_id": "x",
+                "legacy_fips": "02261",
+                "legacy_name": "Valdez-Cordova Census Area (former)",
+                "year": 2023,
+                "value": 78.2,
+                "ci_low": 77.0,
+                "ci_high": 79.4,
+            }
+        ],
+        columns=LEGACY_COLUMNS,
+    )
+    vf = build_values_file(ranked([("53001", 1.0, None, None)]), legacy, COUNTIES, CATALOG)
+    entry = vf.root["x"]["02063"]
+    assert entry.v is None
+    assert entry.rank is None
+    assert entry.legacy is not None
+    assert entry.legacy.year == 2023

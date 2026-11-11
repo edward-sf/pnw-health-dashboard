@@ -15,11 +15,12 @@ import argparse
 import csv
 import json
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 
-from pnw_health.config import ACS_YEAR, CHR_YEAR, PLACES_RELEASE, census_api_key
+from pnw_health.config import ACS_YEAR, CHR_LEGACY_YEAR, CHR_YEAR, PLACES_RELEASE, census_api_key
 from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.sources.chr import fetch_chr
@@ -92,11 +93,39 @@ def record_places_sample(client: httpx.Client | None = None) -> Path:
     return out
 
 
-def record_chr_sample(client: httpx.Client | None = None) -> Path:
-    """Save the two CHR header rows and the catalog's columns for PNW and sample counties."""
+def _record_chr_file(
+    c: httpx.Client, year: int, wanted: list[str], keep: Callable[[str], bool]
+) -> Path:
     catalog = load_catalog()
+    with tempfile.TemporaryDirectory() as tmp:
+        src = fetch_chr(c, Path(tmp), catalog, year)
+        with src.open(newline="", encoding="latin-1") as fh:
+            reader = csv.reader(fh)
+            labels = next(reader)
+            names = next(reader)
+            index = [names.index(w) if w in names else None for w in wanted]
+            fips_at = names.index("fipscode")
+            rows = [
+                [row[i] if i is not None else "" for i in index]
+                for row in reader
+                if keep(row[fips_at])
+            ]
+        labels_out = [labels[i] if i is not None else "" for i in index]
+    out = FIXTURES / f"chr_{year}_sample.csv"
+    with out.open("w", newline="", encoding="latin-1") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerows([labels_out, wanted, *rows])
+    return out
+
+
+def record_chr_sample(client: httpx.Client | None = None) -> list[Path]:
+    """Save the CHR header rows and the catalog's columns for the current and legacy files.
+
+    The current file keeps PNW and sample counties; the 2023 file keeps only the retired
+    Valdez-Cordova row (02261), the Alaska state row and one Washington county.
+    """
     wanted = ["statecode", "countycode", "fipscode", "state", "county", "year"]
-    for ind in catalog:
+    for ind in load_catalog():
         if ind.source == "chr":
             stem = ind.source_field.removesuffix("_rawvalue")
             wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh"]
@@ -104,28 +133,16 @@ def record_chr_sample(client: httpx.Client | None = None) -> Path:
     keep_fips = {"06037", "36061", "53000", "00000"}
     c = client or make_client()
     try:
-        with tempfile.TemporaryDirectory() as tmp:
-            src = fetch_chr(c, Path(tmp), catalog)
-            with src.open(newline="", encoding="latin-1") as fh:
-                reader = csv.reader(fh)
-                labels = next(reader)
-                names = next(reader)
-                index = [names.index(w) if w in names else None for w in wanted]
-                fips_at = names.index("fipscode")
-                rows = [
-                    [row[i] if i is not None else "" for i in index]
-                    for row in reader
-                    if row[fips_at][:2] in keep_states or row[fips_at] in keep_fips
-                ]
-            labels_out = [labels[i] if i is not None else "" for i in index]
+        current = _record_chr_file(
+            c, CHR_YEAR, wanted, lambda f: f[:2] in keep_states or f in keep_fips
+        )
+        legacy = _record_chr_file(
+            c, CHR_LEGACY_YEAR, wanted, lambda f: f in {"02261", "02000", "53033"}
+        )
     finally:
         if client is None:
             c.close()
-    out = FIXTURES / f"chr_{CHR_YEAR}_sample.csv"
-    with out.open("w", newline="", encoding="latin-1") as fh:
-        writer = csv.writer(fh, lineterminator="\n")
-        writer.writerows([labels_out, wanted, *rows])
-    return out
+    return [current, legacy]
 
 
 def main() -> None:
@@ -138,7 +155,9 @@ def main() -> None:
         "places": record_places_sample,
         "chr": record_chr_sample,
     }
-    print(recorders[args.what]())
+    result = recorders[args.what]()
+    for path in result if isinstance(result, list) else [result]:
+        print(path)
 
 
 if __name__ == "__main__":

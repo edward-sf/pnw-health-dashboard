@@ -13,6 +13,7 @@ import typer
 
 from pnw_health.config import (
     ACS_YEAR,
+    CHR_LEGACY_YEAR,
     CHR_YEAR,
     GEO_YEAR,
     PLACES_RELEASE,
@@ -27,7 +28,13 @@ from pnw_health.harmonize import harmonize, pnw_only
 from pnw_health.indicators import load_catalog
 from pnw_health.ranks import add_ranks
 from pnw_health.sources.acs import acs_cache_path, fetch_acs, parse_acs, profile_url
-from pnw_health.sources.chr import chr_cache_path, chr_url, fetch_chr, parse_chr
+from pnw_health.sources.chr import (
+    chr_cache_path,
+    chr_url,
+    fetch_chr,
+    parse_chr,
+    parse_chr_legacy,
+)
 from pnw_health.sources.geo import (
     boundaries_cache_path,
     boundary_url,
@@ -63,6 +70,7 @@ def _fetch(paths: Paths, client: httpx.Client, api_key: str | None, refresh: boo
     fetch_acs(client, paths.raw, catalog, api_key=api_key, refresh=refresh)
     fetch_places(client, paths.raw, catalog, refresh=refresh)
     fetch_chr(client, paths.raw, catalog, CHR_YEAR, refresh=refresh)
+    fetch_chr(client, paths.raw, catalog, CHR_LEGACY_YEAR, refresh=refresh)
     fetch_boundaries(client, paths.raw, refresh=refresh)
 
 
@@ -71,7 +79,10 @@ def _harmonize(paths: Paths) -> None:
     acs = parse_acs(_require(acs_cache_path(paths.raw, catalog), "fetch"), catalog)
     places = parse_places(_require(places_cache_path(paths.raw, catalog), "fetch"), catalog)
     chr_ = parse_chr(_require(chr_cache_path(paths.raw, CHR_YEAR), "fetch"), catalog)
-    result = harmonize([acs, places, chr_])
+    legacy = parse_chr_legacy(
+        _require(chr_cache_path(paths.raw, CHR_LEGACY_YEAR), "fetch"), catalog
+    )
+    result = harmonize([acs, places, chr_, legacy])
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
     result.legacy.to_parquet(paths.interim / "legacy.parquet", index=False)
@@ -96,6 +107,7 @@ def _export(paths: Paths) -> None:
             SourceVintage(source="acs", year=ACS_YEAR, url=profile_url(ACS_YEAR)),
             SourceVintage(source="places", year=PLACES_RELEASE, url=places_url()),
             SourceVintage(source="chr", year=CHR_YEAR, url=chr_url(CHR_YEAR)),
+            SourceVintage(source="chr", year=CHR_LEGACY_YEAR, url=chr_url(CHR_LEGACY_YEAR)),
             SourceVintage(source="boundaries", year=GEO_YEAR, url=boundary_url(GEO_YEAR)),
         ],
         indicators=catalog,

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pandas.errors
 
-from pnw_health.config import CHR_FILES, CHR_YEAR
+from pnw_health.config import CHR_FILES, CHR_LEGACY_YEAR, CHR_YEAR
 from pnw_health.fetch import FetchError, cached_get
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
@@ -86,6 +86,26 @@ def _numeric(table: pd.DataFrame, column: str) -> pd.Series:
     return pd.to_numeric(table[column], errors="coerce").astype("float64")
 
 
+def _long_frame(counties: pd.DataFrame, ind: Indicator, year: int) -> pd.DataFrame:
+    low, high = _ci_columns(ind.source_field)
+    return pd.DataFrame(
+        {
+            "fips": counties["fipscode"].astype(str),
+            "indicator_id": ind.id,
+            "year": year,
+            **{
+                name: (_numeric(counties, column) * ind.source_scale).round(6)
+                for name, column in (
+                    ("value", ind.source_field),
+                    ("ci_low", low),
+                    ("ci_high", high),
+                )
+            },
+            "source": "chr",
+        }
+    )
+
+
 def parse_chr(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     """One long-format row per county x CHR indicator; state and national rows are dropped."""
     table = pd.read_csv(path, header=1, dtype=str, encoding=ENCODING, low_memory=False)
@@ -97,23 +117,26 @@ def parse_chr(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     for ind in _fields(catalog):
         if ind.source_field not in counties:
             raise _invalid(f"missing column {ind.source_field}")
-        low, high = _ci_columns(ind.source_field)
-        frames.append(
-            pd.DataFrame(
-                {
-                    "fips": counties["fipscode"].astype(str),
-                    "indicator_id": ind.id,
-                    "year": ind.year,
-                    **{
-                        name: (_numeric(counties, column) * ind.source_scale).round(6)
-                        for name, column in (
-                            ("value", ind.source_field),
-                            ("ci_low", low),
-                            ("ci_high", high),
-                        )
-                    },
-                    "source": "chr",
-                }
-            )
-        )
+        frames.append(_long_frame(counties, ind, ind.year))
     return pd.concat(frames, ignore_index=True)[LONG_COLUMNS]
+
+
+def parse_chr_legacy(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
+    """Non-null values for the retired Valdez-Cordova FIPS ``02261`` from the 2023 file.
+
+    Catalog fields missing from the older file are skipped, not errors.
+    """
+    table = pd.read_csv(path, header=1, dtype=str, encoding=ENCODING, low_memory=False)
+    missing = sorted(set(ID_COLUMNS) - set(table.columns))
+    if missing:
+        raise _invalid(f"missing column(s) {', '.join(missing)}")
+    retired = table[table["fipscode"] == "02261"]
+    frames = [
+        _long_frame(retired, ind, CHR_LEGACY_YEAR)
+        for ind in _fields(catalog)
+        if ind.source_field in retired
+    ]
+    if not frames:
+        return pd.DataFrame(columns=LONG_COLUMNS)
+    out = pd.concat(frames, ignore_index=True)
+    return out[out["value"].notna()].reset_index(drop=True)[LONG_COLUMNS]
