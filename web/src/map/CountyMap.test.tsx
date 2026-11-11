@@ -54,4 +54,28 @@ describe("CountyMap", () => {
     setup();
     expect(screen.getByText("Alaska (not to scale)")).toBeInTheDocument();
   });
+
+  describe("tooltip side", () => {
+    function hoverAt(clientX: number) {
+      const { container } = setup();
+      const map = container.querySelector(".county-map")!;
+      vi.spyOn(map, "getBoundingClientRect").mockReturnValue({
+        left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300, x: 0, y: 0, toJSON: () => ({}),
+      });
+      fireEvent.mouseMove(container.querySelector('path[data-fips="53033"]')!, { clientX, clientY: 50 });
+      return screen.getByRole("tooltip");
+    }
+
+    test("tooltip flips left past the map's midpoint", () => {
+      const tip = hoverAt(300);
+      expect(tip).toHaveClass("map-tooltip--left");
+      expect(tip.style.left).toBe("288px");
+    });
+
+    test("tooltip stays right of the cursor in the left half", () => {
+      const tip = hoverAt(100);
+      expect(tip).not.toHaveClass("map-tooltip--left");
+      expect(tip.style.left).toBe("112px");
+    });
+  });
 });

@@ -32,22 +32,26 @@ export function useExplorerParams(
   }, [hasInvalid, params.invalid, setSearchParams]);
 
   const setIndicator = useCallback(
-    (id: string) =>
+    (id: string) => {
+      if (id === params.indicator) return;
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.set("i", id);
         return next;
-      }),
-    [setSearchParams],
+      });
+    },
+    [setSearchParams, params.indicator],
   );
   const setCounty = useCallback(
-    (fips: string) =>
+    (fips: string) => {
+      if (fips === params.county) return;
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.set("c", fips);
         return next;
-      }),
-    [setSearchParams],
+      });
+    },
+    [setSearchParams, params.county],
   );
 
   return { params, setIndicator, setCounty };
