@@ -91,9 +91,17 @@ Deferrals I'm pulling back in:
 *Delete the sections that don't apply.*
 
 **M2 Map + live site**
-- [ ] The public URL loads, and the map shows all 149 counties with Alaska drawn as an inset
+
+*Before merge:*
+- [ ] `build-deploy` ran green on `milestone/m2`: real pipeline, site build and Playwright smoke test, with the deploy job skipped
+- [ ] On a local production build, the map shows all 149 counties with Alaska drawn as an inset
 - [ ] Indicator picker, URL state and bad-param fallback all work by hand
-- [ ] `ci` is required on `main`, and the scheduled deploy ran at least once
+- [ ] `ci` is required on `main`
+
+*After merge (a failure here gets a hotfix):*
+- [ ] A manual `build-deploy` run on `main` deployed successfully
+- [ ] The public URL loads and shows all 149 counties, and reloading `/methodology` works
+- [ ] The monthly cron is configured on `main` (its first scheduled run need not have happened yet)
 
 **M3 Full data + county panel**
 - [ ] Each new source's suppression and missing values show as "not available", not as zero
