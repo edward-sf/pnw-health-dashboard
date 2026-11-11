@@ -124,6 +124,9 @@ Deferrals I'm pulling back in:
 **M6 Methodology + polish**
 - [ ] The methodology page covers sources, vintages, harmonization, the ML method, exclusion rationale and caveats
 - [ ] README has a live link, screenshot and badges; mobile and accessibility passes done
+- [ ] The panel's Methodology links land on the right section
+- [ ] axe reports no serious or critical violations; the manual checklist is filled in
+- [ ] The bottom sheet is usable one-handed on a real phone
 
 ### 9. Verdict
 - [ ] **Approve.** Merge with a **merge commit** (not squash).
