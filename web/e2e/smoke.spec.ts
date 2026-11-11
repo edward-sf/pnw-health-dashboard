@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
   await expect(page.locator("path[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Poverty rate" }).click();
+  await page.getByRole("button", { name: "Poverty rate", exact: true }).click();
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await page.locator('path[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
@@ -87,7 +87,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
-  await expect(page.getByRole("button", { name: "Result" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(149);
   await page.goBack();
   await expect(page).not.toHaveURL(/[?&]view=table/);
@@ -98,4 +98,26 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await expect(page.locator(".legend")).toContainText("%");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
+});
+
+test("methodology and about pages render", async ({ page }) => {
+  await page.goto("./methodology");
+  await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
+  await expect(page.getByText("At a glance").first()).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
+  ).toBeVisible();
+  await page.goto("./about");
+  await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+});
+
+test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
+  // King County (53033) shows no panel Methodology link, so use Chugach, which has no model result.
+  await page.goto("./?i=poverty_rate&c=02063&mode=model");
+  const panel = page.getByRole("complementary", { name: "County details" });
+  await panel.getByRole("link", { name: "Methodology", exact: true }).click();
+  await expect(page).toHaveURL(/\/methodology#no-result$/);
+  const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
 });

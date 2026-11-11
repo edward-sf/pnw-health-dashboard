@@ -6,7 +6,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   use: { baseURL: "http://localhost:4173/pnw-health-dashboard/", trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /mobile\.spec\.ts/ },
+    { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /(mobile|a11y)\.spec\.ts/ },
+  ],
   webServer: {
     command: "npm run preview -- --port 4173 --strictPort",
     url: "http://localhost:4173/pnw-health-dashboard/",

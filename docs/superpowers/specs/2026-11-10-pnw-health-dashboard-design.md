@@ -145,7 +145,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
   - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode the indicator picker stays usable but dimmed, and `i` is kept for values mode; the title and legend describe life expectancy compared with expected.
   - Hover tooltip; click selects county.
-- **County panel** (right drawer on desktop, bottom sheet on mobile), in this order:
+- **County panel** (right drawer on desktop, bottom sheet on mobile; phone behavior is specified in `2026-11-11-m6-methodology-polish-design.md` §5), in this order:
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
   - Model card (shown in both modes): actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.

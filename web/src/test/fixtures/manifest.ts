@@ -6,6 +6,9 @@ export const manifest: Manifest = {
   sources: [
     { source: "acs", year: 2023, url: "https://example.test/acs" },
     { source: "places", year: 2023, url: "https://example.test/places" },
+    { source: "chr", year: 2025, url: "https://example.test/chr-2025" },
+    { source: "chr", year: 2023, url: "https://example.test/chr-2023" },
+    { source: "boundaries", year: 2024, url: "https://example.test/boundaries" },
   ],
   indicators: [
     {

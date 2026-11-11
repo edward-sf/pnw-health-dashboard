@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "screenshot": "vite build && node scripts/screenshot.mjs",
     "pretest": "npm run gen:types",
     "test": "vitest run",
     "lint": "eslint .",
@@ -28,6 +29,7 @@
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.65.0",
     "@testing-library/dom": "^10.4.2",

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router";
 import { formatBound, formatValue } from "../color/formatValue";
+import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import type { County, CountyModel, Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
 import { ModelCard } from "./ModelCard";
 import { rankSummary } from "./rankSummary";
@@ -33,6 +34,15 @@ export function CountyPanel({
   onClose,
 }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const bodyId = useId();
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  // The county the sheet was expanded for. It is cleared once another county is selected or the
+  // viewport goes wide, so the sheet always opens in peek and never comes back expanded.
+  const [expandedFips, setExpandedFips] = useState<string | null>(null);
+  if (expandedFips !== null && (expandedFips !== county.fips || !isPhone)) {
+    setExpandedFips(null);
+  }
+  const expanded = isPhone && expandedFips === county.fips;
 
   useEffect(() => {
     if (!focusRequested) return;
@@ -61,7 +71,15 @@ export function CountyPanel({
       : null;
 
   return (
-    <aside className="county-panel" aria-label="County details">
+    <aside
+      className={
+        isPhone
+          ? `county-panel county-panel--sheet${expanded ? " county-panel--expanded" : ""}`
+          : "county-panel"
+      }
+      aria-label="County details"
+    >
+      {isPhone && <div className="sheet-handle" aria-hidden="true" />}
       <div className="panel-header">
         <div>
           <h2 ref={headingRef} tabIndex={-1}>
@@ -69,34 +87,49 @@ export function CountyPanel({
           </h2>
           <p className="panel-state">{county.state}</p>
         </div>
-        <button type="button" className="panel-close" onClick={onClose}>
-          Close
-        </button>
-      </div>
-      <p className="panel-measure">{indicator.label}</p>
-      {v !== null ? (
-        <>
-          <p className="panel-value">{formatValue(v, indicator.unit)}</p>
-          {ci && <p className="panel-ci">{ci}</p>}
-          {ranks && <p className="panel-ranks">{ranks}</p>}
-          {entry?.unreliable && (
-            <p className="panel-unreliable">
-              The data source marks this estimate as unreliable, so read it and its rank with
-              caution. <Link to="/methodology">Methodology</Link>
-            </p>
+        <div className="panel-actions">
+          {isPhone && (
+            <button
+              type="button"
+              className="panel-expand"
+              aria-expanded={expanded}
+              aria-controls={bodyId}
+              onClick={() => setExpandedFips(expanded ? null : county.fips)}
+            >
+              {expanded ? "Collapse" : "Expand"}
+            </button>
           )}
-        </>
-      ) : (
-        <p className="panel-missing">
-          {legacy
-            ? `Reported only for the former Valdez-Cordova Census Area (combined area, CHR ${legacy.year}): ${formatValue(legacy.v, indicator.unit)}`
-            : "Suppressed or not available"}{" "}
-          <Link to="/methodology">Methodology</Link>
-        </p>
-      )}
-      <StripPlot county={county} indicator={indicator} entries={entries} />
-      <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
-      <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
+          <button type="button" className="panel-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+      <div id={bodyId} className="panel-body">
+        <p className="panel-measure">{indicator.label}</p>
+        {v !== null ? (
+          <>
+            <p className="panel-value">{formatValue(v, indicator.unit)}</p>
+            {ci && <p className="panel-ci">{ci}</p>}
+            {ranks && <p className="panel-ranks">{ranks}</p>}
+            {entry?.unreliable && (
+              <p className="panel-unreliable">
+                The data source marks this estimate as unreliable, so read it and its rank with
+                caution. <Link to="/methodology#unreliable">Methodology</Link>
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="panel-missing">
+            {legacy
+              ? `Reported only for the former Valdez-Cordova Census Area (combined area, CHR ${legacy.year}): ${formatValue(legacy.v, indicator.unit)}`
+              : "Suppressed or not available"}{" "}
+            <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
+          </p>
+        )}
+        <StripPlot county={county} indicator={indicator} entries={entries} />
+        <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
+        <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
+      </div>
     </aside>
   );
 }

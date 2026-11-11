@@ -3,6 +3,7 @@ import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
 import type { AppData } from "../data/loadData";
+import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
 import { ModelLegend } from "../model/ModelLegend";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
@@ -36,6 +37,7 @@ export function Explorer({ data }: { data: AppData }) {
     () => paths.map(({ fips, name, state }) => ({ fips, name, state })),
     [paths],
   );
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const openerRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   // The county a search or table selection asked to focus. It is bound to that FIPS, so a
@@ -90,13 +92,20 @@ export function Explorer({ data }: { data: AppData }) {
   );
 
   return (
-    <div className={selectedCounty ? "explorer explorer--panel" : "explorer"}>
+    <div
+      className={
+        selectedCounty
+          ? `explorer explorer--panel${isPhone ? " explorer--sheet-open" : ""}`
+          : "explorer"
+      }
+    >
       <aside className="explorer-picker">
         <IndicatorPicker
           indicators={manifest.indicators}
           selectedId={indicator.id}
           onSelect={setIndicator}
           dimmed={modelMode}
+          collapsible={isPhone}
         />
       </aside>
       <section className="explorer-main">
@@ -117,7 +126,7 @@ export function Explorer({ data }: { data: AppData }) {
             Table
           </button>
         </div>
-        <h2 ref={titleRef} className="indicator-title" tabIndex={-1}>
+        <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
           {modelMode ? "Life expectancy: compared with expected" : indicator.label}
         </h2>
         <p className="indicator-description">

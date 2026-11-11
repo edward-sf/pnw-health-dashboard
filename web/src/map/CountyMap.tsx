@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type PointerEvent, useState } from "react";
 import { MAP_LAYOUT, type MapPath } from "./buildMapPaths";
 
 type Props = {
@@ -14,10 +14,15 @@ type Tip = { fips: string; x: number; y: number; flip: boolean };
 export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Props) {
   const [tip, setTip] = useState<Tip | null>(null);
 
-  const place = (el: Element, fips: string, clientX: number, clientY: number) => {
-    const box = el.closest(".county-map")?.getBoundingClientRect();
-    const x = clientX - (box?.left ?? 0);
-    setTip({ fips, x, y: clientY - (box?.top ?? 0), flip: box !== undefined && x > box.width / 2 });
+  // On touch a tap selects the county and opens the panel, which replaces the tooltip.
+  const place = (e: PointerEvent<SVGPathElement>, fips: string) => {
+    if (e.pointerType === "touch") {
+      setTip(null);
+      return;
+    }
+    const box = e.currentTarget.closest(".county-map")?.getBoundingClientRect();
+    const x = e.clientX - (box?.left ?? 0);
+    setTip({ fips, x, y: e.clientY - (box?.top ?? 0), flip: box !== undefined && x > box.width / 2 });
   };
 
   const renderGroup = (items: MapPath[]) => {
@@ -29,12 +34,13 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
         d={p.d}
         fill={fillFor(p.fips)}
         className="county"
+        role="img"
         aria-label={`${p.name}, ${p.state}`}
         aria-current={p.fips === selected ? "true" : undefined}
         onClick={() => onSelect(p.fips)}
-        onMouseEnter={(e) => place(e.currentTarget, p.fips, e.clientX, e.clientY)}
-        onMouseMove={(e) => place(e.currentTarget, p.fips, e.clientX, e.clientY)}
-        onMouseLeave={() => setTip(null)}
+        onPointerEnter={(e) => place(e, p.fips)}
+        onPointerMove={(e) => place(e, p.fips)}
+        onPointerLeave={() => setTip(null)}
       />
     ));
   };

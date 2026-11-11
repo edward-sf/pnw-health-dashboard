@@ -21,7 +21,7 @@ export function ModelCard({ county, entry, indicators }: Props) {
       ) : (
         <p className="model-none">
           The model has no result for this county because its life expectancy isn't reported.{" "}
-          <Link to="/methodology">Methodology</Link>
+          <Link to="/methodology#no-result">Methodology</Link>
         </p>
       )}
     </section>
