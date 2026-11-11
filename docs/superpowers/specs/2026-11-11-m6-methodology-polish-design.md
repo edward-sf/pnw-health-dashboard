@@ -76,7 +76,7 @@ Under `web/src/pages/methodology/`, one file per section: `AtAGlance`, `SourcesS
 | Unreliable estimate note | `/methodology#unreliable` |
 | "Suppressed or not available" | `/methodology#suppression` |
 | Valdez-Cordova legacy value | `/methodology#legacy` |
-| Model card, no result | `/methodology#model` |
+| Model card, no result | `/methodology#no-result` |
 
 On the methodology page, a hash in the URL (on load or on navigation) scrolls to the matching section and moves focus to its heading. A hash that matches no section is ignored.
 

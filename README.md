@@ -34,7 +34,7 @@ flowchart LR
 - **fetch** downloads each source nationally and caches it in `data/raw/`, so reruns skip the network.
 - **harmonize** puts every source on one set of county FIPS codes, handles the Alaska county split, and produces a tidy table. Validation aborts the run if the counts or value ranges are wrong.
 - **model** trains ridge and LightGBM models with 5-fold cross-validation grouped by state, then computes out-of-fold residuals, flags and SHAP contributions.
-- **export** writes `manifest.json`, `values.json`, `counties.topojson` and `model.json`, each checked against a JSON Schema in `schema/`.
+- **export** writes `manifest.json`, `values.json`, `counties.topojson` and `model.json`. The three JSON files are checked against JSON Schemas in `schema/`.
 - **Vite build and GitHub Pages** produce a static site that reads only those four files. The web app knows nothing about the sources.
 
 ## Repo layout
@@ -43,7 +43,7 @@ flowchart LR
 |---|---|
 | `pipeline/` | Python 3.12 package (managed with uv): sources, harmonization, model, export, tests |
 | `web/` | React and Vite site, unit tests (Vitest) and end-to-end tests (Playwright) |
-| `schema/` | JSON Schemas for the exported files |
+| `schema/` | JSON Schemas for the three exported JSON files |
 | `docs/` | Design specs, plans and review templates |
 | `data/raw/` | Cached source downloads (git-ignored) |
 | `.github/workflows/` | `ci.yml` (CI) and `build-deploy.yml` (Build and deploy) |

@@ -57,7 +57,7 @@ test("no model result", () => {
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute(
     "href",
-    "/methodology#model",
+    "/methodology#no-result",
   );
   expect(screen.queryByText(/Factors associated/)).not.toBeInTheDocument();
 });

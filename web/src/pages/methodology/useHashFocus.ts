@@ -10,9 +10,12 @@ function idFromHash(hash: string): string {
   }
 }
 
-/** Once `ready`, scrolls to and focuses the element the URL hash names; reruns when the hash changes. */
+/**
+ * Once `ready`, scrolls to and focuses the element the URL hash names. Reruns on every navigation
+ * (a same-URL link click gets a new `location.key`), so clicking the same link again still works.
+ */
 export function useHashFocus(ready: boolean): void {
-  const { hash } = useLocation();
+  const { hash, key } = useLocation();
   useEffect(() => {
     if (!ready || !hash) return;
     const id = idFromHash(hash);
@@ -20,5 +23,5 @@ export function useHashFocus(ready: boolean): void {
     if (!el) return;
     el.scrollIntoView?.();
     el.focus();
-  }, [ready, hash]);
+  }, [ready, hash, key]);
 }

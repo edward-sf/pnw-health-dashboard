@@ -27,3 +27,10 @@ test("training, validation, metrics, importance and tiers", () => {
   expect(text).toMatch(/positive difference means better than expected/i);
   expect(text).toMatch(/average se²/);
 });
+
+test("the no-result heading is a focusable deep-link target", () => {
+  render(<ModelSection model={model} indicators={manifest.indicators} />);
+  const heading = screen.getByRole("heading", { level: 4, name: "Counties with no result" });
+  expect(heading).toHaveAttribute("id", "no-result");
+  expect(heading).toHaveAttribute("tabindex", "-1");
+});

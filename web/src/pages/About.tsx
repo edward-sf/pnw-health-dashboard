@@ -11,8 +11,8 @@ export function About() {
 
       <h3>What this is</h3>
       <p>
-        An explorer for county-level health and social indicators across Washington, Oregon and
-        Idaho. It also shows a model of county life expectancy, so you can compare each county's
+        An explorer for county-level health and social indicators across Washington, Oregon, Idaho
+        and Alaska. It also shows a model of county life expectancy, so you can compare each county's
         actual value with the value expected from its other indicators.
       </p>
       <p>
