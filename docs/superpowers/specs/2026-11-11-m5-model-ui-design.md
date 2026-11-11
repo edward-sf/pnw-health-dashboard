@@ -72,7 +72,7 @@ The card sits in the county panel in both modes, between the strip plot and "Who
 ### Part 1: "How this county compares"
 - Actual {80.8} years · Expected {77.1} years · Difference **{+3.7} years**. A small note follows: "Figures are rounded." (Actual − Expected can differ from the Difference by 0.1.)
 - A tier badge in the tier colour with the tier label.
-- **Range graphic:** a number line centred on 0 with a light band for ±`threshold_75`, a darker band for ±`threshold_90`, and a dot at the residual. Its screen-reader text states the difference and both ranges.
+- **Range graphic:** a number line centred on 0 with a light band for ±`threshold_75`, a darker band for ±`threshold_90`, and a dot at the residual. Labels under the line mark 0, ±`threshold_75` and ±`threshold_90` (e.g. "−3.4 −2.4 0 +2.4 +3.4"). When the residual is so large that the two ranges would sit closer than 28 units in the 320-wide graphic, only 0 and ±`threshold_90` are labelled. Its screen-reader text states the difference and both ranges.
 - **Range sentence:** "A difference beyond ±{2.4} years is flagged as somewhat better or worse, and beyond ±{3.4} years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty." If `se` is null, the second sentence ends "…and a typical county's measurement uncertainty, since this county's estimate has no confidence interval," matching the parent §5 fallback.
 
 ### Part 2: "Factors associated with the expected value"
@@ -80,6 +80,7 @@ Its own subheading. It uses one neutral hue and never the tier colours, so it ne
 - **Lead line:** "These factors moved the model's expected value from a starting point of {75.00} to {77.10} years. They describe what the model expects for a county with this profile; they don't explain the difference above."
 - **Bars:** five horizontal bars on a zero axis, direction shown by side. Each has a label like "Bachelor's degree or higher: 43.0%" and a value like "+2.58 years". Labels and units come from the manifest. A null `value` reads "value not reported; estimated".
 - **"All other factors" row:** `predicted − base_value − Σ top 5`, drawn the same way, so the card reconciles.
+- **Proxy note:** a fixed line under the bars on every card with a result: "Some factors stand in for others the model doesn't see. For example, high housing costs often go with expensive metro areas and college towns, so a higher housing cost burden can raise the expected value." This settles the M4 hand-off (M4 spec §3). In the real export, `severe_housing_cost_burden` is a top-5 factor above +0.5 years for 5 counties, and Kittitas's top bar (+1.41 years). The bars still show SHAP as the model computes it: they aren't hidden, re-signed or reordered. The M6 methodology page explains proxy features in more depth.
 - **Implementation:** `buildShapBars()` returns the rows; an inline SVG renders them, like `ResidualRange`. A text list gives screen readers the same content.
 
 ### No model result
