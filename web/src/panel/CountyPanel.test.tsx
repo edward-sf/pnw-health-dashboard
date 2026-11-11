@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
 import { manifest, model, values } from "../test/fixtures";
+import { mockMatchMedia } from "../test/matchMedia";
 import type { County, Indicator } from "../types";
 import { CountyPanel } from "./CountyPanel";
 
@@ -165,4 +167,87 @@ test("shows the model card after the strip plot and before Who lives here", () =
   const who = screen.getByText(/who lives here/i);
   expect(strip.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(card.compareDocumentPosition(who) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+describe("phone sheet", () => {
+  const indicator = manifest.indicators.find((i) => i.id === "poverty_rate") as Indicator;
+  const panel = (fips: string, onClose = () => {}) => (
+    <MemoryRouter>
+      <CountyPanel
+        county={counties.find((c) => c.fips === fips)!}
+        indicator={indicator}
+        entries={values.poverty_rate!}
+        counties={counties}
+        modelEntry={countyModel(model, fips)}
+        manifest={manifest}
+        values={values}
+        focusRequested={false}
+        onFocusHandled={() => {}}
+        onClose={onClose}
+      />
+    </MemoryRouter>
+  );
+  const aside = () => screen.getByRole("complementary", { name: "County details" });
+
+  test("renders as a sheet in peek on a phone", () => {
+    mockMatchMedia(true);
+    render(panel("53033"));
+    expect(aside()).toHaveClass("county-panel--sheet");
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+    const expand = screen.getByRole("button", { name: "Expand" });
+    expect(expand).toHaveAttribute("aria-expanded", "false");
+    const body = document.getElementById(expand.getAttribute("aria-controls")!);
+    expect(body).not.toBeNull();
+    expect(aside()).toContainElement(body);
+    expect(expand.nextElementSibling).toBe(screen.getByRole("button", { name: "Close" }));
+  });
+
+  test("Expand toggles aria-expanded, the class and the label", async () => {
+    mockMatchMedia(true);
+    render(panel("53033"));
+    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
+    const collapse = screen.getByRole("button", { name: "Collapse" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    expect(aside()).toHaveClass("county-panel--expanded");
+    await userEvent.click(collapse);
+    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+  });
+
+  test("a different county returns the sheet to peek", async () => {
+    mockMatchMedia(true);
+    const { rerender } = render(panel("53033"));
+    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
+    expect(aside()).toHaveClass("county-panel--expanded");
+    rerender(panel("02016"));
+    expect(screen.getByRole("heading", { level: 2, name: "Aleutians West" })).toBeInTheDocument();
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("crossing to a wide viewport drops the sheet and keeps the county", () => {
+    const mm = mockMatchMedia(true);
+    render(panel("53033"));
+    const heading = screen.getByRole("heading", { level: 2, name: "King" });
+    act(() => mm.set(false));
+    expect(aside()).not.toHaveClass("county-panel--sheet");
+    expect(aside()).not.toHaveClass("county-panel--expanded");
+    expect(screen.queryByRole("button", { name: "Expand" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "King" })).toBe(heading);
+  });
+
+  test("Escape closes the sheet", async () => {
+    mockMatchMedia(true);
+    const onClose = vi.fn();
+    render(panel("53033", onClose));
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  test("a wide viewport has no Expand button", () => {
+    mockMatchMedia(false);
+    render(panel("53033"));
+    expect(aside()).not.toHaveClass("county-panel--sheet");
+    expect(screen.queryByRole("button", { name: "Expand" })).not.toBeInTheDocument();
+  });
 });

@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
 import { manifest, model, topology, values } from "../test/fixtures";
+import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
 
 function setup(url = "/") {
@@ -257,8 +258,32 @@ test("model table replaces the value table, keeps c and view, and back restores 
 
 test("model mode: hovering King shows the tier tooltip", () => {
   setup("/?mode=model");
-  fireEvent.mouseEnter(document.querySelector('path[data-fips="53033"]')!);
+  fireEvent.pointerEnter(document.querySelector('path[data-fips="53033"]')!, {
+    pointerType: "mouse",
+  });
   expect(screen.getByRole("tooltip")).toHaveTextContent(
     "King, WA: notably better than expected (+3.7 years)",
   );
+});
+
+test("phone: the sheet-open class and Escape in the picker keeps the county", async () => {
+  mockMatchMedia(true);
+  const router = setup("/?i=poverty_rate&c=53033");
+  expect(document.querySelector(".explorer")).toHaveClass("explorer--sheet-open");
+  await userEvent.click(screen.getByRole("button", { name: "Indicator: Poverty rate" }));
+  await userEvent.click(screen.getByLabelText("Filter indicators"));
+  await userEvent.keyboard("{Escape}");
+  expect(screen.getByRole("button", { name: "Indicator: Poverty rate" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033");
+});
+
+test("wide viewport: no sheet-open class and no picker disclosure", () => {
+  mockMatchMedia(false);
+  setup("/?i=poverty_rate&c=53033");
+  expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
+  expect(screen.queryByRole("button", { name: /^Indicator:/ })).not.toBeInTheDocument();
 });
