@@ -77,6 +77,7 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 - **Alaska renames:** Wade Hampton (02270) → Kusilvak (02158) is remapped.
 - **Alaska split:** Valdez-Cordova (02261) → Chugach (02063) + Copper River (02066). Values reported only for 02261 are **not** copied to successors; successors are null (`v: null`) for that indicator/vintage and carry a `legacy` reference instead: `{fips: "02261", name: "Valdez-Cordova Census Area (former)", year, v, lo, hi}`. Current sources no longer report 02261, so its values come from CHR 2023 and carry that vintage in `year`. The pipeline logs a warning. Legacy rows are excluded from model training and from ranks.
 - **Suppressed/missing values** stay null — never imputed for display.
+- **Unreliable estimates** keep their value and rank and are marked in the panel and table.
 - **Confidence intervals** are carried through wherever the source provides them.
 
 ### Validation (runs before export; any failure aborts)
@@ -93,7 +94,7 @@ Defined once as Pydantic models in `contract.py`. JSON Schema generated from tho
 |---|---|
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
-| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3 |
+| `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
 | `model.json` | Metrics (national + PNW subset) for ridge, LightGBM, and the behaviors-included comparison model; global feature importance; flag thresholds (`sigma_model`, `z` per tier); and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.

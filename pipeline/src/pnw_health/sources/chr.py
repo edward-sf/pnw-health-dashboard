@@ -86,6 +86,14 @@ def _numeric(table: pd.DataFrame, column: str) -> pd.Series:
     return pd.to_numeric(table[column], errors="coerce").astype("float64")
 
 
+def _unreliable(table: pd.DataFrame, field: str) -> pd.Series:
+    """CHR's flag column is 0 = no flag, 1 = unreliable, 2 = suppressed; most fields have none."""
+    column = f"{field.removesuffix('_rawvalue')}_flag"
+    if column not in table:
+        return pd.Series(False, index=table.index, dtype="bool")
+    return table[column].eq("1")
+
+
 def _long_frame(counties: pd.DataFrame, ind: Indicator, year: int) -> pd.DataFrame:
     low, high = _ci_columns(ind.source_field)
     return pd.DataFrame(
@@ -102,6 +110,7 @@ def _long_frame(counties: pd.DataFrame, ind: Indicator, year: int) -> pd.DataFra
                 )
             },
             "source": "chr",
+            "unreliable": _unreliable(counties, ind.source_field),
         }
     )
 

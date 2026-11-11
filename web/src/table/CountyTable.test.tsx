@@ -101,3 +101,10 @@ test("CI header has no level when the indicator has none", () => {
   setup("pct_asian");
   expect(screen.getByRole("columnheader", { name: "CI" })).toBeInTheDocument();
 });
+
+test("marks only unreliable values", () => {
+  setup();
+  const rowOf = (name: string) => screen.getByRole("button", { name }).closest("tr")!;
+  expect(rowOf("Aleutians West, AK")).toHaveTextContent("14.2% (unreliable)");
+  expect(rowOf("King, WA")).not.toHaveTextContent("unreliable");
+});

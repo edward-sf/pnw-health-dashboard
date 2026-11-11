@@ -133,3 +133,13 @@ test("strip plot summary omitted for a null selection", () => {
   expect(screen.queryByText(/Higher than/)).not.toBeInTheDocument();
   expect(screen.getByText("1 counties not shown (no data)")).toBeInTheDocument();
 });
+
+test("cautions about an estimate the source marks unreliable", () => {
+  setup("02016", "poverty_rate");
+  expect(screen.getByText(/marks this estimate as unreliable/)).toBeInTheDocument();
+});
+
+test("shows no caution on a reliable estimate", () => {
+  setup("53033", "poverty_rate");
+  expect(screen.queryByText(/unreliable/)).not.toBeInTheDocument();
+});

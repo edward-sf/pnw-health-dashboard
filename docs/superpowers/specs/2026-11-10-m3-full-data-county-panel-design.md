@@ -62,10 +62,10 @@ Age 65 and older and percent rural sit outside Demographics because M4 uses them
 ## 4. Pipeline
 
 - **`sources/places.py`:** one national Socrata query for the catalog's measures at `AgeAdjPrv`, with an explicit `$limit`. A response with exactly `$limit` rows is an error, because it may be truncated. The cache file is keyed by release and measure list, as ACS is. CIs are 95%.
-- **`sources/chr.py`:** parses the 2025 v3 CSV, skips state and national rows, and turns blanks into nulls. CIs are 95%, where CHR provides them.
+- **`sources/chr.py`:** parses the 2025 v3 CSV, skips state and national rows, and turns blanks into nulls. CIs are 95%, where CHR provides them. Where a measure has a `_flag` column, flag 1 ("Unreliable") sets `unreliable` on the value; flag 2 ("Suppressed") rows are already blank.
 - **`source_scale`:** a new optional catalog field, default 1, used only by parsers and excluded from the exported manifest and schema. Value and CI bounds are multiplied by it: 100 for fractions, 100000 for per-person provider rates.
 - **Config:** `PLACES_RELEASE = 2025`, `CHR_YEAR = 2025`, `CHR_LEGACY_YEAR = 2023`, so the `build-deploy` raw cache changes when a vintage does.
-- **Validation:** `years` values must be within [0, 120] (closes #62).
+- **Validation:** `years` values must be within [0, 120] (closes #62). Legacy values pass the same range checks as current values.
 - **Manifest sources** list PLACES, CHR 2025 and CHR 2023 alongside ACS and boundaries.
 
 ### Valdez-Cordova fallback
@@ -74,12 +74,12 @@ The pipeline also reads CHR 2023, keeping only non-null 02261 rows for catalog C
 
 ### Contract
 
-`Legacy` gains a required `year: int`, and `legacy.parquet` gains a matching column. `schema_version` becomes `1.1.0`; the site accepts major version 1, so this is compatible.
+`Legacy` gains a required `year: int`, and `legacy.parquet` gains a matching column. `schema_version` becomes `1.1.0`; the site accepts major version 1, so this is compatible. `ValueEntry` then gains an optional `unreliable` boolean, present only when true, and `schema_version` becomes `1.2.0`.
 
 ## 5. Web app
 
 ### Layout
-The county panel is an in-flow third grid column, about 360px wide, present only when a county is selected. An overlay would cover Idaho and eastern Oregon and get in the way of clicking between counties. `main` grows from 1280px to 1440px. Below 1100px the panel stacks under the map. The selected indicator's label is always shown above the map (#80), and the picker scrolls within a bounded height (#84).
+The county panel is an in-flow third grid column, about 360px wide, present only when a county is selected. An overlay would cover Idaho and eastern Oregon and get in the way of clicking between counties. `main` grows from 1280px to 1440px. Below 1100px the panel stacks under the map. The selected indicator's label is always shown above the map (#80), followed by its description and a source line, and the picker scrolls within a bounded height (#84). The source line gives the data year for ACS and PLACES and says "{year} release" for CHR.
 
 ### URL state
 `view` accepts `map` and `table`; `mode` is unchanged. `setCounty` accepts `null`, which removes `c`. A view change pushes a history entry and keeps `i` and `c`.
@@ -89,18 +89,19 @@ In order:
 1. **Header:** county name, state and a close button. Close and Escape both clear `c`.
 2. **Value and CI:** for example "95% CI 74.2–76.1," using the indicator's `ci_level`. The CI line is omitted if the source has none.
 3. **Ranks:** counted against counties with data, for example "12th of 142 counties, 3rd of 39 in Washington (1 = best)." Neutral indicators show no ranks.
-4. **Missing data:** if `v` is null and `legacy` exists, "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link. If `v` is null with no `legacy`, "Suppressed or not available" with a methodology link.
-5. **Strip plot:** see below.
-6. **"Who lives here":** the seven Demographics shares as a list with small bars, under its own heading, with the "alone" note. Its wording never refers to health results or to model output, and M5's model card will sit above it as a separate section.
+4. **Reliability:** if the source marks the value unreliable, a caution with a methodology link. The value and ranks stay visible.
+5. **Missing data:** if `v` is null and `legacy` exists, "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link. If `v` is null with no `legacy`, "Suppressed or not available" with a methodology link.
+6. **Strip plot:** see below.
+7. **"Who lives here":** the seven Demographics shares as a list with small bars, under its own heading, with the "alone" note. Its wording never refers to health results or to model output, and M5's model card will sit above it as a separate section.
 
 ### Strip plot
 Observable Plot draws one dot per county with a non-null value and highlights the selected county. A pure function `buildStripData(entries, selected)` returns the points and the null count, so its logic is tested without rendering Plot in jsdom. The plot is followed by "N counties not shown (no data)" where N is above zero. A text summary gives screen readers the county's position. Dots are not interactive. A selected county with a null value has no highlighted dot.
 
 ### Table view
-A Map/Table toggle sits above the main area. Columns are county, state, value, CI, rank and state rank; rank columns are hidden for neutral indicators. Headers are sort buttons with `aria-sort`. Nulls sort last in both directions. County names are buttons that select the county. Rows with only a legacy value are marked.
+A Map/Table toggle sits above the main area. Columns are county, state, value, CI, rank and state rank; rank columns are hidden for neutral indicators. Headers are sort buttons with `aria-sort`. Nulls sort last in both directions. County names are buttons that select the county. Rows with only a legacy value are marked, and unreliable values say "(unreliable)."
 
 ### County search
-An accessible combobox above the map or table matches county name and state and works by keyboard alone. After a selection from search or the table, focus moves to the panel heading. Closing the panel returns focus to the element that opened it.
+An accessible combobox above the map or table matches county name and state and works by keyboard alone. County-name matches are listed before state-name matches. After a selection from search or the table, focus moves to the panel heading. Closing the panel returns focus to the element that opened it.
 
 ### New dependency
 `@observablehq/plot` (0.6.x), chosen in the parent spec. It brings in all of d3, so the milestone PR reports the change in bundle size.

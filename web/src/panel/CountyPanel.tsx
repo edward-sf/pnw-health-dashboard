@@ -78,6 +78,12 @@ export function CountyPanel({
           <p className="panel-value">{formatValue(v, indicator.unit)}</p>
           {ci && <p className="panel-ci">{ci}</p>}
           {ranks && <p className="panel-ranks">{ranks}</p>}
+          {entry?.unreliable && (
+            <p className="panel-unreliable">
+              The data source marks this estimate as unreliable, so read it and its rank with
+              caution. <Link to="/methodology">Methodology</Link>
+            </p>
+          )}
         </>
       ) : (
         <p className="panel-missing">
