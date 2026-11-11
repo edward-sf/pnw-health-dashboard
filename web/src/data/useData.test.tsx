@@ -1,13 +1,14 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { manifest, topology, values } from "../test/fixtures";
+import { manifest, model, topology, values } from "../test/fixtures";
 import { useData } from "./useData";
 
 const bodies: Record<string, unknown> = {
   "manifest.json": manifest,
   "values.json": values,
   "counties.topojson": topology,
+  "model.json": model,
 };
 const ok = (url: string) =>
   new Response(JSON.stringify(bodies[url.split("/").pop() as string]));

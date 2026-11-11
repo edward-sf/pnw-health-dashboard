@@ -11,6 +11,7 @@ export function useExplorerParams(
   setIndicator: (id: string) => void;
   setCounty: (fips: string | null) => void;
   setView: (view: "map" | "table") => void;
+  setMode: (mode: "values" | "model") => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.toString();
@@ -69,5 +70,18 @@ export function useExplorerParams(
     [setSearchParams, params.view],
   );
 
-  return { params, setIndicator, setCounty, setView };
+  const setMode = useCallback(
+    (mode: "values" | "model") => {
+      if (mode === params.mode) return;
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (mode === "values") next.delete("mode");
+        else next.set("mode", mode);
+        return next;
+      });
+    },
+    [setSearchParams, params.mode],
+  );
+
+  return { params, setIndicator, setCounty, setView, setMode };
 }

@@ -5,9 +5,10 @@ type Props = {
   indicators: Indicator[];
   selectedId: string;
   onSelect: (id: string) => void;
+  dimmed?: boolean;
 };
 
-export function IndicatorPicker({ indicators, selectedId, onSelect }: Props) {
+export function IndicatorPicker({ indicators, selectedId, onSelect, dimmed = false }: Props) {
   const [filter, setFilter] = useState("");
   const inputId = useId();
   const needle = filter.trim().toLowerCase();
@@ -21,7 +22,13 @@ export function IndicatorPicker({ indicators, selectedId, onSelect }: Props) {
   }
 
   return (
-    <div className="picker">
+    <div className={dimmed ? "picker indicator-picker--dimmed" : "picker"}>
+      {dimmed && (
+        <p className="picker-note">
+          Model mode shows life expectancy compared with what the model expects. Your indicator
+          choice is kept for values mode.
+        </p>
+      )}
       <label htmlFor={inputId} className="picker-label">
         Filter indicators
       </label>

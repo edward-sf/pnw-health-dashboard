@@ -1,9 +1,10 @@
-import type { CountiesTopology, Manifest, ValuesFile } from "../types";
+import type { CountiesTopology, Manifest, ModelFile, ValuesFile } from "../types";
 
 export type AppData = {
   manifest: Manifest;
   values: ValuesFile;
   topology: CountiesTopology;
+  model: ModelFile;
 };
 
 const SUPPORTED_SCHEMA_MAJOR = 1;
@@ -21,10 +22,11 @@ export async function loadData(
   signal?: AbortSignal,
 ): Promise<AppData> {
   const dir = `${baseUrl}data/`;
-  const [manifest, values, topology] = await Promise.all([
+  const [manifest, values, topology, model] = await Promise.all([
     fetchJson<Manifest>(`${dir}manifest.json`, signal),
     fetchJson<ValuesFile>(`${dir}values.json`, signal),
     fetchJson<CountiesTopology>(`${dir}counties.topojson`, signal),
+    fetchJson<ModelFile>(`${dir}model.json`, signal),
   ]);
   const major = Number.parseInt(String(manifest.schema_version).split(".")[0] ?? "", 10);
   if (major !== SUPPORTED_SCHEMA_MAJOR) {
@@ -32,5 +34,5 @@ export async function loadData(
       `Unsupported data schema version ${manifest.schema_version}; this site supports major version ${SUPPORTED_SCHEMA_MAJOR}.`,
     );
   }
-  return { manifest, values, topology };
+  return { manifest, values, topology, model };
 }
