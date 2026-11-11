@@ -1,13 +1,29 @@
 import { render, screen } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
-import { Link, MemoryRouter, Route, Routes } from "react-router";
+import { Link, MemoryRouter, Navigate, Route, Routes } from "react-router";
 import { expect, test } from "vitest";
 import { useRouteFocus } from "./useRouteFocus";
+
+// A page whose heading renders only after a "load", like the Explorer while data loads.
+function LatePage() {
+  const [loaded, setLoaded] = useState(false);
+  return loaded ? (
+    <h2 data-page-heading tabIndex={-1}>
+      Late page
+    </h2>
+  ) : (
+    <button type="button" onClick={() => setLoaded(true)}>
+      Load
+    </button>
+  );
+}
 
 function Shell() {
   useRouteFocus();
   return (
     <>
+      <Link to="/late">Late</Link>
       <Link to="/">Home</Link>
       <Link to="/b">B</Link>
       <Link to="/b#sub">B sub</Link>
@@ -34,6 +50,8 @@ function Shell() {
             </>
           }
         />
+        <Route path="/late" element={<LatePage />} />
+        <Route path="*" element={<Navigate to="/late" replace />} />
       </Routes>
     </>
   );
@@ -74,4 +92,28 @@ test("a search-only change leaves focus alone", async () => {
   const link = screen.getByRole("link", { name: "Home query" });
   await user.click(link);
   expect(link).toHaveFocus();
+});
+
+test("a heading that renders after the route change gets focus", async () => {
+  const user = userEvent.setup();
+  at("/");
+  await user.click(screen.getByRole("link", { name: "Late" }));
+  await user.click(screen.getByRole("button", { name: "Load" }));
+  expect(await screen.findByRole("heading", { name: "Late page" })).toHaveFocus();
+});
+
+test("leaving before the heading renders cancels the wait", async () => {
+  const user = userEvent.setup();
+  at("/");
+  await user.click(screen.getByRole("link", { name: "Late" }));
+  // A URL with a hash leaves focus to the hash target, so a leftover wait must not take it.
+  await user.click(screen.getByRole("link", { name: "B sub" }));
+  expect(await screen.findByRole("heading", { name: "B page" })).not.toHaveFocus();
+});
+
+test("a cold redirect while loading focuses the heading once it renders", async () => {
+  const user = userEvent.setup();
+  at("/nowhere");
+  await user.click(screen.getByRole("button", { name: "Load" }));
+  expect(await screen.findByRole("heading", { name: "Late page" })).toHaveFocus();
 });
