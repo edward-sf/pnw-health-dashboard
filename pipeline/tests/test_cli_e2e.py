@@ -296,3 +296,21 @@ def test_bad_legacy_value_stops_export(tmp_path: Path, full_zip: Path) -> None:
             run_pipeline(paths, Stage.export, client=client)
     assert any(p.startswith("life_expectancy legacy:") for p in err.value.problems)
     assert not paths.out.exists() or not any(paths.out.iterdir())
+
+
+def test_model_validation_failure_writes_nothing(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        model_path = paths.interim / "model.json"
+        model = ModelFile.model_validate_json(model_path.read_text())
+        county = next(c for c in model.counties.values() if c.predicted is not None)
+        county.predicted = county.predicted + 1.0
+        model_path.write_text(model.model_dump_json())
+        with pytest.raises(DataValidationError) as err:
+            run_pipeline(paths, Stage.export, client=client)
+    assert any("do not sum to the prediction" in p for p in err.value.problems)
+    assert not paths.out.exists() or not any(paths.out.iterdir())

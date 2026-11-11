@@ -70,6 +70,7 @@ A new `pnw_health/model/` package:
 | `cv.py` | Assigns folds; in each fold fits the median imputer on training rows, then fits ridge (standardized features) and LightGBM; returns out-of-fold predictions, contributions and base values |
 | `flags.py` | Pure implementation of the parent §5 threshold formula |
 | `explain.py` | Selects each county's top 5 contributions by absolute value and computes global importance |
+| `compare.py` | Refits the main and behaviors models on shared counties and reports metrics |
 | `run.py` | Orchestrates the above and assembles the result |
 
 A new `model` stage runs between `harmonize` and `export` and writes an interim file. `export` reads it, runs the checks in §6 and writes `model.json`. If the interim file is missing, `export` raises the existing `StageInputError`. New dependencies are `lightgbm` and `scikit-learn`, pinned in the uv lockfile.
@@ -101,6 +102,8 @@ Any failure aborts before files are written:
 - `flag` is `insufficient_data` exactly where the target is null.
 - For every county with a prediction, `base_value` plus all contributions equals `predicted` within 1e-6, checked before trimming to the top 5.
 - Main-model features contain no behavior or race/ethnicity field.
+- `actual` and every full-precision SHAP feature value match the current data within 1e-9 (a null SHAP value means the feature is missing), so a stale interim `model.json` is rejected.
+- No county outside the 149 appears in `counties`.
 
 ## 7. Testing
 

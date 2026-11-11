@@ -13,6 +13,8 @@ from pnw_health.model.config import ALLOWED_CATEGORIES, TARGET
 
 NON_NEGATIVE_UNITS = frozenset({"dollars", "count", "rate_per_100k"})
 ADDITIVITY_TOLERANCE = 1e-6
+STALE_TOLERANCE = 1e-9
+RERUN_MODEL = "re-run `pnw-health run --stage model`"
 
 
 class DataValidationError(Exception):
@@ -87,6 +89,39 @@ def _adds_up(county: CountyModel) -> bool:
     return abs(total - county.predicted) <= ADDITIVITY_TOLERANCE
 
 
+def _close(a: float, b: float) -> bool:
+    return abs(a - b) <= STALE_TOLERANCE
+
+
+def _stale_counties(
+    model: ModelFile, values: pd.DataFrame, has_target: set[str]
+) -> tuple[list[str], list[str]]:
+    """Counties whose model actual or SHAP feature values differ from the current data."""
+    present = values[values.value.notna()]
+    lookup: dict[tuple[str, str], float] = {
+        (fips, indicator_id): float(value)
+        for fips, indicator_id, value in zip(
+            present.fips, present.indicator_id, present.value.astype(float), strict=True
+        )
+    }
+    stale_actual: list[str] = []
+    stale_shap: list[str] = []
+    for fips, county in sorted(model.counties.items()):
+        if county.predicted is None or fips not in has_target:
+            continue
+        actual = lookup.get((fips, TARGET))
+        if county.actual is None or actual is None or not _close(county.actual, actual):
+            stale_actual.append(fips)
+        for entry in county.shap:
+            data = lookup.get((fips, entry.feature))
+            if (entry.value is None) != (data is None) or (
+                entry.value is not None and data is not None and not _close(entry.value, data)
+            ):
+                stale_shap.append(fips)
+                break
+    return stale_actual, stale_shap
+
+
 def validate_model(
     model: ModelFile,
     values: pd.DataFrame,
@@ -119,6 +154,22 @@ def validate_model(
     )
     if broken:
         problems.append(f"model contributions do not sum to the prediction: {', '.join(broken)}")
+
+    outside = sorted(set(model.counties) - county_fips)
+    if outside:
+        problems.append(f"model has counties outside the PNW: {', '.join(outside)}; {RERUN_MODEL}")
+
+    stale_actual, stale_shap = _stale_counties(model, values, has_target)
+    if stale_actual:
+        problems.append(
+            f"model actual does not match the current data for: {', '.join(stale_actual)}; "
+            f"{RERUN_MODEL}"
+        )
+    if stale_shap:
+        problems.append(
+            f"model SHAP feature values do not match the current data for: "
+            f"{', '.join(stale_shap)}; {RERUN_MODEL}"
+        )
 
     categories = {ind.id: ind.category for ind in catalog}
     excluded = [f for f in model.model_card.features if categories.get(f) not in ALLOWED_CATEGORIES]
