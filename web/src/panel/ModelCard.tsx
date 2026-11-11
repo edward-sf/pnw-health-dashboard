@@ -73,6 +73,11 @@ function ModelResult({ entry, bars }: { entry: CompleteModel; bars: ShapBar[] })
           {`These factors moved the model's expected value from a starting point of ${formatBound(base_value, "years", 2)} to ${formatBound(predicted, "years", 2)} years. They describe what the model expects for a county with this profile; they don't explain the difference above.`}
         </p>
         <ShapBars bars={bars} />
+        <p className="model-factors-note">
+          Some factors stand in for others the model doesn't see. For example, high housing costs
+          often go with expensive metro areas and college towns, so a higher housing cost burden
+          can raise the expected value.
+        </p>
       </div>
     </>
   );

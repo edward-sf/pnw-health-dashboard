@@ -40,3 +40,30 @@ test("screen-reader text gives the meaning for each of the three cases", () => {
   expect(text(2.6)).toBe("+2.6 years is beyond ±2.4 but within ±3.4 years, somewhat better or worse than expected.");
   expect(text(-0.5)).toBe("−0.5 years is within ±2.4 years, about as expected.");
 });
+
+function labels(residual: number, t75 = 2.36, t90 = 3.37) {
+  const { container, unmount } = render(
+    <ResidualRange residual={residual} threshold75={t75} threshold90={t90} flag="none" />,
+  );
+  const out = [...container.querySelectorAll("text.range-label")].map((t) => ({
+    text: t.textContent,
+    x: Number(t.getAttribute("x")),
+  }));
+  unmount();
+  return out;
+}
+
+test("the axis labels zero and both ranges, left to right", () => {
+  const l = labels(1.2);
+  expect(l.map((x) => x.text)).toEqual(["−3.4", "−2.4", "0", "+2.4", "+3.4"]);
+  const xs = l.map((x) => x.x);
+  expect([...xs].sort((a, b) => a - b)).toEqual(xs);
+  for (const x of xs) {
+    expect(x).toBeGreaterThanOrEqual(12);
+    expect(x).toBeLessThanOrEqual(320 - 12);
+  }
+});
+
+test("when the ranges would crowd together, only the outer range is labelled", () => {
+  expect(labels(11.8).map((x) => x.text)).toEqual(["−3.4", "0", "+3.4"]);
+});

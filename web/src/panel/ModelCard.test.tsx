@@ -97,3 +97,16 @@ test("the factors section draws neutral bars and never uses a tier colour", () =
     for (const t of tiers) expect(used).not.toContain(t);
   }
 });
+
+test("the factors section notes that some factors stand in for others", () => {
+  const { container } = renderCard(model.counties["53033"]!);
+  const note = container.querySelector(".model-factors .model-factors-note");
+  expect(note?.textContent).toBe(
+    "Some factors stand in for others the model doesn't see. For example, high housing costs often go with expensive metro areas and college towns, so a higher housing cost burden can raise the expected value.",
+  );
+});
+
+test("a county with no result shows no proxy note", () => {
+  const { container } = renderCard(model.counties["02063"]!);
+  expect(container.querySelector(".model-factors-note")).toBeNull();
+});
