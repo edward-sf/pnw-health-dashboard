@@ -8,4 +8,7 @@ test("load, pick an indicator, select a county", async ({ page }) => {
   await page.locator('path[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(page.locator('path[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
+  await expect(
+    page.getByRole("complementary", { name: "County details" }).locator("svg circle").first(),
+  ).toBeVisible();
 });

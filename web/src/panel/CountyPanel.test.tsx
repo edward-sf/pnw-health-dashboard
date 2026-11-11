@@ -64,7 +64,7 @@ test("suppressed county", () => {
   );
   expect(screen.getAllByText("Suppressed or not available")).toHaveLength(1);
   expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute("href", "/methodology");
-  expect(screen.queryByText(/of \d+ counties/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
 });
 
 test("legacy county", () => {
@@ -76,11 +76,44 @@ test("legacy county", () => {
     ),
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute("href", "/methodology");
-  expect(screen.queryByText(/of \d+ counties/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
 });
 
 test("neutral indicator has no ranks", () => {
   setup("02016", "pct_asian");
   expect(screen.getByText("5.0%")).toBeInTheDocument();
-  expect(screen.queryByText(/of \d+ counties/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
+});
+
+test("strip plot summary and not-shown note", () => {
+  setup("53033", "poverty_rate");
+  expect(screen.getByText(/Higher than \d+ of \d+ counties with data/)).toBeInTheDocument();
+});
+
+test("strip plot summary shown for a neutral indicator", () => {
+  setup("02016", "pct_asian");
+  expect(screen.getByText(/Higher than \d+ of \d+ counties with data/)).toBeInTheDocument();
+});
+
+test("strip plot summary omitted for a null selection", () => {
+  const indicator = manifest.indicators.find((i) => i.id === "poverty_rate") as Indicator;
+  render(
+    <MemoryRouter>
+      <CountyPanel
+        county={counties[1]!}
+        indicator={indicator}
+        entries={{
+          "02016": { v: null, lo: null, hi: null, rank: null, state_rank: null },
+          "53033": { v: 9.5, lo: null, hi: null, rank: 1, state_rank: 1 },
+        }}
+        counties={counties}
+        manifest={manifest}
+        values={values}
+        focusToken={0}
+        onClose={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText(/Higher than/)).not.toBeInTheDocument();
+  expect(screen.getByText("1 counties not shown (no data)")).toBeInTheDocument();
 });

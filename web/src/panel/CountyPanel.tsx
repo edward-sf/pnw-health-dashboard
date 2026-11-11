@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { formatBound, formatValue } from "../color/formatValue";
 import type { Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
 import { rankSummary } from "./rankSummary";
+import { StripPlot } from "./StripPlot";
 
 export type County = { fips: string; name: string; state: string };
 
@@ -71,6 +72,7 @@ export function CountyPanel({ county, indicator, entries, counties, focusToken, 
           <Link to="/methodology">Methodology</Link>
         </p>
       )}
+      <StripPlot county={county} indicator={indicator} entries={entries} />
     </aside>
   );
 }
