@@ -51,13 +51,15 @@ Global importance is mean |SHAP| across all out-of-fold explanations for the tra
 
 **SHAP calculation.** LightGBM's built-in `predict(pred_contrib=True)`, the same TreeSHAP algorithm as `shap.TreeExplainer`. It returns the base value as well, and it avoids adding `shap` as a dependency.
 
-**LightGBM settings.** Fixed, conservative settings chosen before results are seen and stored in `model/config.py`, with no tuning. Tuning against the folds that produce the reported metrics would inflate them. Training uses a fixed seed, `deterministic=True` and one thread. If LightGBM does not clearly beat ridge at the checkpoint, tuning is reconsidered then.
+**LightGBM settings.** Fixed settings stored in `model/config.py`, with no tuning inside the pipeline: tuning against the folds that produce the reported metrics would inflate them. Training uses a fixed seed, `deterministic=True` and one thread. The first settings were chosen before results were seen. The current ones came from the nested tuning described under "Checkpoint outcome", so the averaged nested result, not the single shipped fold assignment, is the fair accuracy figure.
 
 **Checkpoint outcome.** With the first settings (15 leaves, 400 trees), LightGBM tied ridge nationally and trailed it on the PNW. Two throwaway checks on real data, run outside the pipeline over 5 different state-fold assignments, settled the choice:
 - Nested state-grouped tuning chose smaller trees almost every time. LightGBM now uses 8 leaves, 200 trees, `min_child_samples` 20 and `reg_lambda` 10. This improved PNW RMSE by about 0.03 with no national loss. Accuracy against ridge is then effectively tied.
 - Ridge and LightGBM flag noticeably different PNW counties: the flagged sets overlap about 64% between models, against 83–93% for one model across fold assignments. The main cause is college towns, where students raise the poverty rate and lower income. Ridge reads that as a high-risk profile, giving the 40 US counties with a college-town profile a mean residual of +2.15 years against +0.84 for LightGBM. Benton, OR goes from "notably better" under ridge to no flag.
 
-LightGBM stays the main model because comparing a county with counties like it is the question. Ridge remains the reported baseline. College towns are improved, not solved; a college-enrollment feature is the direct fix and is not in v1. About 12 PNW counties' flags change with the fold assignment, so model-card wording should not overstate a single flag.
+LightGBM stays the main model because comparing a county with counties like it is the question. Ridge remains the reported baseline. College towns are improved, not solved: Latah, ID (Moscow) is still "notably better". A college-enrollment feature is the direct fix and is not in v1. About 12 PNW counties' flags change with the fold assignment, so model-card wording should not overstate a single flag.
+
+**Counter-intuitive feature direction.** In the shipped model, a higher `severe_housing_cost_burden` raises a county's expected life expectancy: across PNW counties its contribution correlates +0.77 with its value, up to +1.41 years for Kittitas. It most likely stands in for expensive metros and college towns once income is accounted for. SHAP reports the model faithfully, so this is not a bug, but an M5 bar reading "severe housing cost burden: +1.4 years" will look wrong to a lay reader. M5 decides how the model card handles it; the feature list is unchanged.
 
 **Behaviors comparison.** The main and behaviors LightGBM models are both refit on the same counties, using the same state fold assignments. Counties missing any behavior measure are excluded from both, which today removes Kentucky and Pennsylvania. The reported difference is therefore like for like and involves no state-wide imputation.
 
@@ -112,6 +114,7 @@ Any failure aborts before files are written:
 - Main-model features contain no behavior or race/ethnicity field.
 - `actual` and every full-precision SHAP feature value match the current data within 1e-9 (a null SHAP value means the feature is missing), so a stale interim `model.json` is rejected.
 - No county outside the 149 appears in `counties`.
+- The interim model was trained on the current `long.parquet`: the `model` stage records its SHA-256 next to the interim file, and export stops with `StageInputError` if it differs. This also catches changes to non-PNW counties, which the value checks above cannot see.
 
 ## 7. Testing
 

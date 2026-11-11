@@ -13,6 +13,7 @@ import pandas as pd
 from pnw_health.config import CHR_YEAR, STATES
 from pnw_health.contract import CountyModel, ModelFile, RegionMetrics
 from pnw_health.indicators import load_catalog
+from pnw_health.model.config import ALLOWED_CATEGORIES
 from pnw_health.sources.chr import chr_cache_path
 
 NAMED = {
@@ -23,7 +24,6 @@ NAMED = {
     "02158": "Kusilvak, AK",
 }
 FLAGS = ["notably_better", "somewhat_better", "none", "somewhat_worse", "notably_worse"]
-ALLOWED_CATEGORIES = {"Social & Economic", "Access"}
 
 
 def _table(header: list[str], rows: list[list[str]]) -> str:
