@@ -26,6 +26,14 @@ describe("CountyMap", () => {
     expect(container.querySelectorAll("path[data-fips]")).toHaveLength(5);
   });
 
+  test("each county path is a named image (aria-label needs a role)", () => {
+    setup("53033");
+    const king = screen.getByRole("img", { name: "King, WA" });
+    expect(king).toHaveAttribute("data-fips", "53033");
+    expect(king).toHaveAttribute("aria-current", "true");
+    expect(screen.getAllByRole("img")).toHaveLength(5);
+  });
+
   test("click calls onSelect with the zero-padded fips", async () => {
     const { container, onSelect } = setup();
     await userEvent.click(container.querySelector('path[data-fips="02016"]')!);

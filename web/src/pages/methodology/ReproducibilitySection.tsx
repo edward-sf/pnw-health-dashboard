@@ -16,9 +16,9 @@ export function ReproducibilitySection({ model, builtAt }: { model: ModelFile; b
   const card = model.model_card;
   return (
     <section aria-labelledby="model-card">
-      <h2 id="model-card" tabIndex={-1}>
+      <h3 id="model-card" tabIndex={-1}>
         Reproducibility
-      </h2>
+      </h3>
       <p>
         A pipeline rebuilds every data file from the sources, with pinned dependencies and fixed
         random seeds, so the same inputs give the same results.
@@ -33,7 +33,7 @@ export function ReproducibilitySection({ model, builtAt }: { model: ModelFile; b
         <dt>Data built</dt>
         <dd>{formatDate(builtAt)}</dd>
       </dl>
-      <h3>LightGBM parameters</h3>
+      <h4>LightGBM parameters</h4>
       <dl className="methodology-dl">
         {Object.entries(card.lightgbm_params).map(([key, value]) => (
           <div key={key}>

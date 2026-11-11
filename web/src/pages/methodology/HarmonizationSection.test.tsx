@@ -5,11 +5,11 @@ import { HarmonizationSection } from "./HarmonizationSection";
 
 test("covers FIPS, the Kusilvak remap and the Valdez-Cordova legacy values", () => {
   render(<HarmonizationSection sources={manifest.sources} />);
-  expect(screen.getByRole("heading", { level: 2, name: "Geography" })).toHaveAttribute(
+  expect(screen.getByRole("heading", { level: 3, name: "Geography" })).toHaveAttribute(
     "id",
     "harmonization",
   );
-  const legacy = screen.getByRole("heading", { level: 3, name: /Valdez-Cordova/ });
+  const legacy = screen.getByRole("heading", { level: 4, name: /Valdez-Cordova/ });
   expect(legacy).toHaveAttribute("id", "legacy");
   expect(legacy).toHaveAttribute("tabindex", "-1");
   const text = document.body.textContent ?? "";

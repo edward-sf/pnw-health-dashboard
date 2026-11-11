@@ -11,10 +11,10 @@ export function ExclusionsSection({ model }: { model: ModelFile }) {
   const groups = groupExcludedCounties(model.model_card.excluded_counties);
   return (
     <section aria-labelledby="exclusions">
-      <h2 id="exclusions" tabIndex={-1}>
+      <h3 id="exclusions" tabIndex={-1}>
         What the model leaves out
-      </h2>
-      <h3>Factor groups left out</h3>
+      </h3>
+      <h4>Factor groups left out</h4>
       <ul>
         {model.model_card.excluded_feature_groups.map((g) => (
           <li key={g.category}>
@@ -22,7 +22,7 @@ export function ExclusionsSection({ model }: { model: ModelFile }) {
           </li>
         ))}
       </ul>
-      <h3>How much do behaviors add?</h3>
+      <h4>How much do behaviors add?</h4>
       <p>
         A second LightGBM model adds the health behavior measures from CDC PLACES to the factors.
         It and the main model are refit on the same {counties(comparison.main.national.n)}, those
@@ -51,7 +51,7 @@ export function ExclusionsSection({ model }: { model: ModelFile }) {
         Only the behaviors model's accuracy metrics are used on this site. Its predictions and
         factor contributions are never shown.
       </p>
-      <h3>Counties left out of training</h3>
+      <h4>Counties left out of training</h4>
       {groups.length === 0 ? (
         <p>No county with a reported life expectancy is left out.</p>
       ) : (

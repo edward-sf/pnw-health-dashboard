@@ -5,11 +5,11 @@ import { IndicatorCatalog } from "./IndicatorCatalog";
 
 test("groups the catalog by category", () => {
   render(<IndicatorCatalog indicators={manifest.indicators} />);
-  expect(screen.getByRole("heading", { level: 2, name: "Indicators" })).toHaveAttribute(
+  expect(screen.getByRole("heading", { level: 3, name: "Indicators" })).toHaveAttribute(
     "id",
     "indicators",
   );
-  const groups = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+  const groups = screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent);
   expect(groups).toEqual(["Outcomes", "Social & Economic", "Demographics"]);
   const social = screen.getByRole("table", { name: "Social & Economic" });
   const poverty = within(social).getByRole("row", { name: /Poverty rate/ });

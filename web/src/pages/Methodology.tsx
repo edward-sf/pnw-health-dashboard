@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import ErrorPage from "../data/ErrorPage";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { DataState } from "../data/useData";
 import { AtAGlance } from "./methodology/AtAGlance";
 import { ExclusionsSection } from "./methodology/ExclusionsSection";
@@ -22,10 +23,13 @@ const CONTENTS = [
 ] as const;
 
 export function Methodology({ state }: { state: DataState }) {
+  usePageTitle("Methodology · PNW Health Dashboard");
   useHashFocus(state.status === "ready");
   return (
     <section className="methodology">
-      <h2 tabIndex={-1}>Methodology</h2>
+      <h2 tabIndex={-1} data-page-heading>
+        Methodology
+      </h2>
       {state.status === "loading" && <p>Loading data…</p>}
       {state.status === "error" && <ErrorPage message={state.message} onRetry={state.retry} />}
       {state.status === "ready" && (

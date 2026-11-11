@@ -43,3 +43,10 @@ test("links to the methodology page inside the app", () => {
   renderAbout();
   expect(screen.getByRole("link", { name: "methodology" })).toHaveAttribute("href", "/methodology");
 });
+
+test("the page heading is the route focus target", () => {
+  renderAbout();
+  expect(screen.getByRole("heading", { level: 2, name: "About" })).toHaveAttribute(
+    "data-page-heading",
+  );
+});

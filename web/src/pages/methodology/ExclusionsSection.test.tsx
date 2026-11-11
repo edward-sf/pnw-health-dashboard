@@ -5,7 +5,7 @@ import { ExclusionsSection } from "./ExclusionsSection";
 
 test("feature groups, behaviors comparison and excluded counties", () => {
   render(<ExclusionsSection model={model} />);
-  expect(screen.getByRole("heading", { level: 2 })).toHaveAttribute("id", "exclusions");
+  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "exclusions");
   const text = document.body.textContent ?? "";
   expect(text).toContain("Behaviors: Health behaviors closely restate the outcome.");
   expect(text).toContain("Kentucky");

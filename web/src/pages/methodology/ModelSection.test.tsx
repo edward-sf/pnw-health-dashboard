@@ -6,7 +6,7 @@ import { ModelSection } from "./ModelSection";
 
 test("training, validation, metrics, importance and tiers", () => {
   render(<ModelSection model={model} indicators={manifest.indicators} />);
-  expect(screen.getByRole("heading", { level: 2 })).toHaveAttribute("id", "model");
+  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "model");
   const text = document.body.textContent ?? "";
   expect(text).toContain(`${formatCount(model.model_card.training_counties)} US counties`);
   expect(text).toContain(`${model.model_card.n_folds}-fold cross-validation`);

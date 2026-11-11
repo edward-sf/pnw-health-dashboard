@@ -10,9 +10,9 @@ export function HarmonizationSection({ sources }: { sources: Manifest["sources"]
     legacyYear === null ? sourceName("chr") : `${sourceName("chr")} ${legacyYear}`;
   return (
     <section aria-labelledby="harmonization">
-      <h2 id="harmonization" tabIndex={-1}>
+      <h3 id="harmonization" tabIndex={-1}>
         Geography
-      </h2>
+      </h3>
       <p>
         Every source is joined on 2020 Census county codes (five-digit FIPS codes), so a county
         means the same area in every dataset.
@@ -21,9 +21,9 @@ export function HarmonizationSection({ sources }: { sources: Manifest["sources"]
         Alaska's Wade Hampton Census Area (02270) was renamed Kusilvak Census Area (02158). Data
         still filed under the old code is moved to the new one.
       </p>
-      <h3 id="legacy" tabIndex={-1}>
+      <h4 id="legacy" tabIndex={-1}>
         The former Valdez-Cordova Census Area
-      </h3>
+      </h4>
       <p>
         Alaska's Valdez-Cordova Census Area (02261) was split into the Chugach (02063) and Copper
         River (02066) Census Areas. For some measures, current releases have no value for either

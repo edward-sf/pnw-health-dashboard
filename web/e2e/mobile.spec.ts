@@ -34,3 +34,23 @@ test("the indicator picker opens, chooses and closes", async ({ page }) => {
   await expect(page.getByLabel("Filter indicators")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Median household income" })).toHaveCount(0);
 });
+
+test("the sheet header stays in view while the sheet scrolls", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./?i=poverty_rate&c=53033&mode=model");
+  const sheet = page.locator(".county-panel--sheet");
+  await sheet.getByRole("button", { name: "Expand" }).tap();
+  await expect(sheet).toHaveClass(/county-panel--expanded/);
+  await expect(sheet.locator("svg").first()).toBeVisible();
+  const scrolled = await sheet.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    return el.scrollTop;
+  });
+  expect(scrolled).toBeGreaterThan(0);
+  const sheetBox = await sheet.boundingBox();
+  for (const name of ["Collapse", "Close"]) {
+    const box = await sheet.getByRole("button", { name }).boundingBox();
+    expect(box!.y, name).toBeGreaterThanOrEqual(sheetBox!.y);
+  }
+  await expect(sheet.getByRole("heading", { level: 2 })).toBeInViewport();
+});

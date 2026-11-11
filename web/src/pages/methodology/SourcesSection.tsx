@@ -1,4 +1,5 @@
 import type { Manifest } from "../../types";
+import { TableScroll } from "./TableScroll";
 
 type Sources = Manifest["sources"];
 
@@ -34,15 +35,15 @@ export function SourcesSection({ sources }: { sources: Sources }) {
   const latest = latestYears(sources);
   return (
     <section aria-labelledby="sources">
-      <h2 id="sources" tabIndex={-1}>
+      <h3 id="sources" tabIndex={-1}>
         Sources and vintages
-      </h2>
+      </h3>
       <p>
         Every value comes from a public federal or national source, fetched for all US counties
         and shown for the Pacific Northwest. The vintage is the data year for ACS and PLACES and the
         release year for County Health Rankings.
       </p>
-      <div className="methodology-table-wrap">
+      <TableScroll label="Data sources">
         <table className="methodology-table">
           <caption>Data sources</caption>
           <thead>
@@ -68,7 +69,7 @@ export function SourcesSection({ sources }: { sources: Sources }) {
             })}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
       <p>
         CDC WONDER isn't used: its API doesn't support queries below the national level, so
         county data can't be fetched from it.
