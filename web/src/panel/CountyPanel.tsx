@@ -4,6 +4,7 @@ import { formatBound, formatValue } from "../color/formatValue";
 import type { Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
+import { WhoLivesHere } from "./WhoLivesHere";
 
 export type County = { fips: string; name: string; state: string };
 
@@ -18,7 +19,7 @@ type Props = {
   onClose: () => void;
 };
 
-export function CountyPanel({ county, indicator, entries, counties, focusToken, onClose }: Props) {
+export function CountyPanel({ county, indicator, entries, counties, manifest, values, focusToken, onClose }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export function CountyPanel({ county, indicator, entries, counties, focusToken, 
         </p>
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
+      <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
     </aside>
   );
 }

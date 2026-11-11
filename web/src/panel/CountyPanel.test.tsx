@@ -81,7 +81,8 @@ test("legacy county", () => {
 
 test("neutral indicator has no ranks", () => {
   setup("02016", "pct_asian");
-  expect(screen.getByText("5.0%")).toBeInTheDocument();
+  // The value also appears in the Who lives here section, so match both.
+  expect(screen.getAllByText("5.0%")).toHaveLength(2);
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
 });
 
