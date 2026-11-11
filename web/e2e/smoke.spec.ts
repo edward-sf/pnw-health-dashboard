@@ -99,3 +99,14 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.locator(".legend")).toContainText("%");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
 });
+
+test("methodology and about pages render", async ({ page }) => {
+  await page.goto("./methodology");
+  await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
+  await expect(page.getByText("At a glance").first()).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
+  ).toBeVisible();
+  await page.goto("./about");
+  await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+});
