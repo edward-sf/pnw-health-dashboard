@@ -6,7 +6,13 @@ import pytest
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
-from pnw_health.sources.chr import chr_cache_path, chr_url, fetch_chr, parse_chr
+from pnw_health.sources.chr import (
+    chr_cache_path,
+    chr_url,
+    fetch_chr,
+    parse_chr,
+    parse_chr_legacy,
+)
 from tests.helpers import make_indicator
 
 HEADER = "statecode,countycode,fipscode,state,county,year,v147_rawvalue,v147_cilow,v147_cihigh"
@@ -127,3 +133,28 @@ def test_missing_required_column_not_cached(tmp_path: Path, body: bytes) -> None
         fetch_chr(client, tmp_path, [chr_indicator()])
     assert not chr_cache_path(tmp_path, 2025).exists()
     assert not list((tmp_path / "chr").glob("*"))
+
+
+def test_legacy_keeps_only_retired_fips(tmp_path: Path) -> None:
+    path = write_csv(
+        tmp_path,
+        [
+            "02,261,02261,AK,Valdez-Cordova,2023,0.5,0.4,0.6",
+            "02,000,02000,AK,Alaska,2023,0.7,0.6,0.8",
+            "53,033,53033,WA,King,2023,0.8,0.7,0.9",
+        ],
+    )
+    out = parse_chr_legacy(path, [chr_indicator(scale=100.0)])
+    assert list(out.columns) == LONG_COLUMNS
+    assert out.fips.tolist() == ["02261"]
+    assert out.year.tolist() == [2023]
+    assert out.value.tolist() == [50.0]
+    assert out.ci_low.tolist() == [40.0]
+
+
+def test_legacy_skips_null_and_absent_fields(tmp_path: Path) -> None:
+    path = write_csv(tmp_path, ["02,261,02261,AK,Valdez-Cordova,2023,,,"])
+    absent = chr_indicator("other", code="v999")
+    out = parse_chr_legacy(path, [chr_indicator(), absent])
+    assert out.empty
+    assert list(out.columns) == LONG_COLUMNS

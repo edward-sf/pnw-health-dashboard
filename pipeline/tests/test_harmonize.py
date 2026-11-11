@@ -90,3 +90,18 @@ def test_split_null_successors_keep_legacy() -> None:
     assert sorted(res.legacy.fips) == ["02063", "02066"]
     assert "02261" not in set(res.values.fips)
     assert len(res.warnings) == 1
+
+
+def test_legacy_year_carried() -> None:
+    legacy = long_rows([("02261", "x", 78.2)]).assign(year=2023)
+    res = harmonize([legacy])
+    assert res.legacy.year.tolist() == [2023, 2023]
+
+
+def test_legacy_with_null_successors() -> None:
+    nan = float("nan")
+    legacy = long_rows([("02261", "x", 78.2)]).assign(year=2023)
+    res = harmonize([long_rows([("02063", "x", nan), ("02066", "x", nan)]), legacy])
+    assert sorted(res.legacy.fips) == ["02063", "02066"]
+    assert sorted(res.values.fips) == ["02063", "02066"]
+    assert res.values.value.isna().all()

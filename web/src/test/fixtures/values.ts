@@ -12,7 +12,7 @@ export const values: ValuesFile = {
       hi: null,
       rank: null,
       state_rank: null,
-      legacy: { fips: "02261", name: "Valdez-Cordova", v: 8.1, lo: 6.0, hi: 10.2 },
+      legacy: { fips: "02261", name: "Valdez-Cordova Census Area (former)", year: 2023, v: 8.1, lo: 6.0, hi: 10.2 },
     },
   },
   median_household_income: {

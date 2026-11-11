@@ -47,6 +47,7 @@ class Legacy(BaseModel):
 
     fips: str
     name: str
+    year: int
     v: float | None
     lo: float | None
     hi: float | None

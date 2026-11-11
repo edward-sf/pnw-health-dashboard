@@ -48,6 +48,7 @@ def build_values_file(
                 legacy=Legacy(
                     fips=str(lg.legacy_fips),
                     name=str(lg.legacy_name),
+                    year=int(lg.year),  # type: ignore[arg-type]
                     v=_num(lg.value),
                     lo=_num(lg.ci_low),
                     hi=_num(lg.ci_high),
