@@ -78,6 +78,22 @@ class ValuesFile(RootModel[dict[str, dict[str, ValueEntry]]]):
     """``{indicator_id: {fips: ValueEntry}}``"""
 
 
+class Metrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rmse: float
+    mae: float
+    r2: float
+    n: int
+
+
+class RegionMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    national: Metrics
+    pnw: Metrics
+
+
 SCHEMAS: dict[str, type[BaseModel]] = {
     "manifest.schema.json": Manifest,
     "values.schema.json": ValuesFile,
