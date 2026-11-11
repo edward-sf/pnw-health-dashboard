@@ -42,6 +42,15 @@ export function ShapBars({ bars }: { bars: ShapBar[] }) {
               >
                 {b.label}
               </text>
+              <line
+                className="shap-zero"
+                x1={ZERO_X}
+                x2={ZERO_X}
+                y1={top + BAR_Y - 2}
+                y2={top + BAR_Y + BAR_H + 2}
+                stroke={SHAP_FILL}
+                strokeWidth={1}
+              />
               <rect
                 className="shap-bar"
                 x={x}
@@ -63,20 +72,11 @@ export function ShapBars({ bars }: { bars: ShapBar[] }) {
             </g>
           );
         })}
-        <line
-          className="shap-zero"
-          x1={ZERO_X}
-          x2={ZERO_X}
-          y1={0}
-          y2={height}
-          stroke={SHAP_FILL}
-          strokeWidth={1}
-        />
       </svg>
       <ul className="visually-hidden">
         {bars.map((b) => (
           <li key={b.key}>
-            {b.label}: {b.contributionText}
+            {b.label}, {b.contributionText}
           </li>
         ))}
       </ul>

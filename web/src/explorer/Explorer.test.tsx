@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
@@ -253,4 +253,12 @@ test("model table replaces the value table, keeps c and view, and back restores 
   expect(screen.getByRole("columnheader", { name: "Rank" })).toBeInTheDocument();
   expect(screen.queryByRole("columnheader", { name: "Result" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "King, WA" })).toHaveAttribute("aria-current", "true");
+});
+
+test("model mode: hovering King shows the tier tooltip", () => {
+  setup("/?mode=model");
+  fireEvent.mouseEnter(document.querySelector('path[data-fips="53033"]')!);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "King, WA: notably better than expected (+3.7 years)",
+  );
 });

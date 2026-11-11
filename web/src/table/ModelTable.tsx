@@ -69,9 +69,9 @@ export function ModelTable({ rows, selected, onSelect }: Props) {
                   </button>
                 </td>
                 <td>{r.state}</td>
-                <td>{actual !== null ? formatValue(actual, "years") : ""}</td>
-                <td>{predicted !== null ? formatValue(predicted, "years") : ""}</td>
-                <td>{residual !== null ? formatSigned(residual, "years") : ""}</td>
+                <td className="num">{actual !== null ? formatValue(actual, "years") : ""}</td>
+                <td className="num">{predicted !== null ? formatValue(predicted, "years") : ""}</td>
+                <td className="num">{residual !== null ? formatSigned(residual, "years") : ""}</td>
                 <td>{tierLabel(flag)}</td>
               </tr>
             );

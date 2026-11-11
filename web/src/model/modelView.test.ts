@@ -3,6 +3,7 @@ import { HATCH_FILL } from "../color/makeColorScale";
 import { model } from "../test/fixtures";
 import {
   countyModel,
+  hasModelResult,
   modelTooltip,
   TIERS,
   tierCounts,
@@ -67,4 +68,13 @@ test("modelTooltip", () => {
   expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"))).toBe(
     "Chugach, AK: not enough data for the model",
   );
+});
+
+test("hasModelResult is false for insufficient data or any null field", () => {
+  const full = model.counties["53033"]!;
+  expect(hasModelResult(full)).toBe(true);
+  expect(hasModelResult({ ...full, flag: "insufficient_data" })).toBe(false);
+  for (const k of ["actual", "predicted", "residual", "base_value", "threshold_75", "threshold_90"] as const) {
+    expect(hasModelResult({ ...full, [k]: null })).toBe(false);
+  }
 });

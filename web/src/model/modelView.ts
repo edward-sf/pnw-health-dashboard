@@ -65,8 +65,29 @@ export function tierCounts(model: ModelFile, fipsList: string[]): Record<Flag, n
   return counts;
 }
 
+export type CompleteModel = CountyModel & {
+  actual: number;
+  predicted: number;
+  residual: number;
+  base_value: number;
+  threshold_75: number;
+  threshold_90: number;
+};
+
+export function hasModelResult(entry: CountyModel): entry is CompleteModel {
+  return (
+    entry.flag !== "insufficient_data" &&
+    entry.actual !== null &&
+    entry.predicted !== null &&
+    entry.residual !== null &&
+    entry.base_value !== null &&
+    entry.threshold_75 !== null &&
+    entry.threshold_90 !== null
+  );
+}
+
 export function modelTooltip(name: string, state: string, entry: CountyModel): string {
-  if (entry.flag === "insufficient_data" || entry.residual === null) {
+  if (!hasModelResult(entry) || entry.residual === null) {
     return `${name}, ${state}: not enough data for the model`;
   }
   return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, "years")})`;

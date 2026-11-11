@@ -24,6 +24,7 @@ test("King: comparison, badge, range sentence and factors", () => {
   expect(screen.getByText("Expected 77.1 years")).toBeInTheDocument();
   expect(screen.getByText("Difference +3.7 years")).toBeInTheDocument();
   expect(screen.getByText("Notably better than expected")).toBeInTheDocument();
+  expect(screen.getByText("Figures are rounded.")).toBeInTheDocument();
   expect(
     screen.getByText(
       "A difference beyond ±2.4 years is flagged as somewhat better or worse, and beyond ±3.4 years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty.",
@@ -33,7 +34,7 @@ test("King: comparison, badge, range sentence and factors", () => {
     screen.getByRole("heading", { level: 4, name: "Factors associated with the expected value" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/starting point of 75\.0 to 77\.1 years\. They describe what the model expects/),
+    screen.getByText(/starting point of 75\.00 to 77\.10 years\. They describe what the model expects/),
   ).toBeInTheDocument();
   expect(screen.getAllByText(/All other factors/).length).toBeGreaterThan(0);
 });
