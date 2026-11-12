@@ -133,7 +133,7 @@ All files are small enough to load up front.
 **Why SVG + d3-geo rather than MapLibre:** a composite projection (Albers for WA/OR/ID plus a scaled Alaska inset) avoids Mercator distortion of Alaska; no tile basemap or API keys; 149 DOM elements are easy to style, test, and make accessible.
 
 ### Routes
-- `/` — Explorer. All state in URL: `?i=<indicator_id>&c=<fips>&mode=values|model&view=map|table`.
+- `/` — Explorer. All state in URL: `?i=<indicator_id>&c=<fips>&t=<target_id>&mode=values|model&view=map|table`. `t` defaults to the first model target and is kept in both modes.
 - `/methodology` — sources and vintages, harmonization rules, ML method, model card, caveats.
 - `/about` — project overview and author links.
 
@@ -145,7 +145,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - *Values mode:* direction-aware sequential color scale, quantile bins, legend; hatch pattern for suppressed/missing.
   - *Neutral indicators (Demographics):* neutral single-hue sequential scale; no ranks.
   - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
-  - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode the indicator picker stays usable but dimmed, and `i` is kept for values mode; the title and legend describe life expectancy compared with expected.
+  - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode an "Outcome" select (the model targets, `t`) replaces the indicator picker, and `i` is kept for values mode; the title and legend describe the chosen outcome compared with expected.
   - Hover tooltip; click selects county.
 - **County panel** (right drawer on desktop, bottom sheet on mobile; phone behavior is specified in `2026-11-11-m6-methodology-polish-design.md` §5), in this order in values mode. In model mode the model card comes first, then the indicator value with its strip plot, then "Who lives here" (amended in M7, #130):
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.

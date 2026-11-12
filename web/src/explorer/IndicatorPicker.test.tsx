@@ -67,26 +67,6 @@ test("is operable by keyboard", async () => {
   expect(onSelect).toHaveBeenCalledWith("poverty_rate");
 });
 
-test("dimmed adds the class, shows the note, and stays interactive", async () => {
-  const onSelect = vi.fn();
-  render(
-    <IndicatorPicker
-      indicators={manifest.indicators}
-      selectedId="poverty_rate"
-      onSelect={onSelect}
-      dimmed
-    />,
-  );
-  expect(
-    screen.getByText(
-      "Model mode shows life expectancy compared with what the model expects. Your indicator choice is kept for values mode.",
-    ),
-  ).toBeInTheDocument();
-  expect(document.querySelector(".indicator-picker--dimmed")).not.toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
-  expect(onSelect).toHaveBeenCalledWith("pct_asian");
-});
-
 describe("collapsible", () => {
   const setupCollapsible = (onSelect = vi.fn()) => {
     render(

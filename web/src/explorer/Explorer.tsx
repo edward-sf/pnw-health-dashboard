@@ -6,7 +6,7 @@ import type { AppData } from "../data/loadData";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
 import { ModelLegend } from "../model/ModelLegend";
-import { DEFAULT_TARGET, targetModel } from "../model/targetView";
+import { targetModel } from "../model/targetView";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
 import { CountyMap } from "../map/CountyMap";
 import { CountyPanel } from "../panel/CountyPanel";
@@ -17,6 +17,7 @@ import { ModelTable } from "../table/ModelTable";
 import type { ModelRow } from "../table/sortModelRows";
 import type { Row } from "../table/sortRows";
 import { IndicatorPicker } from "./IndicatorPicker";
+import { OutcomePicker } from "./OutcomePicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
@@ -24,7 +25,11 @@ const SEARCH_INPUT_ID = "county-search";
 
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
-  const model = useMemo(() => targetModel(data.model, DEFAULT_TARGET), [data.model]);
+  const targetIds = useMemo(() => Object.keys(data.model.targets), [data.model]);
+  const targetOptions = useMemo(
+    () => targetIds.map((id) => ({ id, label: targetModel(data.model, id).label })),
+    [targetIds, data.model],
+  );
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
   const fipsSet = useMemo(
     () =>
@@ -35,9 +40,14 @@ export function Explorer({ data }: { data: AppData }) {
       ),
     [topology],
   );
-  const { params, setIndicator, setCounty, setView, setMode } = useExplorerParams(
+  const { params, setIndicator, setCounty, setTarget, setView, setMode } = useExplorerParams(
     manifest,
     fipsSet,
+    targetIds,
+  );
+  const model = useMemo(
+    () => targetModel(data.model, params.target),
+    [data.model, params.target],
   );
 
   const counties = useMemo<County[]>(
@@ -122,13 +132,16 @@ export function Explorer({ data }: { data: AppData }) {
         Skip to county search
       </a>
       <aside className="explorer-picker">
-        <IndicatorPicker
-          indicators={manifest.indicators}
-          selectedId={indicator.id}
-          onSelect={setIndicator}
-          dimmed={modelMode}
-          collapsible={isPhone}
-        />
+        {modelMode ? (
+          <OutcomePicker targets={targetOptions} value={params.target} onChange={setTarget} />
+        ) : (
+          <IndicatorPicker
+            indicators={manifest.indicators}
+            selectedId={indicator.id}
+            onSelect={setIndicator}
+            collapsible={isPhone}
+          />
+        )}
       </aside>
       <section className="explorer-main">
         <CountySearch counties={counties} onSelect={onSelectWithOpener} inputId={SEARCH_INPUT_ID} />

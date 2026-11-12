@@ -6,18 +6,20 @@ import { parseParams, type ExplorerParams } from "./parseParams";
 export function useExplorerParams(
   manifest: Manifest,
   fipsSet: ReadonlySet<string>,
+  targetIds: readonly string[],
 ): {
   params: ExplorerParams;
   setIndicator: (id: string) => void;
   setCounty: (fips: string | null) => void;
+  setTarget: (id: string) => void;
   setView: (view: "map" | "table") => void;
   setMode: (mode: "values" | "model") => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.toString();
   const params = useMemo(
-    () => parseParams(search, manifest, fipsSet),
-    [search, manifest, fipsSet],
+    () => parseParams(search, manifest, fipsSet, targetIds),
+    [search, manifest, fipsSet, targetIds],
   );
 
   const hasInvalid = params.invalid.length > 0;
@@ -57,6 +59,19 @@ export function useExplorerParams(
     [setSearchParams, params.county],
   );
 
+  const setTarget = useCallback(
+    (id: string) => {
+      if (id === params.target) return;
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === targetIds[0]) next.delete("t");
+        else next.set("t", id);
+        return next;
+      });
+    },
+    [setSearchParams, params.target, targetIds],
+  );
+
   const setView = useCallback(
     (view: "map" | "table") => {
       if (view === params.view) return;
@@ -83,5 +98,5 @@ export function useExplorerParams(
     [setSearchParams, params.mode],
   );
 
-  return { params, setIndicator, setCounty, setView, setMode };
+  return { params, setIndicator, setCounty, setTarget, setView, setMode };
 }

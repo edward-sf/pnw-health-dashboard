@@ -2,12 +2,15 @@ import { expect, test } from "vitest";
 import { manifest } from "../test/fixtures";
 import { parseParams } from "./parseParams";
 
-const parse = (s: string) => parseParams(s, manifest, new Set(["53033", "02016"]));
+const targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
+const parse = (s: string) =>
+  parseParams(s, manifest, new Set(["53033", "02016"]), targetIds);
 
 test("defaults to the first catalog indicator", () => {
   expect(parse("")).toEqual({
     indicator: manifest.indicators[0]!.id,
     county: null,
+    target: "life_expectancy",
     mode: "values",
     view: "map",
     invalid: [],
@@ -48,4 +51,14 @@ test("mode=Model and an empty mode are invalid and default to values, keeping th
       invalid: ["mode"],
     });
   }
+});
+
+test("defaults t to the first target", () => {
+  expect(parse("")).toMatchObject({ target: "life_expectancy", invalid: [] });
+});
+test("accepts a known t", () => {
+  expect(parse("?t=injury_deaths")).toMatchObject({ target: "injury_deaths", invalid: [] });
+});
+test("flags an unknown t", () => {
+  expect(parse("?t=nope")).toMatchObject({ target: "life_expectancy", invalid: ["t"] });
 });
