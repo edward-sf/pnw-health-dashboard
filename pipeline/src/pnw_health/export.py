@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -110,10 +113,27 @@ def write_exports(
     topology: dict[str, Any],
     model: ModelFile,
 ) -> list[Path]:
+    """Write the four web files as a set: all of them change, or none do.
+
+    Each file is written to a temporary directory beside ``out_dir`` (not inside it, so a
+    killed run can't leave a directory that Vite would copy into the site) and moved into
+    place only after all four writes succeed. The four renames are separate system calls,
+    so a crash between two of them could still mix vintages; nothing that can fail on
+    content runs between them.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
-    return [
-        _write_json(out_dir / "manifest.json", manifest.model_dump(mode="json")),
-        _write_json(out_dir / "values.json", values.model_dump(mode="json")),
-        _write_json(out_dir / "counties.topojson", topology),
-        write_model(out_dir / "model.json", model),
-    ]
+    tmp = Path(tempfile.mkdtemp(dir=out_dir.parent, prefix=f".{out_dir.name}-export-"))
+    try:
+        written = [
+            _write_json(tmp / "manifest.json", manifest.model_dump(mode="json")),
+            _write_json(tmp / "values.json", values.model_dump(mode="json")),
+            _write_json(tmp / "counties.topojson", topology),
+            write_model(tmp / "model.json", model),
+        ]
+        final = []
+        for path in written:
+            os.replace(path, out_dir / path.name)
+            final.append(out_dir / path.name)
+        return final
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
