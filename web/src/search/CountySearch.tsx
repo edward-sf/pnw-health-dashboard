@@ -5,12 +5,15 @@ import { STATE_NAMES } from "../panel/rankSummary";
 type Props = {
   counties: County[];
   onSelect: (fips: string, opener: HTMLElement) => void;
+  /** A stable id for the input, so a skip link can point at it. Defaults to a generated one. */
+  inputId?: string;
 };
 
 const MAX_OPTIONS = 8;
 
-export function CountySearch({ counties, onSelect }: Props) {
+export function CountySearch({ counties, onSelect, inputId }: Props) {
   const id = useId();
+  const inputDomId = inputId ?? `${id}-input`;
   const listId = `${id}-list`;
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
@@ -71,12 +74,12 @@ export function CountySearch({ counties, onSelect }: Props) {
 
   return (
     <div className="county-search">
-      <label htmlFor={`${id}-input`} className="visually-hidden">
+      <label htmlFor={inputDomId} className="visually-hidden">
         Search counties
       </label>
       <input
         ref={inputRef}
-        id={`${id}-input`}
+        id={inputDomId}
         type="text"
         role="combobox"
         placeholder="Search counties"

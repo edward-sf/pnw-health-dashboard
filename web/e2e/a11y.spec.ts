@@ -67,3 +67,17 @@ test("about page", async ({ page }, testInfo) => {
   await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
   await audit(page, testInfo);
 });
+
+test("skip link reaches the county search", async ({ page }) => {
+  await explorer(page, "?i=poverty_rate");
+  const link = page.getByRole("link", { name: "Skip to county search" });
+  // The site header's links come first; the skip link is the Explorer's first tab stop.
+  for (let i = 0; i < 10 && !(await link.evaluate((el) => el === document.activeElement)); i++) {
+    await page.keyboard.press("Tab");
+  }
+  await expect(link).toBeFocused();
+  await expect(link).toBeInViewport();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("combobox", { name: "Search counties" })).toBeFocused();
+  expect(new URL(page.url()).hash).toBe("");
+});

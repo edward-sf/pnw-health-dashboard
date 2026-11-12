@@ -19,6 +19,8 @@ import { IndicatorPicker } from "./IndicatorPicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
+const SEARCH_INPUT_ID = "county-search";
+
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology, model } = data;
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
@@ -31,7 +33,10 @@ export function Explorer({ data }: { data: AppData }) {
       ),
     [topology],
   );
-  const { params, setIndicator, setCounty, setView, setMode } = useExplorerParams(manifest, fipsSet);
+  const { params, setIndicator, setCounty, setView, setMode } = useExplorerParams(
+    manifest,
+    fipsSet,
+  );
 
   const counties = useMemo<County[]>(
     () => paths.map(({ fips, name, state }) => ({ fips, name, state })),
@@ -83,13 +88,17 @@ export function Explorer({ data }: { data: AppData }) {
     () => counties.map((c) => ({ ...c, model: countyModel(model, c.fips) })),
     [counties, model],
   );
+  const counts = useMemo(
+    () =>
+      tierCounts(
+        model,
+        counties.map((c) => c.fips),
+      ),
+    [model, counties],
+  );
   if (!indicator || !scale) return null;
   const modelMode = params.mode === "model";
   const lifeExpectancy = manifest.indicators.find((x) => x.id === "life_expectancy");
-  const counts = tierCounts(
-    model,
-    counties.map((c) => c.fips),
-  );
 
   return (
     <div
@@ -99,6 +108,17 @@ export function Explorer({ data }: { data: AppData }) {
           : "explorer"
       }
     >
+      <a
+        className="skip-link"
+        href={`#${SEARCH_INPUT_ID}`}
+        onClick={(e) => {
+          // Focus the search without adding a hash to the URL.
+          e.preventDefault();
+          document.getElementById(SEARCH_INPUT_ID)?.focus();
+        }}
+      >
+        Skip to county search
+      </a>
       <aside className="explorer-picker">
         <IndicatorPicker
           indicators={manifest.indicators}
@@ -109,7 +129,7 @@ export function Explorer({ data }: { data: AppData }) {
         />
       </aside>
       <section className="explorer-main">
-        <CountySearch counties={counties} onSelect={onSelectWithOpener} />
+        <CountySearch counties={counties} onSelect={onSelectWithOpener} inputId={SEARCH_INPUT_ID} />
         <div className="view-toggle" role="group" aria-label="Mode">
           <button type="button" aria-pressed={!modelMode} onClick={() => setMode("values")}>
             Values
@@ -122,7 +142,11 @@ export function Explorer({ data }: { data: AppData }) {
           <button type="button" aria-pressed={params.view === "map"} onClick={() => setView("map")}>
             Map
           </button>
-          <button type="button" aria-pressed={params.view === "table"} onClick={() => setView("table")}>
+          <button
+            type="button"
+            aria-pressed={params.view === "table"}
+            onClick={() => setView("table")}
+          >
             Table
           </button>
         </div>
@@ -187,6 +211,7 @@ export function Explorer({ data }: { data: AppData }) {
           modelEntry={countyModel(model, selectedCounty.fips)}
           manifest={manifest}
           values={values}
+          modelMode={params.mode === "model"}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
           onFocusHandled={onFocusHandled}
           onClose={onClosePanel}

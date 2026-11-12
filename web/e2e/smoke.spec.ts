@@ -90,13 +90,15 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
   await expect(page.locator("tbody tr")).toHaveCount(149);
   await page.goBack();
-  await expect(page).not.toHaveURL(/[?&]view=table/);
+  await expect(page).toHaveURL(/[?&]c=53033/);
+  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page.locator(".legend li")).toHaveCount(6);
   await page.goBack();
-  await expect(page).not.toHaveURL(/[?&]c=53033/);
+  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(panel).toBeHidden();
   await page.goBack();
-  await expect(page).not.toHaveURL(/[?&]mode=/);
-  await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await expect(page.locator(".legend")).toContainText("%");
+  expect(new URL(page.url()).search).toBe("?i=poverty_rate");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
 });
 

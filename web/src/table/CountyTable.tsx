@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { formatBound, formatValue } from "../color/formatValue";
 import type { Indicator } from "../types";
-import { sortRows, type Row, type SortDir, type SortKey } from "./sortRows";
+import { CountyCell } from "./CountyCell";
+import { SortHeader } from "./SortHeader";
+import { sortRows, type Row, type Sort, type SortKey } from "./sortRows";
 
 type Props = {
   rows: Row[];
@@ -12,29 +14,10 @@ type Props = {
 
 export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
   const neutral = indicator.direction === "neutral";
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>(
+  const [sort, setSort] = useState<Sort<SortKey>>(
     neutral ? { key: "value", dir: "desc" } : { key: "rank", dir: "asc" },
   );
   const sorted = useMemo(() => sortRows(rows, sort.key, sort.dir), [rows, sort]);
-
-  const header = (key: SortKey, label: string) => (
-    <th
-      scope="col"
-      aria-sort={sort.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-    >
-      <button
-        type="button"
-        className="sort-button"
-        onClick={() =>
-          setSort((s) =>
-            s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
-          )
-        }
-      >
-        {label}
-      </button>
-    </th>
-  );
 
   return (
     <div className="county-table-wrap">
@@ -42,14 +25,16 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
         <caption className="visually-hidden">{indicator.label} by county</caption>
         <thead>
           <tr>
-            {header("name", "County")}
-            {header("state", "State")}
-            {header("value", "Value")}
+            <SortHeader sortKey="name" label="County" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="state" label="State" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="value" label="Value" sort={sort} onSort={setSort} />
             <th scope="col">
               {indicator.ci_level !== null ? `${Math.round(indicator.ci_level * 100)}% CI` : "CI"}
             </th>
-            {!neutral && header("rank", "Rank")}
-            {!neutral && header("state_rank", "State rank")}
+            {!neutral && <SortHeader sortKey="rank" label="Rank" sort={sort} onSort={setSort} />}
+            {!neutral && (
+              <SortHeader sortKey="state_rank" label="State rank" sort={sort} onSort={setSort} />
+            )}
           </tr>
         </thead>
         <tbody>
@@ -62,17 +47,13 @@ export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
                 : "";
             return (
               <tr key={r.fips}>
-                <td>
-                  <button
-                    type="button"
-                    className="table-county"
-                    aria-label={`${r.name}, ${r.state}`}
-                    aria-current={r.fips === selected ? "true" : undefined}
-                    onClick={(ev) => onSelect(r.fips, ev.currentTarget)}
-                  >
-                    {r.name}
-                  </button>
-                </td>
+                <CountyCell
+                  fips={r.fips}
+                  name={r.name}
+                  state={r.state}
+                  selected={r.fips === selected}
+                  onSelect={onSelect}
+                />
                 <td>{r.state}</td>
                 <td className="num">
                   {v !== null

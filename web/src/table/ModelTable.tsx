@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { formatSigned, formatValue } from "../color/formatValue";
 import { tierLabel } from "../model/modelView";
-import type { SortDir } from "./sortRows";
+import { CountyCell } from "./CountyCell";
+import { SortHeader } from "./SortHeader";
+import type { Sort } from "./sortRows";
 import { sortModelRows, type ModelRow, type ModelSortKey } from "./sortModelRows";
 
 type Props = {
@@ -11,30 +13,11 @@ type Props = {
 };
 
 export function ModelTable({ rows, selected, onSelect }: Props) {
-  const [sort, setSort] = useState<{ key: ModelSortKey; dir: SortDir }>({
+  const [sort, setSort] = useState<Sort<ModelSortKey>>({
     key: "result",
     dir: "asc",
   });
   const sorted = useMemo(() => sortModelRows(rows, sort.key, sort.dir), [rows, sort]);
-
-  const header = (key: ModelSortKey, label: string) => (
-    <th
-      scope="col"
-      aria-sort={sort.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-    >
-      <button
-        type="button"
-        className="sort-button"
-        onClick={() =>
-          setSort((s) =>
-            s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
-          )
-        }
-      >
-        {label}
-      </button>
-    </th>
-  );
 
   return (
     <div className="county-table-wrap">
@@ -44,12 +27,12 @@ export function ModelTable({ rows, selected, onSelect }: Props) {
         </caption>
         <thead>
           <tr>
-            {header("name", "County")}
-            {header("state", "State")}
-            {header("actual", "Life expectancy")}
-            {header("expected", "Expected")}
-            {header("difference", "Difference")}
-            {header("result", "Result")}
+            <SortHeader sortKey="name" label="County" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="state" label="State" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="actual" label="Life expectancy" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="expected" label="Expected" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="difference" label="Difference" sort={sort} onSort={setSort} />
+            <SortHeader sortKey="result" label="Result" sort={sort} onSort={setSort} />
           </tr>
         </thead>
         <tbody>
@@ -57,17 +40,13 @@ export function ModelTable({ rows, selected, onSelect }: Props) {
             const { actual, predicted, residual, flag } = r.model;
             return (
               <tr key={r.fips}>
-                <td>
-                  <button
-                    type="button"
-                    className="table-county"
-                    aria-label={`${r.name}, ${r.state}`}
-                    aria-current={r.fips === selected ? "true" : undefined}
-                    onClick={(ev) => onSelect(r.fips, ev.currentTarget)}
-                  >
-                    {r.name}
-                  </button>
-                </td>
+                <CountyCell
+                  fips={r.fips}
+                  name={r.name}
+                  state={r.state}
+                  selected={r.fips === selected}
+                  onSelect={onSelect}
+                />
                 <td>{r.state}</td>
                 <td className="num">{actual !== null ? formatValue(actual, "years") : ""}</td>
                 <td className="num">{predicted !== null ? formatValue(predicted, "years") : ""}</td>
