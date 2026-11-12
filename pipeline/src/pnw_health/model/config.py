@@ -31,6 +31,8 @@ RIDGE_ALPHA = 1.0
 Z_75 = 1.150
 Z_90 = 1.645
 TOP_N = 5
+PEER_K = 5
+PEER_MIN_FEATURES = 6
 
 # Smaller trees chosen at the M4 checkpoint; see M4 spec §3 "Checkpoint outcome".
 LGBM_PARAMS: dict[str, Any] = {

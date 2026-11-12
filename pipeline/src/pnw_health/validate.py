@@ -7,7 +7,7 @@ from collections import Counter
 import pandas as pd
 
 from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
-from pnw_health.contract import CountyModel, ModelFile, TargetModel
+from pnw_health.contract import CountyModel, ModelFile, Peers, TargetModel
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import ALLOWED_CATEGORIES
@@ -202,6 +202,33 @@ def _validate_target(
     return problems
 
 
+def _peer_problems(peers: Peers, county_fips: set[str]) -> list[str]:
+    """Problems with the peer lists; each names the counties involved."""
+    problems: list[str] = []
+    k = peers.method.k
+    missing = sorted(county_fips - set(peers.counties))
+    if missing:
+        problems.append(f"peers are missing counties: {', '.join(missing)}")
+    outside = sorted(set(peers.counties) - county_fips)
+    if outside:
+        problems.append(f"peers has counties outside the PNW: {', '.join(outside)}")
+    outside_peer = sorted(
+        {p for found in peers.counties.values() for p in found if p not in county_fips}
+    )
+    if outside_peer:
+        problems.append(f"peer counties outside the PNW: {', '.join(outside_peer)}")
+    self_listed = sorted(f for f, found in peers.counties.items() if f in found)
+    if self_listed:
+        problems.append(f"peers list the county itself: {', '.join(self_listed)}")
+    duplicated = sorted(f for f, found in peers.counties.items() if len(found) != len(set(found)))
+    if duplicated:
+        problems.append(f"peer lists contain duplicates: {', '.join(duplicated)}")
+    wrong = sorted(f for f, found in peers.counties.items() if len(found) not in (0, k))
+    if wrong:
+        problems.append(f"peer lists must have exactly {k} entries or none: {', '.join(wrong)}")
+    return problems
+
+
 def validate_model(
     model: ModelFile,
     values: pd.DataFrame,
@@ -214,5 +241,6 @@ def validate_model(
         for target_id, target in model.targets.items()
         for problem in _validate_target(target_id, target, values, county_fips, catalog)
     ]
+    problems.extend(_peer_problems(model.peers, county_fips))
     if problems:
         raise DataValidationError(problems)

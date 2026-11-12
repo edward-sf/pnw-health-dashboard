@@ -121,4 +121,21 @@ export const lifeExpectancy: TargetModel = {
   },
 };
 
-export const model: ModelFile = { targets: { life_expectancy: lifeExpectancy } };
+// Five counties, so k is 2 here; the web does not read k.
+export const model: ModelFile = {
+  targets: { life_expectancy: lifeExpectancy },
+  peers: {
+    method: {
+      features: ["median_household_income", "poverty_rate", "bachelors_or_higher"],
+      k: 2,
+      min_features: 6,
+    },
+    counties: {
+      "02016": ["02063", "16001"],
+      "02063": ["02016", "16001"],
+      "16001": ["41051", "53033"],
+      "41051": ["53033", "16001"],
+      "53033": ["41051", "16001"],
+    },
+  },
+};
