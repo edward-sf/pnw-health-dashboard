@@ -106,10 +106,14 @@ test("a heading that renders after the route change gets focus", async () => {
 test("leaving before the heading renders cancels the wait", async () => {
   const user = userEvent.setup();
   at("/");
-  await user.click(screen.getByRole("link", { name: "Late" }));
-  // A URL with a hash leaves focus to the hash target, so a leftover wait must not take it.
-  await user.click(screen.getByRole("link", { name: "B sub" }));
-  expect(await screen.findByRole("heading", { name: "B page" })).not.toHaveFocus();
+  const late = screen.getByRole("link", { name: "Late" });
+  await user.click(late);
+  // fireEvent keeps focus on "Late", the element the pending wait recorded, so only the
+  // cancel (not the user-moved-focus guard) stops a leftover wait from taking it. The hash
+  // URL means the new route itself leaves focus alone.
+  fireEvent.click(screen.getByRole("link", { name: "B sub" }));
+  await screen.findByRole("heading", { name: "B page" });
+  expect(late).toHaveFocus();
 });
 
 test("a cold redirect while loading focuses the heading once it renders", async () => {

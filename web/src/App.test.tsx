@@ -67,6 +67,20 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("a load that fails after navigating to the Explorer focuses the error heading", async () => {
+    let fail: (e: Error) => void = () => {};
+    const pending = new Promise<Response>((_, reject) => (fail = reject));
+    vi.stubGlobal("fetch", vi.fn(() => pending));
+    const user = userEvent.setup();
+    at("/about");
+    await user.click(screen.getByRole("link", { name: "Explorer" }));
+    expect(screen.getByText("Loading data…")).toBeInTheDocument();
+    fail(new Error("offline"));
+    expect(
+      await screen.findByRole("heading", { name: "Couldn't load the data" }),
+    ).toHaveFocus();
+  });
+
   it("an unknown path redirects to the explorer", async () => {
     at("/nope");
     expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();

@@ -1,6 +1,4 @@
-import type { SortDir } from "./sortRows";
-
-type Sort<K extends string> = { key: K; dir: SortDir };
+import type { Sort } from "./sortRows";
 
 type Props<K extends string> = {
   sortKey: K;

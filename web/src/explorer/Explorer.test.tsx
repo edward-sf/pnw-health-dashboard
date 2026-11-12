@@ -229,7 +229,7 @@ test("picking an indicator in model mode keeps mode=model", async () => {
   expect(router.state.location.search).toBe("?mode=model&i=median_household_income");
 });
 
-test("focusRequested is cleared when a selection renders no panel", async () => {
+test("a pending focus request doesn't fire for a different county", async () => {
   const router = setup();
   await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "King");
   await act(async () => {

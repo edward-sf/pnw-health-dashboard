@@ -2,7 +2,7 @@ import { scaleQuantile } from "d3-scale";
 import { schemeBlues, schemeOrRd } from "d3-scale-chromatic";
 import type { Indicator, ValueEntry } from "../types";
 
-export const HATCH_FILL = "url(#hatch-null)";
+export const HATCH_FILL = "url(#hatch-null)" as const;
 
 export type LegendBin = { color: string; min: number; max: number };
 export type ColorScale = {
