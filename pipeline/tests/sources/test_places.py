@@ -125,3 +125,16 @@ def test_bad_bodies_not_cached(tmp_path: Path, body: bytes) -> None:
     with make_client(httpx.MockTransport(handler)) as client, pytest.raises(FetchError):
         fetch_places(client, tmp_path, [places_indicator()])
     assert not list((tmp_path / "places").glob("*.json"))
+
+
+def test_national_rows_dropped(tmp_path: Path) -> None:
+    rows = [ROW, {**ROW, "locationid": "59"}]
+    out = parse_places(write_rows(tmp_path, rows), [places_indicator()])
+    assert list(out.fips) == ["53033"]
+    assert out.fips.str.len().eq(5).all()
+
+
+def test_short_county_fips_raises(tmp_path: Path) -> None:
+    rows = [ROW, {**ROW, "locationid": "2013"}]
+    with pytest.raises(FetchError, match="2013"):
+        parse_places(write_rows(tmp_path, rows), [places_indicator()])
