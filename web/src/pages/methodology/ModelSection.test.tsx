@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { manifest, model } from "../../test/fixtures";
+import { manifest, lifeExpectancy as model } from "../../test/fixtures";
 import { formatCount } from "./format";
 import { ModelSection } from "./ModelSection";
 

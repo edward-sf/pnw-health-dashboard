@@ -1,11 +1,11 @@
 import { formatBound } from "../../color/formatValue";
-import type { Indicator, ModelFile } from "../../types";
+import type { Indicator, TargetModel } from "../../types";
 import { featureLabel, formatCount, formatMetric, joinList } from "./format";
 import { MetricsTable } from "./MetricsTable";
 
 const formatZ = (z: number) => z.toLocaleString("en-US", { maximumFractionDigits: 3 });
 
-export function ModelSection({ model, indicators }: { model: ModelFile; indicators: Indicator[] }) {
+export function ModelSection({ model, indicators }: { model: TargetModel; indicators: Indicator[] }) {
   const card = model.model_card;
   const { sigma_model, z_75, z_90 } = model.thresholds;
   const label = (id: string) => featureLabel(id, indicators);

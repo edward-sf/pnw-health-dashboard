@@ -97,7 +97,7 @@ The four files are written as a set: into a temporary directory under `data/inte
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
-| `model.json` | Metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
+| `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
@@ -108,7 +108,7 @@ All files are small enough to load up front.
 **Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of life expectancy the features leave unexplained.
 
 - **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
-- **Target:** CHR life expectancy. Target is configurable; v1 ships one target.
+- **Targets:** CHR life expectancy (the default), premature death, injury deaths and low birth weight (M9 spec §2.1). Each is modelled separately with the shared features, folds and parameters.
 - **Features:** social/economic only, from ACS and CHR — median household income, poverty rate, uninsured rate, educational attainment, unemployment, age structure (% 65+), rurality, severe housing cost burden, broadband access. Final list lives in config.
   - **Excluded:** health behaviors (on the causal path; would restate the outcome) and race/ethnicity shares (proxies for structural factors; SHAP attributions would mislead). Rationale documented on the methodology page.
   - Missing feature values: median imputation fitted within each training fold.

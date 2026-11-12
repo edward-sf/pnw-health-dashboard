@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { expect, test } from "vitest";
-import { manifest, model } from "../test/fixtures";
+import { manifest, lifeExpectancy as model } from "../test/fixtures";
 import type { CountyModel, Flag } from "../types";
 import { ModelCard } from "./ModelCard";
 import { rangeDomain } from "./ResidualRange";

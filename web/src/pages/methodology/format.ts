@@ -1,6 +1,6 @@
-import type { Indicator, ModelFile } from "../../types";
+import type { Indicator, TargetModel } from "../../types";
 
-export type MetricSet = ModelFile["metrics"]["ridge"]["national"];
+export type MetricSet = TargetModel["metrics"]["ridge"]["national"];
 
 export const formatMetric = (v: number): string =>
   v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

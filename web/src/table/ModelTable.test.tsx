@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
-import { model } from "../test/fixtures";
+import { lifeExpectancy as model } from "../test/fixtures";
 import { ModelTable } from "./ModelTable";
 import type { ModelRow } from "./sortModelRows";
 

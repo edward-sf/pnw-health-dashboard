@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
-import { manifest, model, values } from "../test/fixtures";
+import { manifest, lifeExpectancy as model, values } from "../test/fixtures";
 import { mockMatchMedia } from "../test/matchMedia";
 import type { County, Indicator } from "../types";
 import { CountyPanel } from "./CountyPanel";

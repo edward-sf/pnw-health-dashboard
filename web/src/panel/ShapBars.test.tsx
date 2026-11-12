@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { buildShapBars } from "../model/buildShapBars";
-import { manifest, model } from "../test/fixtures";
+import { manifest, lifeExpectancy as model } from "../test/fixtures";
 import { ShapBars } from "./ShapBars";
 
 const bars = buildShapBars(model.counties["53033"]!, manifest.indicators);

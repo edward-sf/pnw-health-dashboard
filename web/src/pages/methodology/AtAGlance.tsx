@@ -1,9 +1,11 @@
 import type { AppData } from "../../data/loadData";
+import { DEFAULT_TARGET, targetModel } from "../../model/targetView";
 import { featureLabel, formatCount, formatMetric, joinList } from "./format";
 import { stateNameForFips } from "./stateFipsNames";
 
 export function AtAGlance({ data }: { data: AppData }) {
-  const { manifest, model, topology } = data;
+  const { manifest, topology } = data;
+  const model = targetModel(data.model, DEFAULT_TARGET);
   const fips = topology.objects.counties.geometries.flatMap((g) =>
     g.properties && "fips" in g.properties ? [g.properties.fips] : [],
   );

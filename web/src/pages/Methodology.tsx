@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import ErrorPage from "../data/ErrorPage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { DataState } from "../data/useData";
+import { DEFAULT_TARGET, targetModel } from "../model/targetView";
 import { AtAGlance } from "./methodology/AtAGlance";
 import { ExclusionsSection } from "./methodology/ExclusionsSection";
 import { HarmonizationSection } from "./methodology/HarmonizationSection";
@@ -48,9 +49,12 @@ export function Methodology({ state }: { state: DataState }) {
           <IndicatorCatalog indicators={state.data.manifest.indicators} />
           <HarmonizationSection sources={state.data.manifest.sources} />
           <MissingDataSection indicators={state.data.manifest.indicators} />
-          <ModelSection model={state.data.model} indicators={state.data.manifest.indicators} />
-          <ExclusionsSection model={state.data.model} />
-          <ReproducibilitySection model={state.data.model} builtAt={state.data.manifest.built_at} />
+          <ModelSection model={targetModel(state.data.model, DEFAULT_TARGET)} indicators={state.data.manifest.indicators} />
+          <ExclusionsSection model={targetModel(state.data.model, DEFAULT_TARGET)} />
+          <ReproducibilitySection
+            model={targetModel(state.data.model, DEFAULT_TARGET)}
+            builtAt={state.data.manifest.built_at}
+          />
         </>
       )}
     </section>

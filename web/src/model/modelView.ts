@@ -1,6 +1,6 @@
 import { formatSigned } from "../color/formatValue";
 import { HATCH_FILL } from "../color/makeColorScale";
-import type { CountyModel, Flag, ModelFile } from "../types";
+import type { CountyModel, Flag, TargetModel } from "../types";
 
 export const TIERS: readonly Flag[] = [
   "notably_worse",
@@ -48,11 +48,11 @@ const MISSING: CountyModel = {
   shap: [],
 };
 
-export function countyModel(model: ModelFile, fips: string): CountyModel {
+export function countyModel(model: TargetModel, fips: string): CountyModel {
   return model.counties[fips] ?? MISSING;
 }
 
-export function tierCounts(model: ModelFile, fipsList: string[]): Record<Flag, number> {
+export function tierCounts(model: TargetModel, fipsList: string[]): Record<Flag, number> {
   const counts: Record<Flag, number> = {
     notably_worse: 0,
     somewhat_worse: 0,

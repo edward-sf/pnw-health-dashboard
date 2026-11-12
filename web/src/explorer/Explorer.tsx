@@ -6,6 +6,7 @@ import type { AppData } from "../data/loadData";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
 import { ModelLegend } from "../model/ModelLegend";
+import { DEFAULT_TARGET, targetModel } from "../model/targetView";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
 import { CountyMap } from "../map/CountyMap";
 import { CountyPanel } from "../panel/CountyPanel";
@@ -22,7 +23,8 @@ import { useExplorerParams } from "./useExplorerParams";
 const SEARCH_INPUT_ID = "county-search";
 
 export function Explorer({ data }: { data: AppData }) {
-  const { manifest, values, topology, model } = data;
+  const { manifest, values, topology } = data;
+  const model = useMemo(() => targetModel(data.model, DEFAULT_TARGET), [data.model]);
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
   const fipsSet = useMemo(
     () =>

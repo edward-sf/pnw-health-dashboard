@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { manifest, model } from "../test/fixtures";
+import { manifest, lifeExpectancy as model } from "../test/fixtures";
 import type { CountyModel } from "../types";
 import { buildShapBars } from "./buildShapBars";
 

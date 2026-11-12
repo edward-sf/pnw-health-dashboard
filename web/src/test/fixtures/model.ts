@@ -1,4 +1,4 @@
-import type { CountyModel, ModelFile } from "../../types";
+import type { CountyModel, ModelFile, TargetModel } from "../../types";
 
 const insufficient: CountyModel = {
   actual: null,
@@ -12,7 +12,10 @@ const insufficient: CountyModel = {
   shap: [],
 };
 
-export const model: ModelFile = {
+export const lifeExpectancy: TargetModel = {
+  label: "Life expectancy",
+  unit: "years",
+  direction: "higher_is_better",
   metrics: {
     lightgbm: {
       national: { mae: 1.1, n: 3000, r2: 0.8, rmse: 1.5 },
@@ -117,3 +120,5 @@ export const model: ModelFile = {
     training_counties: 3000,
   },
 };
+
+export const model: ModelFile = { targets: { life_expectancy: lifeExpectancy } };
