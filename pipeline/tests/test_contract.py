@@ -7,6 +7,7 @@ from pnw_health.indicators import Indicator
 from tests.helpers import make_indicator
 
 REPO_SCHEMA = Path(__file__).resolve().parents[2] / "schema"
+STALE = "schema/ is out of date; run `uv run pnw-health schema --root ..` from pipeline/"
 
 
 def test_write_schemas_files(tmp_path: Path) -> None:
@@ -19,11 +20,11 @@ def test_write_schemas_files(tmp_path: Path) -> None:
 
 
 def test_committed_schema_matches_models(tmp_path: Path) -> None:
-    """Drift guard: regenerate with `write_schemas(Path('../schema'))` after contract changes."""
+    """Drift guard: after a contract change, run `uv run pnw-health schema --root ..`."""
     for path in write_schemas(tmp_path):
         committed = REPO_SCHEMA / path.name
-        assert committed.exists(), f"missing {committed}"
-        assert committed.read_text() == path.read_text(), f"{path.name} is stale"
+        assert committed.exists(), f"missing {committed}; {STALE}"
+        assert committed.read_text() == path.read_text(), f"{path.name}: {STALE}"
 
 
 def test_source_scale_not_exported() -> None:

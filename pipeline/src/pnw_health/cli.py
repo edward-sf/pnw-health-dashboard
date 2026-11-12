@@ -22,7 +22,7 @@ from pnw_health.config import (
     Paths,
     census_api_key,
 )
-from pnw_health.contract import Manifest, ModelFile, SourceVintage
+from pnw_health.contract import Manifest, ModelFile, SourceVintage, write_schemas
 from pnw_health.export import build_values_file, finalize_model, write_exports, write_model
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.harmonize import harmonize, pnw_only
@@ -206,3 +206,12 @@ def run(
     except (DataValidationError, FetchError, StageInputError, ValueError) as err:
         typer.echo(f"pipeline failed:\n{err}", err=True)
         raise typer.Exit(1) from err
+
+
+@app.command()
+def schema(
+    root: Annotated[Path, typer.Option(help="Repository root.")] = Path("."),
+) -> None:
+    """Regenerate the committed JSON Schema files in ``schema/`` from the contract."""
+    for path in write_schemas(Paths.default(root.resolve()).schema):
+        typer.echo(str(path))
