@@ -174,10 +174,8 @@ export function CountyPanel({
         <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
         {peerData ? (
           <SimilarCounties
-            rows={peerData.rows}
-            median={peerData.median}
+            data={peerData}
             unit={modelMode ? target.unit : indicator.unit}
-            mode={modelMode ? "model" : "values"}
             factorCount={peers.method.features.length}
             onSelect={onSelectCounty}
           />

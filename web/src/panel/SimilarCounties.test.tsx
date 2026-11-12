@@ -2,11 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, test, vi } from "vitest";
-import type { PeerRow } from "./buildPeerRows";
+import type { ModelPeerData, ModelPeerRow, ValuesPeerData } from "./buildPeerRows";
 import { SimilarCounties } from "./SimilarCounties";
 
-const rows: PeerRow[] = [
+const rows: ModelPeerRow[] = [
   {
+    kind: "model",
     fips: "53033",
     name: "King",
     state: "WA",
@@ -16,6 +17,7 @@ const rows: PeerRow[] = [
     flag: "notably_better",
   },
   {
+    kind: "model",
     fips: "41051",
     name: "Multnomah",
     state: "OR",
@@ -25,6 +27,11 @@ const rows: PeerRow[] = [
     flag: "none",
   },
 ];
+const modelData: ModelPeerData = {
+  kind: "model",
+  rows,
+  median: { kind: "model", value: 76, expected: 78 },
+};
 
 function setup(
   props: Partial<React.ComponentProps<typeof SimilarCounties>> = {},
@@ -33,10 +40,8 @@ function setup(
   render(
     <MemoryRouter>
       <SimilarCounties
-        rows={rows}
-        median={{ value: 76, expected: 78 }}
+        data={modelData}
         unit="years"
-        mode="model"
         factorCount={9}
         onSelect={onSelect}
         {...props}
@@ -47,11 +52,19 @@ function setup(
 }
 
 test("shows 'Not available' for a null value", () => {
-  setup({
-    mode: "values",
-    rows: [rows[0]!, rows[1]!],
-    median: { value: null },
-  });
+  const data: ValuesPeerData = {
+    kind: "values",
+    rows: rows.map((r) => ({
+      kind: "values",
+      fips: r.fips,
+      name: r.name,
+      state: r.state,
+      isSelected: r.isSelected,
+      value: r.value,
+    })),
+    median: { kind: "values", value: null },
+  };
+  setup({ data });
   const row = screen.getByRole("row", { name: /Multnomah/ });
   expect(within(row).getByText("Not available")).toBeInTheDocument();
 });
@@ -112,6 +125,30 @@ test.each([
   expect(
     screen.getByText(
       new RegExp(`income, poverty, education and ${words} social and economic measures\\.`),
+    ),
+  ).toBeInTheDocument();
+});
+
+test("with three factors names them all and counts none", () => {
+  setup({ factorCount: 3 });
+  expect(
+    screen.getByText(/Most similar PNW counties on income, poverty and education\./),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/other social and economic/)).not.toBeInTheDocument();
+});
+
+test("with fewer than three factors never counts a negative remainder", () => {
+  setup({ factorCount: 2 });
+  expect(
+    screen.getByText(/Most similar PNW counties on income, poverty and education\./),
+  ).toBeInTheDocument();
+});
+
+test("with four factors the one other measure is singular", () => {
+  setup({ factorCount: 4 });
+  expect(
+    screen.getByText(
+      /income, poverty, education and one other social and economic measure\./,
     ),
   ).toBeInTheDocument();
 });
