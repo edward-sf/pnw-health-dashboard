@@ -33,11 +33,11 @@ Work order: §3.1 → §3.11. Pipeline correctness bugs first (#61, #66, #60, #1
 
 `write_exports` writes four files, not the three the issue names: `manifest.json`, `values.json`, `counties.topojson` and `model.json`. All four are covered.
 
-**Change:** `write_exports` creates a temporary directory inside `out_dir` (`tempfile.mkdtemp(dir=out_dir, prefix=".export-")`), so it is on the same filesystem and `os.replace` is a rename. It writes all four files there. Only when all four writes succeed does it `os.replace` each into `out_dir`, in a fixed order. The temporary directory is removed in a `finally`, whether the writes succeeded or not. Return value and signature are unchanged.
+**Change:** `write_exports` creates a temporary directory next to `out_dir` (`tempfile.mkdtemp(dir=out_dir.parent, prefix=f".{out_dir.name}-export-")`), so it is on the same filesystem and `os.replace` is a rename. It is a sibling, not a child, because `out_dir` is `web/public/data`: a directory left inside it by a killed run would be copied into the site by Vite. It writes all four files there. Only when all four writes succeed does it `os.replace` each into `out_dir`, in a fixed order. The temporary directory is removed in a `finally`, whether the writes succeeded or not. Return value and signature are unchanged.
 
 **Limit:** the four renames are four system calls, not one atomic step. Nothing that can fail on content (serialization, a NaN, a full disk) happens between them, so the realistic failures the issue describes all leave the previous export untouched. A crash in the microseconds between two renames could still mix vintages; that is accepted.
 
-**Test:** with a previous export in place, patch the writer so the second file raises. The four existing files are byte-identical afterwards and no `.export-*` directory remains. A second test checks the happy path leaves no temporary directory.
+**Test:** with a previous export in place, patch the writer so the second file raises. The four existing files are byte-identical afterwards and no `.<name>-export-*` directory remains. A second test checks the happy path leaves no temporary directory and nothing but the four files in `out_dir`.
 
 ### 3.2 #66 Fail fast when `CENSUS_API_KEY` is missing
 
@@ -53,9 +53,9 @@ Work order: §3.1 → §3.11. Pipeline correctness bugs first (#61, #66, #60, #1
 
 ### 3.4 #113 Filter 2-character national FIPS rows from PLACES
 
-**Change:** `parse_places` keeps only rows whose FIPS is five digits (`str.fullmatch(r"\d{5}")`) before building the long frame. This drops the national `59` rows.
+**Change:** `parse_places` drops rows whose `locationid` is two digits (national and state aggregates such as `59`) before building the long frame. Any other `locationid` that is not five digits raises `FetchError` via `_invalid`, naming up to five examples. A filter that kept only five-digit rows would silently drop a county whose leading zero was lost (Alaska's `02013` arriving as `2013`), so that case fails loudly instead.
 
-**Test:** a PLACES fixture row with location id `59` does not appear in `parse_places` output, and every output FIPS has length 5.
+**Tests:** a row with `locationid` `59` does not appear in `parse_places` output, and every output FIPS has length 5. A row with `locationid` `2013` raises, and the message names `2013`.
 
 ### 3.5 #65 Fail validation when a state has no values for an indicator
 
@@ -91,7 +91,7 @@ One fix and test per bullet:
 
 Tests only. A test that exposes a real bug gets the fix in the same PR, noted in the PR body.
 
-- **Feature-side leakage.** Fit OOF once. Then set NaN in, and scale (×10), the features of every county in one held-out state, and fit again. Every other fold's OOF predictions are equal with `check_exact=True`. Repeated for ridge and LightGBM.
+- **Feature-side leakage.** Fit OOF once. Then set NaN in, and scale (×10), the features of every county in one held-out state, and fit again. The other states in that state's fold, which are held out with it, have equal OOF predictions (`check_exact=True`), so held-out rows cannot influence each other through imputation or scaling. The issue asked for "other folds unchanged", but every other fold trains on the changed state, so their predictions are meant to change. The test asserts that they do, so it cannot pass vacuously. Repeated for ridge and LightGBM.
 - **Own-target explanation test.** Shift each state's targets in turn, not only state 53, and check that state's explanations are the only ones that change.
 - **Contribution ↔ feature.** On synthetic data where one feature drives the target, that feature's name carries the largest |contribution| for most counties. A swap of columns in `pred_contrib` handling fails it.
 - **The rest, one test each:** the unmapped-state guard in `cv._oof` raises; `global_importance` breaks ties by name; flags are unchanged under a shuffled index; zero residuals give `none` for every county; the flag test derives its z values from `model.config` instead of hard-coding them; `build_table` with an asymmetric CI; `compare_behaviors` passes the behavior columns to the fit (a spy on the fit records the columns it receives).
