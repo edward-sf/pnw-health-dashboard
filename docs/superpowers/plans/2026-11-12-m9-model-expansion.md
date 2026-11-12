@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The model predicts four CHR outcomes instead of one, model mode gets an Outcome picker (`t`), and every PNW county shows its five most similar PNW counties.
+**Goal:** The model predicts three CHR outcomes instead of one, model mode gets an Outcome picker (`t`), and every PNW county shows its five most similar PNW counties.
 
 **Architecture:** `model.json` becomes `{targets: {id: TargetModel}, peers}`. The pipeline loops its existing CV, flag and SHAP steps over `TARGETS`, with direction-aware flag signs. A new `model/peers.py` computes nearest neighbours once. The web reads the target from a new `t` URL param through one helper, so no model UI code hardcodes life expectancy.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- `TARGETS = ("life_expectancy", "premature_death", "injury_deaths", "low_birth_weight")`; the first is the default everywhere.
+- `TARGETS = ("life_expectancy", "premature_death", "injury_deaths")`; the first is the default everywhere.
 - `SCHEMA_VERSION = "2.0.0"`.
 - `PEER_K = 5`, `PEER_MIN_FEATURES = 6`; peer features are the model's `FEATURES`.
 - Residual is always `actual − predicted`; a negative residual is better for `higher_is_worse` targets.
@@ -321,7 +321,7 @@ grep -rniE 'life expectancy|"years"' web/src --include='*.ts' --include='*.tsx' 
 - Produces: `Methodology` holds `const [targetId, setTargetId] = useState(DEFAULT_TARGET)`, local to the page and not in the URL. It feeds the global-importance and model-card details.
 
 - [ ] **Step 1: Write failing tests.**
-  - The metrics table has one row per target and model: 4 targets × 2 models when the fixture has 4. Use the fixture's count.
+  - The metrics table has one row per target and model: one per target and model; use the fixture's count. Use the fixture's count.
   - The behaviors comparison has one row per target.
   - Changing the page's target select changes the importance list heading.
   - The text includes the PLACES-circularity sentence and the direction sentence.

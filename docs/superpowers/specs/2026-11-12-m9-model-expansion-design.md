@@ -8,7 +8,7 @@
 
 The model answers its question for more than one outcome, and every county points to the PNW counties most like it.
 
-- **#45 Additional model targets.** Besides life expectancy, the model predicts three more CHR outcomes: premature death, injury deaths and low birth weight. Model mode gets an "Outcome" picker, kept in the URL.
+- **#45 Additional model targets.** Besides life expectancy, the model predicts two more CHR outcomes: premature death and injury deaths. Model mode gets an "Outcome" picker, kept in the URL.
 - **#43 Peer counties.** Each PNW county gets its five most similar PNW counties on the model's social and economic features. The county panel shows them in a "Similar counties" section, and clicking one selects it.
 
 **Exit criteria:**
@@ -24,9 +24,9 @@ The model answers its question for more than one outcome, and every county point
 
 ### 2.1 Which targets
 
-`TARGETS = ("life_expectancy", "premature_death", "injury_deaths", "low_birth_weight")`, in that order. The first is the default everywhere.
+`TARGETS = ("life_expectancy", "premature_death", "injury_deaths")`, in that order. The first is the default everywhere.
 
-All four come from CHR, built from death and birth records, and each has a 95% CI per county, which the flag formula needs. PNW coverage in the current export: life expectancy 139 of 149 counties, premature death 142, injury deaths 137, low birth weight 134, each with a CI wherever it has a value.
+All three come from CHR, built from death and birth records, and each has a 95% CI per county, which the flag formula needs. PNW coverage in the current export: life expectancy 139 of 149 counties, premature death 142, injury deaths 137, each with a CI wherever it has a value.
 
 PLACES outcomes (diabetes, COPD, depression and others) are not targets. They are CDC small-area model estimates built partly from ACS demographics, so predicting them from ACS features would largely reproduce CDC's own model. The methodology page says so.
 
@@ -60,16 +60,18 @@ TargetModel
   thresholds, counties, model_card       # today's ModelFile fields, unchanged
 ```
 
-`ModelCard.target` stays and equals the key. JSON Schema in `schema/` and the web's generated types are regenerated in the same PR. `model.json` grows from about 75 KB to about 300 KB, which is still small enough to load up front (parent spec §4).
+`ModelCard.target` stays and equals the key. JSON Schema in `schema/` and the web's generated types are regenerated in the same PR. `model.json` grows from about 75 KB to about 230 KB with three targets, which is still small enough to load up front (parent spec §4).
 
 ### 2.5 Checkpoint
 
 As in M4, a `checkpoint` issue sits between the pipeline work and the UI work. The author reviews each new target's national and PNW metrics, flag distribution and SHAP samples from `model_report.py`. A target that models poorly is removed from `TARGETS` before the UI exposes it, and the decision is recorded in this spec under "Checkpoint outcome". Low birth weight is the most likely to be weak.
 
+**Checkpoint outcome (2026-11-12, #179).** The author dropped `low_birth_weight` from `TARGETS`. LightGBM scored a PNW R² of −1.135 (ridge −1.487) against a national R² of 0.339, and every PNW state's mean residual sat between −0.96 and −1.41 points, so 33 PNW counties were flagged better and 1 worse. That is a regional offset, not county signal. Low birth weight stays available as a values-mode indicator.
+
 ### 2.6 URL state and picker
 
 - New param `t=<target_id>`, defaulting to `life_expectancy`. It is parsed like `i`: a value not in `model.targets` falls back to the default and the bad param is cleared. `t` is kept in both modes, so switching modes keeps both the indicator and the target. Existing links are unchanged.
-- In model mode, an "Outcome" native `<select>` listing the target labels replaces the dimmed indicator picker and its "Model mode shows life expectancy…" note. A plain select is enough for four options. In values mode the indicator picker is unchanged.
+- In model mode, an "Outcome" native `<select>` listing the target labels replaces the dimmed indicator picker and its "Model mode shows life expectancy…" note. A plain select is enough for three options. In values mode the indicator picker is unchanged.
 
 ### 2.7 Target-aware model UI
 
@@ -130,7 +132,7 @@ Work order: T1 → T9. Pipeline first, then the checkpoint, then the UI. The roa
 
 | Task | What | Done when |
 |---|---|---|
-| T1 | Multi-target pipeline and contract (§2.1, §2.2, §2.4) | `model.json` has `targets` keyed by all four targets; `SCHEMA_VERSION` is `2.0.0`; schema and web types are regenerated; `check_targets` and per-target `validate_model` have failing-input tests; the `life_expectancy` entry matches the pre-M9 output. The web reads `targets.life_expectancy`, so the site shows no change. |
+| T1 | Multi-target pipeline and contract (§2.1, §2.2, §2.4) | `model.json` has `targets` keyed by all three targets; `SCHEMA_VERSION` is `2.0.0`; schema and web types are regenerated; `check_targets` and per-target `validate_model` have failing-input tests; the `life_expectancy` entry matches the pre-M9 output. The web reads `targets.life_expectancy`, so the site shows no change. |
 | T2 | Direction-aware flags (§2.3) | `classify` takes `direction`; hand-computed tests cover both directions at each tier boundary. |
 | T3 | Peer counties in the pipeline (§3.1, §3.2) | `peers` is exported; tests cover hand-computed neighbours on a small synthetic table, tie-breaking, the minimum-features rule, imputation, determinism, and each new validation check. |
 | T4 | **Checkpoint**: review per-target metrics, flags and SHAP (§2.5) | The author closes the `checkpoint` issue; any dropped target is removed and recorded in §2.5. |
@@ -147,7 +149,7 @@ Each is made in the same PR as the code it describes.
 | Spec | Section | Change | Task |
 |---|---|---|---|
 | Parent spec | §4 | `model.json` holds one entry per target plus `peers` (§2.4, §3.2). | T1, T3 |
-| Parent spec | §5 | "Target is configurable; v1 ships one target" becomes the four targets of §2.1, with direction-aware flag signs (§2.3). | T1, T2 |
+| Parent spec | §5 | "Target is configurable; v1 ships one target" becomes the three targets of §2.1, with direction-aware flag signs (§2.3). | T1, T2 |
 | Parent spec | §6 Routes | Add `t=<target_id>` to the Explorer's URL state. | T5 |
 | Parent spec | §6 Explorer | Outcome picker in model mode; "Similar counties" panel section after "Who lives here". | T5, T8 |
 | Parent spec | §10 | Remove "County peer-group clustering". | T3 |

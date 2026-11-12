@@ -10,7 +10,7 @@ import pandas as pd
 from pnw_health.long import LONG_COLUMNS
 from pnw_health.model.config import BEHAVIORS, FEATURES, TARGETS
 
-INTERCEPTS = dict(zip(TARGETS, (78.0, 7000.0, 80.0, 7.0), strict=True))
+INTERCEPTS = dict(zip(TARGETS, (78.0, 7000.0, 80.0), strict=True))
 
 
 def make_long(

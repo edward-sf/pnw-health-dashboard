@@ -9,7 +9,6 @@ TARGETS: tuple[str, ...] = (
     "life_expectancy",
     "premature_death",
     "injury_deaths",
-    "low_birth_weight",
 )
 FEATURES: tuple[str, ...] = (
     "median_household_income",
