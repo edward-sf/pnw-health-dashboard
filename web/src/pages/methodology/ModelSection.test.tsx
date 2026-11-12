@@ -109,3 +109,52 @@ test("says why PLACES outcomes and low birth weight are not targets, and how dir
   expect(text).toMatch(/higher is worse.*a negative difference is better than expected/is);
   expect(text).toMatch(/blue for better than expected/);
 });
+
+const wording = (id: string) => {
+  const { unmount } = render(
+    <ModelSection model={modelFile} targetId={id} onTargetChange={() => {}} indicators={manifest.indicators} />,
+  );
+  const text = document.body.textContent ?? "";
+  const section = text.slice(text.indexOf("Factors that stand in for others"));
+  unmount();
+  return { text, section };
+};
+
+test("the closing sections read correctly for every outcome", () => {
+  const le = wording("life_expectancy").section;
+  const pd = wording("premature_death").section;
+  expect(le).toContain("actual life expectancy differs");
+  expect(le).toContain("change life expectancy");
+  expect(pd).toContain("actual premature death differs");
+  expect(pd).toContain("change premature death");
+  for (const section of [le, pd]) expect(section).not.toMatch(/lives tend to be longer/);
+  expect(pd).not.toMatch(/life expectancy/i);
+});
+
+test("makes no claim the data can't support about the sources or intervals", () => {
+  const { text } = wording("life_expectancy");
+  expect(text).not.toMatch(/birth records/);
+  expect(text).not.toMatch(/a confidence interval for each county/);
+  expect(text).toMatch(/confidence interval for most counties/);
+});
+
+test("flag colours are blue and red, and low birth weight is explained plainly", () => {
+  const { text } = wording("life_expectancy");
+  expect(text).toMatch(/blue for better than expected and red for worse/);
+  expect(text).not.toMatch(/orange/);
+  expect(text).toMatch(/regional offset/);
+  expect(text).not.toMatch(/review of the first results|because counties there sit/);
+});
+
+test("names the default outcome from DEFAULT_TARGET, not key order", () => {
+  const reordered = { ...modelFile, targets: { premature_death: modelFile.targets.premature_death!, life_expectancy: modelFile.targets.life_expectancy! } };
+  render(<ModelSection model={reordered} targetId="life_expectancy" onTargetChange={() => {}} indicators={manifest.indicators} />);
+  expect(document.body.textContent).toContain("The default is life expectancy.");
+});
+
+test("the accuracy table puts each outcome's unit in the Outcome cell", () => {
+  render(<ModelSection model={modelFile} targetId="life_expectancy" onTargetChange={() => {}} indicators={manifest.indicators} />);
+  const table = screen.getByRole("table");
+  expect(within(table).getAllByText("Life expectancy, years")).toHaveLength(4);
+  expect(within(table).getAllByText("Premature death (years lost), per 100k")).toHaveLength(4);
+});

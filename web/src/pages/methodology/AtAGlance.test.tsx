@@ -54,3 +54,8 @@ test("doesn't claim a worse PNW fit when the PNW R² is not lower", () => {
     /better than the Pacific Northwest/,
   );
 });
+
+test("the closing line holds for every outcome", () => {
+  render(<AtAGlance data={data} />);
+  expect(document.body.textContent).not.toMatch(/longer or shorter lives/);
+});

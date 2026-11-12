@@ -19,7 +19,7 @@ test("feature groups, behaviors comparison and excluded counties", () => {
   const targets = Object.values(modelFile.targets);
   expect(within(table).getAllByText("With behaviors")).toHaveLength(2 * targets.length);
   expect(within(table).getAllByText("Main model")).toHaveLength(2 * targets.length);
-  for (const t of targets) expect(within(table).getAllByText(t.label)).not.toHaveLength(0);
+  for (const t of targets) expect(within(table).getAllByText(new RegExp(`^${t.label.replace(/[()]/g, "\\$&")}, `))).not.toHaveLength(0);
 });
 
 test("an excluded state FIPS the web doesn't know is shown raw", () => {
@@ -38,4 +38,9 @@ test("an excluded state FIPS the web doesn't know is shown raw", () => {
   );
   expect(document.body.textContent).toContain("99: 3 counties");
   expect(document.body.textContent).not.toContain("undefined");
+});
+
+test("the factor groups heading names the selected outcome", () => {
+  render(<ExclusionsSection model={modelFile} targetId="premature_death" />);
+  expect(screen.getByRole("heading", { level: 4, name: "Factor groups left out, premature death" })).toBeInTheDocument();
 });

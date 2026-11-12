@@ -1,8 +1,8 @@
 import { formatValue } from "../../color/formatValue";
 import { modelDigits } from "../../model/modelView";
-import { targetModel } from "../../model/targetView";
+import { DEFAULT_TARGET, targetModel } from "../../model/targetView";
 import type { Indicator, ModelFile } from "../../types";
-import { featureLabel, formatCount, joinList, outcomeName } from "./format";
+import { featureLabel, formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
 
 const formatZ = (z: number) => z.toLocaleString("en-US", { maximumFractionDigits: 3 });
@@ -23,6 +23,8 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
     );
   const better = names("higher_is_better");
   const worse = names("higher_is_worse");
+  const defaultTarget = targetModel(file, DEFAULT_TARGET);
+  const outcome = outcomeName(model.label);
   const card = model.model_card;
   const { sigma_model, z_75, z_90 } = model.thresholds;
   const label = (id: string) => featureLabel(id, indicators);
@@ -34,17 +36,17 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
       </h3>
       <p>
         The same model is built for each of {targets.length} outcomes, from the same factors:{" "}
-        {joinList(targets.map(([, t]) => outcomeName(t.label)))}. The first is the default. All of
-        them come from County Health Rankings & Roadmaps, are built from death and birth records,
-        and have a confidence interval for each county.
+        {joinList(targets.map(([, t]) => outcomeName(t.label)))}. The default is{" "}
+        {outcomeName(defaultTarget.label)}. They all come from County Health Rankings & Roadmaps,
+        and each is published with a confidence interval for most counties.
       </p>
       <p>
         CDC PLACES outcomes such as diabetes, COPD and depression are not targets. CDC builds them
         partly from American Community Survey demographics, so predicting them from the same kind of
-        data would largely reproduce CDC's own model. Low birth weight was also dropped after the
-        review of the first results: the model couldn't explain it in the Pacific Northwest, where
-        its R² was below zero because counties there sit at a different level from the rest of the
-        country.
+        data would largely reproduce CDC's own model. Low birth weight was also left out. The
+        model's expected values didn't fit Pacific Northwest counties: the region as a whole sat
+        well below its national expectation, so the flags would have shown a regional offset, not
+        differences between counties.
       </p>
       <label className="methodology-select">
         Outcome{" "}
@@ -83,8 +85,8 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
       <MetricsTable
         caption="Cross-validated accuracy, by outcome"
         rows={targets.flatMap(([, t]) => [
-          { target: t.label, model: "Ridge baseline", ...t.metrics.ridge },
-          { target: t.label, model: "LightGBM", ...t.metrics.lightgbm },
+          { target: outcomeCell(t), model: "Ridge baseline", ...t.metrics.ridge },
+          { target: outcomeCell(t), model: "LightGBM", ...t.metrics.lightgbm },
         ])}
       />
       <h4 id="model-importance">Factors by importance: {model.label}</h4>
@@ -108,7 +110,7 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
           ` Where higher is better (${better}), a positive difference means better than expected, and a negative one worse.`}
         {worse &&
           ` Where higher is worse (${worse}), a negative difference is better than expected, and a positive one worse.`}{" "}
-        The flag colors keep blue for better than expected and orange for worse, whichever way the
+        The flag colors keep blue for better than expected and red for worse, whichever way the
         outcome runs.
       </p>
       <p>
@@ -131,16 +133,16 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
       <h4>Factors that stand in for others</h4>
       <p>
         Some factors stand in for others the model doesn't see. For example, high housing costs
-        often go with expensive metro areas and college towns, where lives tend to be longer, so a
-        higher housing cost burden can raise the expected value. A factor's contribution shows what
+        often go with expensive metro areas and college towns, so a higher housing cost
+        burden can move the expected value toward what those places tend to have. A factor's contribution shows what
         the model has learned goes with it, not what would happen if it changed.
       </p>
       <h4>Associations, not effects</h4>
       <p>
         The factors are associated with the expected value. They describe what the model expects for
-        a county with that profile. They say nothing about why a county's actual life expectancy
-        differs from its expected value, and they don't show that changing a factor would change
-        life expectancy.
+        a county with that profile. They say nothing about why a county's actual {outcome} differs
+        from its expected value, and they don't show that changing a factor would change{" "}
+        {outcome}.
       </p>
     </section>
   );

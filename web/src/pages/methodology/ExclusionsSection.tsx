@@ -1,7 +1,7 @@
 import { targetModel } from "../../model/targetView";
 import type { ModelFile } from "../../types";
 import { groupExcludedCounties } from "./excludedCounties";
-import { formatCount, joinList, outcomeName } from "./format";
+import { formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
 import { stateNameForFips } from "./stateFipsNames";
 
@@ -22,7 +22,7 @@ export function ExclusionsSection({
       <h3 id="exclusions" tabIndex={-1}>
         What the model leaves out
       </h3>
-      <h4>Factor groups left out</h4>
+      <h4>Factor groups left out, {outcomeName(model.label)}</h4>
       <ul>
         {model.model_card.excluded_feature_groups.map((g) => (
           <li key={g.category}>
@@ -40,12 +40,12 @@ export function ExclusionsSection({
         caption="Main model and with behaviors, on the same counties, by outcome"
         rows={Object.values(file.targets).flatMap((t) => [
           {
-            target: t.label,
+            target: outcomeCell(t),
             model: "Main model",
             ...t.behaviors_comparison.main,
           },
           {
-            target: t.label,
+            target: outcomeCell(t),
             model: "With behaviors",
             ...t.behaviors_comparison.behaviors,
           },

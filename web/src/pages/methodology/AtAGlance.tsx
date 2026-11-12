@@ -35,7 +35,7 @@ export function AtAGlance({ data }: { data: AppData }) {
         The factors most associated with its expected values are {joinList(top)}.
       </p>
       <p>
-        These are associations. They show what tends to go with longer or shorter lives, not what
+        These are associations. They show what tends to go with higher or lower values, not what
         would change them.
       </p>
     </section>

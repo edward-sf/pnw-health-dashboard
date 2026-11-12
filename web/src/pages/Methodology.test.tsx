@@ -124,3 +124,8 @@ test("has a Similar counties section in the table of contents", () => {
   );
   expect(document.getElementById("similar-counties")?.tagName).toBe("H3");
 });
+
+test("a deep link to similar counties focuses its heading", () => {
+  at(ready, "/methodology#similar-counties");
+  expect(document.getElementById("similar-counties")).toHaveFocus();
+});

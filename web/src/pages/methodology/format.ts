@@ -1,4 +1,4 @@
-import type { Indicator, TargetModel } from "../../types";
+import type { Indicator, TargetModel, Unit } from "../../types";
 
 export type MetricSet = TargetModel["metrics"]["ridge"]["national"];
 
@@ -21,3 +21,14 @@ export function joinList(items: string[]): string {
 /** An outcome's label as running text: lower case, without a trailing "(years lost)" and the like. */
 export const outcomeName = (label: string): string =>
   label.replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();
+
+const UNIT_NOTE: Record<Unit, string> = {
+  percent: "percent",
+  years: "years",
+  rate_per_100k: "per 100k",
+  dollars: "dollars",
+  count: "count",
+};
+
+/** The Outcome cell of an accuracy table: the label and its unit, since the error columns mix units. */
+export const outcomeCell = (t: TargetModel): string => `${t.label}, ${UNIT_NOTE[t.unit]}`;
