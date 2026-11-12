@@ -69,3 +69,24 @@ def test_census_api_key_dotenv_forms(
     monkeypatch.delenv("CENSUS_API_KEY", raising=False)
     (tmp_path / ".env").write_text(f"{line}\n")
     assert census_api_key(tmp_path) == expected
+
+
+@pytest.mark.parametrize("value", ["", "   ", "\t"])
+def test_blank_env_key_falls_back_to_dotenv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("CENSUS_API_KEY", value)
+    (tmp_path / ".env").write_text("CENSUS_API_KEY=from-file\n")
+    assert census_api_key(tmp_path) == "from-file"
+
+
+def test_blank_env_key_without_dotenv_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CENSUS_API_KEY", "   ")
+    assert census_api_key(tmp_path) is None
+
+
+def test_env_key_is_stripped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CENSUS_API_KEY", "  abc  ")
+    assert census_api_key(tmp_path) == "abc"

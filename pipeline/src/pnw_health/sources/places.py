@@ -100,9 +100,9 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     # that is not a 5-digit FIPS (a county that lost its leading zero) must not vanish.
     kept = location[~location.str.fullmatch(r"\d{2}")]
     table = table.loc[kept.index]
-    bad = sorted(set(kept[~kept.str.fullmatch(r"\d{5}")]))
-    if bad:
-        raise _invalid(f"unexpected locationid(s) {', '.join(bad[:5])}")
+    bad_ids = sorted(set(kept[~kept.str.fullmatch(r"\d{5}")]))
+    if bad_ids:
+        raise _invalid(f"unexpected locationid(s) {', '.join(bad_ids[:5])}")
     frames = []
     empty: list[str] = []
     for ind in catalog:
@@ -113,9 +113,11 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
             empty.append(ind.id)
             continue
         years = rows["year"].astype(str) if "year" in rows else pd.Series(dtype=str)
-        bad = sorted(set(years[years != str(ind.year)]))
-        if bad:
-            raise _invalid(f"{ind.id} year {', '.join(bad)} does not match catalog year {ind.year}")
+        bad_years = sorted(set(years[years != str(ind.year)]))
+        if bad_years:
+            raise _invalid(
+                f"{ind.id} year {', '.join(bad_years)} does not match catalog year {ind.year}"
+            )
         frames.append(
             pd.DataFrame(
                 {

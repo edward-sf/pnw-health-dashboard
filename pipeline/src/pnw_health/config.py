@@ -57,9 +57,11 @@ def _dotenv_value(raw: str) -> str:
 def census_api_key(root: Path) -> str | None:
     """CENSUS_API_KEY from the environment, else from the git-ignored ``<root>/.env``.
 
-    The file may use shell syntax: an ``export`` prefix, quotes, and ``# comments``.
+    An environment value that is empty or only whitespace counts as unset, so the
+    ``.env`` file is read instead. The file may use shell syntax: an ``export`` prefix,
+    quotes, and ``# comments``.
     """
-    if key := os.environ.get("CENSUS_API_KEY"):
+    if key := os.environ.get("CENSUS_API_KEY", "").strip():
         return key
     env_file = root / ".env"
     if not env_file.exists():
