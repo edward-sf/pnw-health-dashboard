@@ -53,10 +53,10 @@ test("indicator title survives filtering", async () => {
 test("changing indicator re-renders the panel", async () => {
   setup("/?i=poverty_rate&c=02016");
   expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
-  expect(screen.getByText("14.2%")).toBeInTheDocument();
+  expect(screen.getByText("14.2%", { selector: ".panel-value" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
-  expect(screen.queryByText("14.2%")).not.toBeInTheDocument();
+  expect(screen.queryByText("14.2%", { selector: ".panel-value" })).not.toBeInTheDocument();
   expect(screen.getByText("5.0%", { selector: ".panel-value" })).toBeInTheDocument();
 });
 
@@ -79,6 +79,14 @@ test("select from search moves focus to panel heading", async () => {
   await userEvent.keyboard("{ArrowDown}{Enter}");
   expect(router.state.location.search).toBe("?c=41051");
   expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+});
+
+test("clicking a peer in the panel moves focus to the new county's heading", async () => {
+  const router = setup("/?i=poverty_rate&c=53033");
+  const panel = screen.getByRole("complementary", { name: "County details" });
+  await userEvent.click(within(panel).getByRole("button", { name: /^Multnomah/ }));
+  expect(router.state.location.search).toContain("c=41051");
+  expect(screen.getByRole("heading", { level: 2, name: "Multnomah" })).toHaveFocus();
 });
 
 test("close returns focus to opener", async () => {

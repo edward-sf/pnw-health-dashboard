@@ -85,6 +85,15 @@ export function Explorer({ data }: { data: AppData }) {
     [setCounty],
   );
 
+  // A peer button lives inside the panel, so like search it moves focus to the new heading.
+  const onSelectPeer = useCallback(
+    (fips: string) => {
+      setFocusFips(fips);
+      setCounty(fips);
+    },
+    [setCounty],
+  );
+
   const selectedCounty = counties.find((c) => c.fips === params.county);
   const indicator = manifest.indicators.find((x) => x.id === params.indicator);
   const entries = indicator ? values[indicator.id] : undefined;
@@ -233,6 +242,8 @@ export function Explorer({ data }: { data: AppData }) {
           manifest={manifest}
           values={values}
           modelMode={params.mode === "model"}
+          peers={data.model.peers}
+          onSelectCounty={onSelectPeer}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
           onFocusHandled={onFocusHandled}
           onClose={onClosePanel}

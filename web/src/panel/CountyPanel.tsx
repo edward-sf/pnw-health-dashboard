@@ -7,10 +7,13 @@ import type {
   CountyModel,
   Indicator,
   Manifest,
+  Peers,
   TargetModel,
   ValueEntry,
   ValuesFile,
 } from "../types";
+import { buildPeerRows } from "./buildPeerRows";
+import { SimilarCounties } from "./SimilarCounties";
 import { ModelCard } from "./ModelCard";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
@@ -27,6 +30,9 @@ type Props = {
   values: ValuesFile;
   /** In model mode the model card comes first (parent spec §6). */
   modelMode: boolean;
+  peers: Peers;
+  /** Selects another county, exactly as a map click does. */
+  onSelectCounty: (fips: string) => void;
   focusRequested: boolean;
   onFocusHandled: () => void;
   onClose: () => void;
@@ -42,12 +48,15 @@ export function CountyPanel({
   manifest,
   values,
   modelMode,
+  peers,
+  onSelectCounty,
   focusRequested,
   onFocusHandled,
   onClose,
 }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const bodyId = useId();
+  const similarId = useId();
   const isPhone = useMediaQuery(PHONE_QUERY);
   // The county the sheet was expanded for. It is cleared once another county is selected or the
   // viewport goes wide, so the sheet always opens in peek and never comes back expanded.
@@ -109,6 +118,12 @@ export function CountyPanel({
       <StripPlot county={county} indicator={indicator} entries={entries} />
     </>
   );
+  const peerData = buildPeerRows(
+    county.fips,
+    peers,
+    counties,
+    modelMode ? { kind: "model", target } : { kind: "values", entries },
+  );
   const modelCard = (
     <ModelCard
       county={county}
@@ -157,6 +172,20 @@ export function CountyPanel({
         {indicatorSection}
         {!modelMode && modelCard}
         <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
+        {peerData ? (
+          <SimilarCounties
+            rows={peerData.rows}
+            median={peerData.median}
+            unit={modelMode ? target.unit : indicator.unit}
+            mode={modelMode ? "model" : "values"}
+            onSelect={onSelectCounty}
+          />
+        ) : (
+          <section className="similar-counties" aria-labelledby={similarId}>
+            <h3 id={similarId}>Similar counties</h3>
+            <p className="similar-basis">Not enough data to find similar counties.</p>
+          </section>
+        )}
       </div>
     </aside>
   );

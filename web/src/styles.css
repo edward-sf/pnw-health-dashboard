@@ -685,3 +685,68 @@ main {
   max-width: 60rem;
   line-height: 1.5;
 }
+
+.similar-counties {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+.similar-counties h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.similar-basis {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.similar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  table-layout: auto;
+}
+
+.similar-table th,
+.similar-table td {
+  padding: 0.3rem 0.35rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #eee;
+  overflow-wrap: anywhere;
+}
+
+.similar-table th[scope="row"] {
+  font-weight: 400;
+}
+
+.similar-selected th,
+.similar-selected td,
+.similar-median th,
+.similar-median td {
+  font-weight: 600;
+}
+
+.similar-peer {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #1d4ed8;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.similar-this {
+  font-weight: 400;
+  color: #555;
+}
+
+.similar-table th {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}

@@ -17,7 +17,7 @@ test("table view and county search", async ({ page }) => {
   await page.goto("./");
   await page.getByRole("button", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
-  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.getByRole("combobox", { name: "Search counties" }).fill("Multnomah");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
@@ -88,7 +88,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await page.getByRole("button", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
-  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.goBack();
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(page).toHaveURL(/[?&]mode=model/);
@@ -117,7 +117,7 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   // King County (53033) shows no panel Methodology link, so use Chugach, which has no model result.
   await page.goto("./?i=poverty_rate&c=02063&mode=model");
   const panel = page.getByRole("complementary", { name: "County details" });
-  await panel.getByRole("link", { name: "Methodology", exact: true }).click();
+  await panel.getByRole("link", { name: "Methodology", exact: true }).first().click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
   const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
   await expect(heading).toBeFocused();

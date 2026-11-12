@@ -34,7 +34,7 @@ test("explorer: model map", async ({ page }, testInfo) => {
 
 test("explorer: table view", async ({ page }, testInfo) => {
   await explorer(page, "?i=poverty_rate&view=table");
-  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await audit(page, testInfo);
 });
 
