@@ -121,7 +121,11 @@ def _move(src: Path, dst: Path) -> None:
             shutil.copyfile(src, partial)
             os.replace(partial, dst)
         finally:
-            partial.unlink(missing_ok=True)
+            # Never let a failed cleanup hide the copy error, or a move that succeeded.
+            try:
+                partial.unlink(missing_ok=True)
+            except OSError as cleanup_err:
+                print(f"warning: could not remove {partial}: {cleanup_err}", file=sys.stderr)
 
 
 def _remove(tmp: Path) -> None:
@@ -171,11 +175,14 @@ def write_exports(
             try:
                 _move(path, target)
             except OSError as err:
-                done = ", ".join(p.name for p in final) or "none"
+                if final:
+                    done = ", ".join(p.name for p in final)
+                    state = f"already replaced: {done}. The folder may mix two exports"
+                else:
+                    state = "nothing was replaced"
                 raise ExportError(
-                    f"export stopped moving {path.name} into {out_dir} ({err}); already "
-                    f"replaced: {done}. The folder may mix two exports: re-run "
-                    "`pnw-health run --stage export`"
+                    f"export stopped moving {path.name} into {out_dir} ({err}); {state}: "
+                    "re-run `pnw-health run --stage export`"
                 ) from err
             final.append(target)
         return final

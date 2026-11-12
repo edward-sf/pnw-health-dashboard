@@ -309,12 +309,9 @@ def test_cross_device_copy_never_writes_the_final_name_directly(
 
 def test_partial_move_names_replaced_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     real = os.replace
-    calls = 0
 
     def flaky(src: str | Path, dst: str | Path) -> None:
-        nonlocal calls
-        calls += 1
-        if calls == 3:
+        if Path(dst).name == "counties.topojson":
             raise OSError("permission denied")
         real(src, dst)
 
@@ -326,6 +323,35 @@ def test_partial_move_names_replaced_files(tmp_path: Path, monkeypatch: pytest.M
     assert "manifest.json, values.json" in message
     assert "pnw-health run --stage export" in message
     assert "permission denied" in message
+    assert list((tmp_path / "s").iterdir()) == []
+
+
+def test_copy_failure_leaves_no_partial_and_keeps_untouched_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import errno
+
+    out = tmp_path / "data"
+    args = _export_args()
+    write_exports(out, args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+    before = {p.name: p.read_bytes() for p in out.iterdir()}
+
+    _cross_device_replace(monkeypatch)
+    real_copy = export.shutil.copyfile
+
+    def full_on_values(src: Path, dst: Path) -> object:
+        if Path(src).name == "values.json":
+            Path(dst).write_text("half")
+            raise OSError(errno.ENOSPC, "No space left on device")
+        return real_copy(src, dst)
+
+    monkeypatch.setattr(export.shutil, "copyfile", full_on_values)
+    changed = args[0].model_copy(update={"schema_version": "9.9.9"})
+    with pytest.raises(export.ExportError, match="already replaced: manifest.json"):
+        write_exports(out, changed, args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+    assert not list(out.glob(".*.partial"))
+    for name in ("values.json", "counties.topojson", "model.json"):
+        assert (out / name).read_bytes() == before[name]
 
 
 def test_staging_inside_out_dir_rejected(tmp_path: Path) -> None:
@@ -346,3 +372,46 @@ def test_cleanup_failure_warns(
     err = capsys.readouterr().err
     assert "could not remove" in err
     assert "busy" in err
+
+
+def test_failed_cleanup_of_partial_keeps_the_copy_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _cross_device_replace(monkeypatch)
+
+    def full_disk(src: Path, dst: Path) -> None:
+        Path(dst).write_text("half")
+        raise OSError("disk full")
+
+    real_unlink = Path.unlink
+
+    def stuck(self: Path, missing_ok: bool = False) -> None:
+        if self.name.endswith(".partial"):
+            raise OSError("busy")
+        real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(export.shutil, "copyfile", full_disk)
+    monkeypatch.setattr(Path, "unlink", stuck)
+    out = tmp_path / "data"
+    with pytest.raises(export.ExportError, match="disk full"):
+        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+
+
+def test_first_move_failure_says_nothing_was_replaced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(src: str | Path, dst: str | Path) -> None:
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(export.os, "replace", fail)
+    with pytest.raises(export.ExportError) as err:
+        write_exports(
+            tmp_path / "data",
+            *_export_args()[:2],
+            TOPOLOGY,
+            _export_args()[2],
+            staging=tmp_path / "s",
+        )
+    message = str(err.value)
+    assert "nothing was replaced" in message
+    assert "mix" not in message

@@ -121,3 +121,16 @@ def test_dotenv_not_utf8_names_the_file(tmp_path: Path, monkeypatch: pytest.Monk
     (tmp_path / ".env").write_bytes(b"CENSUS_API_KEY=\xff\xfe\n")
     with pytest.raises(ValueError, match=r"cannot read .*\.env"):
         census_api_key(tmp_path)
+
+
+def test_dotenv_with_bom(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CENSUS_API_KEY", raising=False)
+    (tmp_path / ".env").write_bytes("\ufeffCENSUS_API_KEY=abc\n".encode())
+    assert census_api_key(tmp_path) == "abc"
+
+
+def test_unreadable_dotenv_names_the_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CENSUS_API_KEY", raising=False)
+    (tmp_path / ".env").mkdir()
+    with pytest.raises(ValueError, match=r"cannot read .*\.env"):
+        census_api_key(tmp_path)

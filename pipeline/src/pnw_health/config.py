@@ -78,9 +78,12 @@ def census_api_key(root: Path) -> str | None:
     if not env_file.exists():
         return None
     try:
-        text = env_file.read_text(encoding="utf-8")
+        # utf-8-sig drops the byte-order mark some Windows editors add.
+        text = env_file.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError as err:
         raise ValueError(f"cannot read {env_file}: not UTF-8 ({err.reason})") from err
+    except OSError as err:
+        raise ValueError(f"cannot read {env_file}: {err.strerror or err}") from err
     found: str | None = None
     for number, line in enumerate(text.splitlines(), start=1):
         line = line.strip()

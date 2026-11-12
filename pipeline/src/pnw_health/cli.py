@@ -210,7 +210,9 @@ def run(
                 Paths.default(root),
                 stage,
                 client=client,
-                api_key=census_api_key(root),
+                # Only fetch may download ACS; other stages never read .env, so a broken
+                # one can't block them.
+                api_key=census_api_key(root) if stage in (Stage.fetch, Stage.all) else None,
                 refresh=refresh,
                 env_file=env_file_path(root),
             )

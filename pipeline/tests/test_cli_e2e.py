@@ -439,3 +439,26 @@ def test_cli_reports_export_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     result = CliRunner().invoke(cli.app, ["run", "--root", str(tmp_path)])
     assert result.exit_code == 1
     assert "export stopped after replacing manifest.json" in result.output
+
+
+def test_bad_dotenv_does_not_block_stages_without_fetch(tmp_path: Path) -> None:
+    """Only a stage that may download ACS reads the key, so a broken .env can't block others."""
+    monkey_env = {"CENSUS_API_KEY": ""}
+    (tmp_path / ".env").write_text('CENSUS_API_KEY="unclosed\n')
+    result = CliRunner().invoke(
+        cli.app, ["run", "--stage", "harmonize", "--root", str(tmp_path)], env=monkey_env
+    )
+    assert result.exit_code == 1
+    assert "--stage fetch" in result.output
+    assert "unclosed quote" not in result.output
+
+
+def test_bad_dotenv_still_reported_for_fetch(tmp_path: Path) -> None:
+    (tmp_path / ".env").write_text('CENSUS_API_KEY="unclosed\n')
+    result = CliRunner().invoke(
+        cli.app,
+        ["run", "--stage", "fetch", "--root", str(tmp_path)],
+        env={"CENSUS_API_KEY": ""},
+    )
+    assert result.exit_code == 1
+    assert "unclosed quote" in result.output
