@@ -745,3 +745,8 @@ main {
   font-weight: 400;
   color: #555;
 }
+
+.similar-table th {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}

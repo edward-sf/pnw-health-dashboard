@@ -75,4 +75,10 @@ describe("buildPeerRows", () => {
     expect(buildPeerRows("02016", peers, counties, values({}))).toBeNull();
     expect(buildPeerRows("99999", peers, counties, values({}))).toBeNull();
   });
+
+  test("skips peers that have no county entry and carries the state", () => {
+    const r = buildPeerRows("02016", model.peers, counties.filter((c) => c.fips !== "02063"), values({ "02016": 1, "16001": 3 }));
+    expect(r!.rows.map((x) => x.fips)).toEqual(["02016", "16001"]);
+    expect(r!.rows[1]).toMatchObject({ name: "Ada", state: "ID" });
+  });
 });

@@ -3,6 +3,7 @@ import type { County, Flag, Peers, TargetModel, ValueEntry } from "../types";
 export type PeerRow = {
   fips: string;
   name: string;
+  state: string;
   isSelected: boolean;
   value: number | null;
   expected?: number | null;
@@ -33,9 +34,12 @@ export function buildPeerRows(
 ): { rows: PeerRow[]; median: PeerMedian } | null {
   const peerFips = peers.counties[fips];
   if (!peerFips || peerFips.length === 0) return null;
-  const names = new Map(counties.map((c) => [c.fips, c.name]));
-  const rows: PeerRow[] = [fips, ...peerFips].map((f) => {
-    const base = { fips: f, name: names.get(f) ?? f, isSelected: f === fips };
+  const byFips = new Map(counties.map((c) => [c.fips, c]));
+  // A peer we cannot name cannot be shown or selected, so it is left out.
+  const ids = [fips, ...peerFips].filter((f) => byFips.has(f));
+  const rows: PeerRow[] = ids.map((f) => {
+    const c = byFips.get(f)!;
+    const base = { fips: f, name: c.name, state: c.state, isSelected: f === fips };
     if (source.kind === "values")
       return { ...base, value: source.entries[f]?.v ?? null };
     const m = source.target.counties[f];

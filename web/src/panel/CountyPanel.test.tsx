@@ -314,7 +314,7 @@ describe("similar counties", () => {
     const who = screen.getByRole("heading", { name: "Who lives here" });
     const similar = screen.getByRole("heading", { name: "Similar counties" });
     expect(who.compareDocumentPosition(similar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Chugach" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chugach, AK" })).toBeInTheDocument();
   });
 
   test("shows a note when there are no peers", () => {

@@ -81,6 +81,14 @@ test("select from search moves focus to panel heading", async () => {
   expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
 });
 
+test("clicking a peer in the panel moves focus to the new county's heading", async () => {
+  const router = setup("/?i=poverty_rate&c=53033");
+  const panel = screen.getByRole("complementary", { name: "County details" });
+  await userEvent.click(within(panel).getByRole("button", { name: /^Multnomah/ }));
+  expect(router.state.location.search).toContain("c=41051");
+  expect(screen.getByRole("heading", { level: 2, name: "Multnomah" })).toHaveFocus();
+});
+
 test("close returns focus to opener", async () => {
   setup();
   const input = screen.getByRole("combobox", { name: "Search counties" });

@@ -50,7 +50,7 @@ export function SimilarCounties({ rows, median, unit, mode, onSelect }: Props) {
               <th scope="row">
                 {r.isSelected ? (
                   <>
-                    {r.name} <span className="similar-this">(this county)</span>
+                    {r.name}, {r.state} <span className="similar-this">(this county)</span>
                   </>
                 ) : (
                   <button
@@ -58,7 +58,7 @@ export function SimilarCounties({ rows, median, unit, mode, onSelect }: Props) {
                     className="similar-peer"
                     onClick={() => onSelect(r.fips)}
                   >
-                    {r.name}
+                    {r.name}, {r.state}
                   </button>
                 )}
               </th>

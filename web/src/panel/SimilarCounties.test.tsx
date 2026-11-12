@@ -9,6 +9,7 @@ const rows: PeerRow[] = [
   {
     fips: "53033",
     name: "King",
+    state: "WA",
     isSelected: true,
     value: 80.8,
     expected: 77.1,
@@ -17,6 +18,7 @@ const rows: PeerRow[] = [
   {
     fips: "41051",
     name: "Multnomah",
+    state: "OR",
     isSelected: false,
     value: null,
     expected: 78.6,
@@ -68,10 +70,10 @@ test("model mode shows actual, expected and flag; median row has no flag", () =>
 
 test("clicking a peer calls onSelect with its fips; selected county is not a button", async () => {
   const onSelect = setup();
-  await userEvent.click(screen.getByRole("button", { name: "Multnomah" }));
+  await userEvent.click(screen.getByRole("button", { name: "Multnomah, OR" }));
   expect(onSelect).toHaveBeenCalledWith("41051");
   expect(
-    screen.queryByRole("button", { name: "King" }),
+    screen.queryByRole("button", { name: /King/ }),
   ).not.toBeInTheDocument();
 });
 
@@ -92,4 +94,10 @@ test("shows the basis sentence with a link to /methodology#similar-counties", ()
   expect(
     screen.getByRole("table", { name: /Similar counties/ }),
   ).toBeInTheDocument();
+});
+
+test("shows the state for every row, including the selected county", () => {
+  setup();
+  expect(screen.getByRole("row", { name: /King, WA/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Multnomah, OR" })).toBeInTheDocument();
 });
