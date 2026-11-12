@@ -5,15 +5,20 @@ import { modelDigits, tierLabel } from "../model/modelView";
 import type { Unit } from "../types";
 import type { PeerMedian, PeerRow } from "./buildPeerRows";
 
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const countWord = (n: number): string => WORDS[n] ?? String(n);
+
 type Props = {
   rows: PeerRow[];
   median: PeerMedian;
   unit: Unit;
   mode: "values" | "model";
+  /** How many factors define similarity; three are named in the sentence, the rest counted. */
+  factorCount: number;
   onSelect: (fips: string) => void;
 };
 
-export function SimilarCounties({ rows, median, unit, mode, onSelect }: Props) {
+export function SimilarCounties({ rows, median, unit, mode, factorCount, onSelect }: Props) {
   const headingId = useId();
   const model = mode === "model";
   const fmt = (v: number | null | undefined) =>
@@ -24,7 +29,7 @@ export function SimilarCounties({ rows, median, unit, mode, onSelect }: Props) {
     <section className="similar-counties" aria-labelledby={headingId}>
       <h3 id={headingId}>Similar counties</h3>
       <p className="similar-basis">
-        Most similar PNW counties on income, poverty, education and six other
+        Most similar PNW counties on income, poverty, education and {countWord(factorCount - 3)} other
         social and economic measures.{" "}
         <Link to="/methodology#similar-counties">Methodology</Link>
       </p>

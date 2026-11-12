@@ -18,9 +18,7 @@ export function joinList(items: string[]): string {
   return list.format(items).replace(/, and /, " and ");
 }
 
-/** An outcome's label as running text: lower case, without a trailing "(years lost)" and the like. */
-export const outcomeName = (label: string): string =>
-  label.replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();
+export { outcomeName } from "../../model/targetView";
 
 const UNIT_NOTE: Record<Unit, string> = {
   percent: "percent",

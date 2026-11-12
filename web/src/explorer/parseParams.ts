@@ -1,4 +1,9 @@
+import { DEFAULT_TARGET } from "../model/targetView";
 import type { Manifest } from "../types";
+
+/** The default target: DEFAULT_TARGET when the model has it, otherwise the first one. */
+export const defaultTargetId = (targetIds: readonly string[]): string =>
+  targetIds.includes(DEFAULT_TARGET) ? DEFAULT_TARGET : (targetIds[0] ?? "");
 
 export type ParamKey = "i" | "c" | "t" | "mode" | "view";
 export type ExplorerParams = {
@@ -34,7 +39,7 @@ export function parseParams(
     else invalid.push("c");
   }
 
-  let target = targetIds[0] ?? "";
+  let target = defaultTargetId(targetIds);
   const t = q.get("t");
   if (t !== null) {
     if (targetIds.includes(t)) target = t;

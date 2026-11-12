@@ -62,3 +62,11 @@ test("accepts a known t", () => {
 test("flags an unknown t", () => {
   expect(parse("?t=nope")).toMatchObject({ target: "life_expectancy", invalid: ["t"] });
 });
+
+test("the default target is life expectancy however the keys are ordered", () => {
+  const shuffled = ["premature_death", "life_expectancy", "injury_deaths"];
+  expect(parseParams("", manifest, new Set(), shuffled).target).toBe("life_expectancy");
+});
+test("falls back to the first target when life expectancy is absent", () => {
+  expect(parseParams("", manifest, new Set(), ["premature_death"]).target).toBe("premature_death");
+});

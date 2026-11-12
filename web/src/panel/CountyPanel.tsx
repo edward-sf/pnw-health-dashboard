@@ -178,6 +178,7 @@ export function CountyPanel({
             median={peerData.median}
             unit={modelMode ? target.unit : indicator.unit}
             mode={modelMode ? "model" : "values"}
+            factorCount={peers.method.features.length}
             onSelect={onSelectCounty}
           />
         ) : (

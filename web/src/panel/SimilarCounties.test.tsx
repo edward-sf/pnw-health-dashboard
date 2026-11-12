@@ -37,6 +37,7 @@ function setup(
         median={{ value: 76, expected: 78 }}
         unit="years"
         mode="model"
+        factorCount={9}
         onSelect={onSelect}
         {...props}
       />
@@ -100,4 +101,17 @@ test("shows the state for every row, including the selected county", () => {
   setup();
   expect(screen.getByRole("row", { name: /King, WA/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Multnomah, OR" })).toBeInTheDocument();
+});
+
+test.each([
+  [9, "six other"],
+  [10, "seven other"],
+  [14, "11 other"],
+])("derives the other-measure count from %i factors", (factorCount, words) => {
+  setup({ factorCount });
+  expect(
+    screen.getByText(
+      new RegExp(`income, poverty, education and ${words} social and economic measures\\.`),
+    ),
+  ).toBeInTheDocument();
 });

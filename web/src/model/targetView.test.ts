@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { model } from "../test/fixtures";
-import { DEFAULT_TARGET, directionNote, targetModel } from "./targetView";
+import { DEFAULT_TARGET, directionNote, outcomeName, targetModel } from "./targetView";
 
 describe("targetModel", () => {
   it("returns the entry for the id", () => {
@@ -27,5 +27,13 @@ describe("directionNote", () => {
 
   it("is null for a higher_is_better target", () => {
     expect(directionNote(targetModel(model, "life_expectancy"))).toBeNull();
+  });
+});
+
+describe("outcomeName", () => {
+  it("lower-cases a label and drops a trailing parenthetical", () => {
+    expect(outcomeName("Life expectancy")).toBe("life expectancy");
+    expect(outcomeName("Premature death (years lost)")).toBe("premature death");
+    expect(outcomeName("Injury deaths")).toBe("injury deaths");
   });
 });

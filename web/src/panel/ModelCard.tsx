@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
 import { buildShapBars, type ShapBar } from "../model/buildShapBars";
 import { type CompleteModel, hasModelResult, modelDigits, tierFill, tierLabel } from "../model/modelView";
-import { directionNote } from "../model/targetView";
+import { directionNote, outcomeName } from "../model/targetView";
 import type { County, CountyModel, Indicator, TargetModel } from "../types";
 import { ResidualRange } from "./ResidualRange";
 import { ShapBars } from "./ShapBars";
@@ -26,7 +26,7 @@ export function ModelCard({ county, entry, indicators, target }: Props) {
         <ModelResult entry={entry} bars={bars} target={target} />
       ) : (
         <p className="model-none">
-          The model has no result for this county because its {target.label.toLowerCase()} isn't reported.{" "}
+          The model has no result for this county because this county's {outcomeName(target.label)} figure isn't reported.{" "}
           <Link to="/methodology#no-result">Methodology</Link>
         </p>
       )}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import type { Manifest } from "../types";
-import { parseParams, type ExplorerParams } from "./parseParams";
+import { defaultTargetId, parseParams, type ExplorerParams } from "./parseParams";
 
 export function useExplorerParams(
   manifest: Manifest,
@@ -64,7 +64,7 @@ export function useExplorerParams(
       if (id === params.target) return;
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        if (id === targetIds[0]) next.delete("t");
+        if (id === defaultTargetId(targetIds)) next.delete("t");
         else next.set("t", id);
         return next;
       });

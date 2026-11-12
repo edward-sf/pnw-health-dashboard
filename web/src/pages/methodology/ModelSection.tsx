@@ -140,7 +140,7 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
       <h4>Associations, not effects</h4>
       <p>
         The factors are associated with the expected value. They describe what the model expects for
-        a county with that profile. They say nothing about why a county's actual {outcome} differs
+        a county with that profile. They say nothing about why a county's actual value differs
         from its expected value, and they don't show that changing a factor would change{" "}
         {outcome}.
       </p>

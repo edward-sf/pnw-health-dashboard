@@ -6,7 +6,7 @@ import type { AppData } from "../data/loadData";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
 import { ModelLegend } from "../model/ModelLegend";
-import { targetModel } from "../model/targetView";
+import { outcomeName, targetModel } from "../model/targetView";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
 import { CountyMap } from "../map/CountyMap";
 import { CountyPanel } from "../panel/CountyPanel";
@@ -179,7 +179,7 @@ export function Explorer({ data }: { data: AppData }) {
         </h2>
         <p className="indicator-description">
           {modelMode
-            ? `How each county's ${model.label.toLowerCase()} compares with what the model expects for counties nationwide with a similar social and economic profile.`
+            ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
             : indicator.description}
         </p>
         {modelMode ? (
