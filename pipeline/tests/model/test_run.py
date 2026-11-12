@@ -177,6 +177,21 @@ def test_target_carries_catalog_label_unit_direction(full_model: ModelFile) -> N
     )
 
 
+def test_run_flags_follow_direction(full_model: ModelFile) -> None:
+    counties = full_model.targets["premature_death"].counties.values()
+    scored = [c for c in counties if c.residual is not None and c.threshold_90 is not None]
+    assert scored
+    for c in scored:
+        assert c.residual is not None and c.threshold_90 is not None
+        if c.residual < -c.threshold_90:
+            assert c.flag == "notably_better"
+        elif c.residual > c.threshold_90:
+            assert c.flag == "notably_worse"
+    assert any(c.flag == "notably_better" for c in scored) or any(
+        c.flag == "notably_worse" for c in scored
+    )
+
+
 def test_card_target_matches_key(full_model: ModelFile) -> None:
     assert all(t.model_card.target == k for k, t in full_model.targets.items())
 
