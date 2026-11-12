@@ -2,6 +2,10 @@ import type { ModelFile, TargetModel } from "../types";
 
 export const DEFAULT_TARGET = "life_expectancy";
 
+/** The default target: DEFAULT_TARGET when the model has it, otherwise the first one. */
+export const defaultTargetId = (targetIds: readonly string[]): string =>
+  targetIds.includes(DEFAULT_TARGET) ? DEFAULT_TARGET : (targetIds[0] ?? "");
+
 /** An outcome's label as running text: lower case, without a trailing "(years lost)" and the like. */
 export const outcomeName = (label: string): string =>
   label.replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();

@@ -1,9 +1,7 @@
-import { DEFAULT_TARGET } from "../model/targetView";
+import { defaultTargetId } from "../model/targetView";
 import type { Manifest } from "../types";
 
-/** The default target: DEFAULT_TARGET when the model has it, otherwise the first one. */
-export const defaultTargetId = (targetIds: readonly string[]): string =>
-  targetIds.includes(DEFAULT_TARGET) ? DEFAULT_TARGET : (targetIds[0] ?? "");
+export { defaultTargetId };
 
 export type ParamKey = "i" | "c" | "t" | "mode" | "view";
 export type ExplorerParams = {

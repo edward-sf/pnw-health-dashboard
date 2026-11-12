@@ -1,6 +1,6 @@
 import { formatValue } from "../../color/formatValue";
 import { modelDigits } from "../../model/modelView";
-import { DEFAULT_TARGET, targetModel } from "../../model/targetView";
+import { defaultTargetId, targetModel } from "../../model/targetView";
 import type { Indicator, ModelFile } from "../../types";
 import { featureLabel, formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
@@ -23,7 +23,7 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
     );
   const better = names("higher_is_better");
   const worse = names("higher_is_worse");
-  const defaultTarget = targetModel(file, DEFAULT_TARGET);
+  const defaultTarget = targetModel(file, defaultTargetId(Object.keys(file.targets)));
   const outcome = outcomeName(model.label);
   const card = model.model_card;
   const { sigma_model, z_75, z_90 } = model.thresholds;
