@@ -108,7 +108,7 @@ All files are small enough to load up front.
 **Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of life expectancy the features leave unexplained.
 
 - **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
-- **Targets:** CHR life expectancy (the default), premature death, injury deaths and low birth weight (M9 spec §2.1). Each is modelled separately with the shared features, folds and parameters.
+- **Targets:** CHR life expectancy (the default), premature death and injury deaths (M9 spec §2.1). Each is modelled separately with the shared features, folds and parameters.
 - **Features:** social/economic only, from ACS and CHR — median household income, poverty rate, uninsured rate, educational attainment, unemployment, age structure (% 65+), rurality, severe housing cost burden, broadband access. Final list lives in config.
   - **Excluded:** health behaviors (on the causal path; would restate the outcome) and race/ethnicity shares (proxies for structural factors; SHAP attributions would mislead). Rationale documented on the methodology page.
   - Missing feature values: median imputation fitted within each training fold.
@@ -120,7 +120,7 @@ All files are small enough to load up front.
   - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's life-expectancy CI.
   - `σ_resid²` = variance of national OOF residuals; `σ_model² = max(σ_resid² − mean(se_i²), 0)` (removes average measurement noise already present in residuals; mean over counties with a CI).
   - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
-  - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign is direction-aware: for a `higher_is_better` target (life expectancy) a positive residual is better; for a `higher_is_worse` target (premature death, injury deaths, low birth weight) a negative residual is better.
+  - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign is direction-aware: for a `higher_is_better` target (life expectancy) a positive residual is better; for a `higher_is_worse` target (premature death, injury deaths) a negative residual is better.
   - `insufficient_data` when the target is null.
 - **Explanations:** TreeSHAP through LightGBM's built-in `pred_contrib`, from the fold model that produced each county's out-of-fold prediction, so `base_value` plus contributions equals `predicted`; top-5 contributions per PNW county plus global mean |SHAP| importance across all out-of-fold explanations. Contributions explain the expected value relative to the base value, not the residual.
 - **Reproducibility:** fixed seeds, pinned dependencies (uv lockfile), auto-generated model card rendered on the methodology page.

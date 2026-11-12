@@ -177,4 +177,4 @@ def test_check_targets_rejects_missing_ci_level(catalog: list[Indicator]) -> Non
 
 def test_check_targets_rejects_neutral(catalog: list[Indicator]) -> None:
     with pytest.raises(ModelDataError, match="neutral"):
-        check_targets(TARGETS, _edited(catalog, "low_birth_weight", direction="neutral"))
+        check_targets(TARGETS, _edited(catalog, "injury_deaths", direction="neutral"))
