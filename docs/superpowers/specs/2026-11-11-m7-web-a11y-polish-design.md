@@ -9,7 +9,7 @@
 The live site has no known accessibility bugs, and the web code carries no open review debt from M2–M6.
 
 **Exit criteria:**
-- The county outline stroke is at least 3:1 against the white page and against every pale fill listed in §3.1; a unit test checks the ratios.
+- Every county's outline is at least 3:1 against its own fill, for every fill the map can draw (both ramps, every tier, the hatch), as §3.1 specifies; a unit test checks each one.
 - After a route change made while the data is still loading (for example a cold-load redirect from an unknown path), focus lands on the Explorer heading once it renders; a unit test covers it.
 - A skip link reaches the county search in one Tab and one Enter from the top of the Explorer; covered by a unit test and `e2e/a11y.spec.ts`.
 - In model mode the county panel's first section is the model card, and every other item in #130 is done.
@@ -28,7 +28,7 @@ Each is made in the same PR as the code it describes.
 | Spec | Section | Change | PR |
 |---|---|---|---|
 | Parent spec | §6 Explorer, county panel | The listed order applies in values mode. In model mode the model card comes first, then the indicator section (value, ranks, strip plot), then "Who lives here". | #130 |
-| M6 design | Accessibility (§6) | County boundaries are required graphics under WCAG 1.4.11. Their stroke is at least 3:1 against the page and the pale fills; the known limit in §3.1 applies. | #138 |
+| M6 design | Accessibility (§6) | County boundaries are required graphics under WCAG 1.4.11. Each county's outline is at least 3:1 against its own fill (§3.1). | #138 |
 
 ## 3. Per-issue design
 
@@ -38,21 +38,21 @@ Work order: §3.1 → §3.7, i.e. #138, #139, #98, #130, #129, #81, #83. The acc
 
 **Decision:** county boundaries are required graphics under WCAG 1.4.11. They are what separates a pale county from the page and from a pale neighbour.
 
-**Change:** `.county { stroke }` in `web/src/styles.css` goes from `#b8b8b8` to `#808080`. Stroke width, the hover/focus stroke (`#333`, width 1) and every fill, including the M5 tier fills, stay as they are.
+**Change:** the outline depends on the county's fill, so it is at least 3:1 against every fill the map draws. `outlineFor(fill)` in `web/src/color/outline.ts` returns the grey default `#808080` when that reaches 3:1 against the fill, and otherwise black or white, whichever contrasts more. The hatch fill is judged by its `#f2f2f2` background. `CountyMap` sets it on each path as the `--county-stroke` custom property, and `.county { stroke: var(--county-stroke, #808080) }` uses it, so the hover/focus rule (`#333`, width 1) and the selected rule (`#000`, width 2) still win. Stroke width and every fill, including the M5 tier fills, stay as they are.
 
-Contrast of `#808080` against the pale fills (WCAG relative luminance):
-
-| Fill | Where | Ratio |
+| Fills | Outline | Ratio against the fill |
 |---|---|---|
-| `#ffffff` | Page | 3.95 |
-| `#e3e3e3` | Model `none` tier | 3.08 |
-| `#f2f2f2` | Hatch background (null values) | 3.53 |
-| `#eff3ff` | Lightest neutral bin (`schemeBlues[5][0]`) | 3.56 |
-| `#fef0d9` | Lightest values bin (`schemeOrRd[5][0]`) | 3.51 |
+| Lightest bins (`#fef0d9`, `#eff3ff`), `none` tier `#e3e3e3`, hatch `#f2f2f2` | `#808080` | 3.08–3.56 |
+| Values bins 1–3, neutral bins 1–3, `somewhat_worse` `#f4a582`, `somewhat_better` `#92c5de` | `#000000` | 5.06–14.18 |
+| Darkest bins (`#b30000`, `#08519c`), `notably_worse` `#ca0020`, `notably_better` `#0571b0` | `#ffffff` | 5.26–7.87 |
 
-**Known limit:** against the darkest fills the stroke is 1.3–2.0:1 (`#0571b0` 1.33, `#ca0020` 1.51, `#b30000` 1.82, `#08519c` 1.99). No single grey reaches 3:1 against both ends of the ramps. A dark county is set apart from pale neighbours by its fill. The case left is two adjacent counties in the same dark bin, and that is accepted. In that case the boundary isn't needed to read the value, since both counties share it. Hover and focus draw the `#333` outline, and the table, search and panel identify every county.
+`#808080` is also 3.95:1 against the white page, so a pale county's outline separates it from the page too.
 
-**Test:** a unit test with a small WCAG contrast helper asserts that the stroke is ≥ 3:1 against each fill in the table above. The test reads the `.county` stroke from the `styles.css` text, so it checks the color actually shipped and fails if a later edit lowers it. It takes the fills from their sources (`tierFill`, the d3 schemes) rather than copying them.
+**Why not one colour:** no single colour reaches 3:1 against the whole ramp. A first version used `#808080` everywhere. Against bin 3 of each ramp that is 1.00:1 (`#e34a33`) and 1.05:1 (`#3182bd`), worse than the old `#b8b8b8` (about 2:1), so neighbouring counties in those bins lost their boundary. The M7 whole-branch review caught it, and the fill-aware outline replaced it.
+
+**Trade-off:** mid-ramp counties get thin black outlines, close in colour to the `#333` hover outline. Hover stays distinct by width (1 vs 0.5), and the selected county by width (2).
+
+**Test:** `outlineContrast.test.ts` (with the `contrastRatio` helper in `web/src/color/contrast.ts`) checks that `outlineFor(fill)` is at least 3:1 against every colour in both 5-bin ramps and every tier fill, taken from their sources (`tierFill`, the d3 schemes), and against the hatch background. It checks that pale fills keep `#808080`, and that the `.county` rule's fallback in `styles.css` equals it. `CountyMap.test.tsx` checks that each path carries `outlineFor` of its fill.
 
 ### 3.2 #139 Route focus after a late heading
 

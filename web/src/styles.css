@@ -25,8 +25,10 @@ body {
   height: auto;
 }
 
+/* Each path sets --county-stroke from its fill (outlineFor), so the outline is at least 3:1
+   against every fill. Hover, focus and the selected county below still override it. */
 .county {
-  stroke: #808080;
+  stroke: var(--county-stroke, #808080);
   stroke-width: 0.5;
   cursor: pointer;
 }
