@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
 import { manifest, model, topology, values } from "../test/fixtures";
+import { tierFill } from "../model/modelView";
 import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
 
@@ -229,6 +230,11 @@ const twoTargets = {
       label: "Premature death (years lost)",
       unit: "rate_per_100k" as const,
       direction: "higher_is_worse" as const,
+      // Flags differ from life_expectancy's, so the map fill shows which target is rendered.
+      counties: {
+        ...model.targets.life_expectancy!.counties,
+        "53033": { ...model.targets.life_expectancy!.counties["53033"]!, flag: "notably_worse" as const },
+      },
     },
   },
 };
@@ -253,6 +259,16 @@ test("shows the Outcome select in model mode instead of the indicator picker", a
   await userEvent.selectOptions(select, "premature_death");
   expect(router.state.location.search).toBe("?mode=model&i=pct_asian&t=premature_death");
   expect(screen.getByRole("combobox", { name: "Outcome" })).toHaveValue("premature_death");
+});
+
+test("the selected target drives the map fill", () => {
+  setupTwo("/?mode=model");
+  const king = () => screen.getByLabelText("King, WA").getAttribute("fill");
+  expect(king()).toBe(tierFill("notably_better"));
+  cleanup();
+  setupTwo("/?mode=model&t=premature_death");
+  expect(king()).toBe(tierFill("notably_worse"));
+  expect(king()).not.toBe(tierFill("notably_better"));
 });
 
 test("hides the Outcome select in values mode", () => {
