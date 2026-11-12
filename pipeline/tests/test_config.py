@@ -48,3 +48,24 @@ def test_census_api_key_from_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_census_api_key_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CENSUS_API_KEY", raising=False)
     assert census_api_key(tmp_path) is None
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("export CENSUS_API_KEY=abc", "abc"),
+        ("export   CENSUS_API_KEY=abc", "abc"),
+        ("CENSUS_API_KEY=abc # note", "abc"),
+        ('CENSUS_API_KEY="abc # not a comment"', "abc # not a comment"),
+        ("CENSUS_API_KEY='abc' # note", "abc"),
+        ("CENSUS_API_KEY=ab#c", "ab#c"),
+        ("# CENSUS_API_KEY=abc", None),
+        ("CENSUS_API_KEY= # note", None),
+    ],
+)
+def test_census_api_key_dotenv_forms(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, line: str, expected: str | None
+) -> None:
+    monkeypatch.delenv("CENSUS_API_KEY", raising=False)
+    (tmp_path / ".env").write_text(f"{line}\n")
+    assert census_api_key(tmp_path) == expected
