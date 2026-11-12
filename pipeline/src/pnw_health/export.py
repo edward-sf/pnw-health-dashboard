@@ -167,8 +167,9 @@ def write_exports(
         ]
         final: list[Path] = []
         for path in written:
+            target = out_dir / path.name
             try:
-                _move(path, out_dir / path.name)
+                _move(path, target)
             except OSError as err:
                 done = ", ".join(p.name for p in final) or "none"
                 raise ExportError(
@@ -176,7 +177,7 @@ def write_exports(
                     f"replaced: {done}. The folder may mix two exports: re-run "
                     "`pnw-health run --stage export`"
                 ) from err
-            final.append(out_dir / path.name)
+            final.append(target)
         return final
     finally:
         _remove(tmp)
