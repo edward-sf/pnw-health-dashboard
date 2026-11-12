@@ -149,7 +149,9 @@ def _export(paths: Paths) -> None:
     values_file = build_values_file(add_ranks(values, catalog), legacy, county_fips, catalog)
     topology = to_topojson(counties)
     # Only after validation passed, and rounded only now: validation needs full precision.
-    write_exports(paths.out, manifest, values_file, topology, finalize_model(model))
+    write_exports(
+        paths.out, manifest, values_file, topology, finalize_model(model), staging=paths.interim
+    )
 
 
 def run_pipeline(

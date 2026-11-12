@@ -117,7 +117,7 @@ def test_write_exports_round_trip(tmp_path: Path) -> None:
     )
     manifest = make_manifest()
     model = make_model_file({"53001": make_county_model()})
-    paths = write_exports(tmp_path / "out", manifest, vf, TOPOLOGY, model)
+    paths = write_exports(tmp_path / "out", manifest, vf, TOPOLOGY, model, staging=tmp_path / "s")
     assert sorted(p.name for p in paths) == [
         "counties.topojson",
         "manifest.json",
@@ -204,7 +204,9 @@ def test_finalize_leaves_input_full_precision() -> None:
 def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
     vf = build_values_file(ranked([("53001", 1.0, None, None)]), no_legacy(), COUNTIES, CATALOG)
     model = make_model_file({"02063": make_null_county_model()})
-    write_exports(tmp_path, make_manifest(), vf, TOPOLOGY, finalize_model(model))
+    write_exports(
+        tmp_path, make_manifest(), vf, TOPOLOGY, finalize_model(model), staging=tmp_path / "s"
+    )
     text = (tmp_path / "model.json").read_text()
     assert "NaN" not in text
     assert json.loads(text)["counties"]["02063"]["predicted"] is None
@@ -220,7 +222,7 @@ def test_write_exports_failure_keeps_previous_export(
 ) -> None:
     out = tmp_path / "data"
     manifest, vf, model = _export_args()
-    write_exports(out, manifest, vf, TOPOLOGY, model)
+    write_exports(out, manifest, vf, TOPOLOGY, model, staging=tmp_path / "s")
     before = {p.name: p.read_bytes() for p in out.iterdir()}
 
     real = export._write_json
@@ -236,18 +238,38 @@ def test_write_exports_failure_keeps_previous_export(
     monkeypatch.setattr(export, "_write_json", flaky)
     changed = manifest.model_copy(update={"schema_version": "9.9.9"})
     with pytest.raises(OSError, match="disk full"):
-        write_exports(out, changed, vf, TOPOLOGY, model)
+        write_exports(out, changed, vf, TOPOLOGY, model, staging=tmp_path / "s")
     assert {p.name: p.read_bytes() for p in out.iterdir()} == before
-    assert list(tmp_path.glob(".data-export-*")) == []
+    assert list((tmp_path / "s").iterdir()) == []
 
 
 def test_write_exports_leaves_only_the_four_files(tmp_path: Path) -> None:
     out = tmp_path / "data"
-    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2])
+    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
     assert sorted(p.name for p in out.iterdir()) == [
         "counties.topojson",
         "manifest.json",
         "model.json",
         "values.json",
     ]
-    assert list(tmp_path.glob(".data-export-*")) == []
+    assert list((tmp_path / "s").iterdir()) == []
+
+
+def test_write_exports_moves_across_filesystems(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import errno
+
+    def cross_device(src: object, dst: object) -> None:
+        raise OSError(errno.EXDEV, "Invalid cross-device link")
+
+    monkeypatch.setattr(export.os, "replace", cross_device)
+    out = tmp_path / "data"
+    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+    assert sorted(p.name for p in out.iterdir()) == [
+        "counties.topojson",
+        "manifest.json",
+        "model.json",
+        "values.json",
+    ]
+    assert list((tmp_path / "s").iterdir()) == []
