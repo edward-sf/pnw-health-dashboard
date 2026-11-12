@@ -17,8 +17,10 @@ class ModelDataError(ValueError):
 
 @dataclass(frozen=True)
 class ModelTable:
+    """One row per county. ``frame`` is treated as read-only; callers copy before editing."""
+
     frame: pd.DataFrame
-    dropped: list[str]
+    dropped: tuple[str, ...]
 
 
 def build_table(
@@ -39,6 +41,11 @@ def build_table(
         raise ModelDataError(f"indicators missing from long table: {', '.join(missing)}")
 
     rows = long[long["indicator_id"].isin(wanted)]
+    dupes = rows[rows.duplicated(["fips", "indicator_id"], keep=False)]
+    if not dupes.empty:
+        keys = sorted({f"{r.fips}/{r.indicator_id}" for r in dupes.itertuples()})
+        more = f" and {len(keys) - 10} more" if len(keys) > 10 else ""
+        raise ModelDataError(f"duplicate (fips, indicator_id) rows: {', '.join(keys[:10])}{more}")
     wide = rows.pivot(index="fips", columns="indicator_id", values="value").reindex(columns=wanted)
     target_rows = rows[rows["indicator_id"] == target].set_index("fips")
     wide["ci_low"] = target_rows["ci_low"]
@@ -47,7 +54,7 @@ def build_table(
 
     has_target = wide["target"].notna()
     has_feature = wide[list(features)].notna().any(axis=1)
-    dropped = sorted(wide.index[has_target & ~has_feature].astype(str))
+    dropped = tuple(sorted(wide.index[has_target & ~has_feature].astype(str)))
     frame = wide[has_target & has_feature].sort_index()
     frame = frame[[*features, *behaviors, "target", "ci_low", "ci_high"]].astype(float)
     frame.index = frame.index.astype(str)

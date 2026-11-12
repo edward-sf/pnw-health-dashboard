@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import math
 import os
 import shutil
 import tempfile
@@ -15,15 +14,9 @@ import pandas as pd
 from pnw_health.contract import Legacy, Manifest, ModelFile, ValueEntry, ValuesFile
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import TOP_N
+from pnw_health.numeric import nan_to_none
 
 MODEL_DECIMALS = 4
-
-
-def _num(x: object) -> float | None:
-    if x is None or x is pd.NA:
-        return None
-    f = float(x)  # type: ignore[arg-type]
-    return None if math.isnan(f) else f
 
 
 def _int(x: object) -> int | None:
@@ -50,18 +43,18 @@ def build_values_file(
             r = rows.get((ind.id, fips))
             lg = legacies.get((ind.id, fips))
             entries[fips] = ValueEntry(
-                v=_num(r.value) if r is not None else None,
-                lo=_num(r.ci_low) if r is not None else None,
-                hi=_num(r.ci_high) if r is not None else None,
+                v=nan_to_none(r.value) if r is not None else None,
+                lo=nan_to_none(r.ci_low) if r is not None else None,
+                hi=nan_to_none(r.ci_high) if r is not None else None,
                 rank=_int(r.rank) if r is not None else None,
                 state_rank=_int(r.state_rank) if r is not None else None,
                 legacy=Legacy(
                     fips=str(lg.legacy_fips),
                     name=str(lg.legacy_name),
                     year=int(lg.year),  # type: ignore[arg-type]
-                    v=_num(lg.value),
-                    lo=_num(lg.ci_low),
-                    hi=_num(lg.ci_high),
+                    v=nan_to_none(lg.value),
+                    lo=nan_to_none(lg.ci_low),
+                    hi=nan_to_none(lg.ci_high),
                 )
                 if lg is not None
                 else None,

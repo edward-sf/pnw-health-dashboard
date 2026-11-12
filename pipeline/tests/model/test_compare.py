@@ -6,10 +6,14 @@ import pytest
 
 from pnw_health.contract import BehaviorsComparison
 from pnw_health.model import compare
-from pnw_health.model.compare import compare_behaviors
+from pnw_health.model.compare import (
+    EXCLUSION_REASON_ALL,
+    EXCLUSION_REASON_SOME,
+    compare_behaviors,
+)
 from pnw_health.model.config import BEHAVIORS, FEATURES
 from pnw_health.model.cv import assign_folds
-from pnw_health.model.features import build_table
+from pnw_health.model.features import ModelDataError, build_table
 from tests.model.synthetic import make_long
 
 
@@ -37,7 +41,8 @@ def test_models_use_identical_counties() -> None:
 
 def test_excluded_state_reported() -> None:
     frame = _blank_state(_frame(), "06")
-    frame.loc[frame["state"] == "36", BEHAVIORS[0]] = np.nan
+    # Part of 36 only: 36 is alone in its fold, and an emptied fold is an error.
+    frame.loc[frame.index[frame["state"] == "36"][:10], BEHAVIORS[0]] = np.nan
     result = _compare(frame)
     by_state = {s.state_fips: s for s in result.excluded_states}
     assert list(by_state) == ["06", "36"]
@@ -64,3 +69,27 @@ def test_behaviors_model_receives_behavior_columns(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(compare, "fit_lightgbm_oof", spy)
     _compare(_frame())
     assert seen == [list(FEATURES), [*FEATURES, *BEHAVIORS]]
+
+
+def test_all_counties_excluded_raises() -> None:
+    frame = _frame()
+    frame[list(BEHAVIORS)] = np.nan
+    with pytest.raises(ModelDataError, match="no county"):
+        _compare(frame)
+
+
+def test_empty_fold_after_exclusion_raises() -> None:
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    for state in [s for s, f in folds.items() if f == 0]:
+        frame = _blank_state(frame, state)
+    with pytest.raises(ModelDataError, match="fold 0"):
+        compare_behaviors(frame, FEATURES, BEHAVIORS, folds)
+
+
+def test_partial_exclusion_reason() -> None:
+    frame = _blank_state(_frame(), "06")
+    one = frame.index[frame["state"] == "36"][0]
+    frame.loc[one, BEHAVIORS[0]] = np.nan
+    by_state = {s.state_fips: s.reason for s in _compare(frame).excluded_states}
+    assert by_state == {"06": EXCLUSION_REASON_ALL, "36": EXCLUSION_REASON_SOME}
