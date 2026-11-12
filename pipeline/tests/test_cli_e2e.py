@@ -403,3 +403,25 @@ def test_schema_command_writes_files(tmp_path: Path) -> None:
         written = tmp_path / "schema" / ref.name
         assert written.read_bytes() == ref.read_bytes()
         assert str(written) in result.output
+
+
+def test_export_stages_outside_the_site(
+    tmp_path: Path, full_zip: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A killed export must not leave files where Vite copies them (all of web/public)."""
+    from pnw_health import export
+
+    staged: list[Path] = []
+    real = export.tempfile.mkdtemp
+
+    def spy(*args: object, **kwargs: object) -> str:
+        path = real(*args, **kwargs)  # type: ignore[arg-type]
+        staged.append(Path(path))
+        return path
+
+    monkeypatch.setattr(export.tempfile, "mkdtemp", spy)
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    assert [p.parent for p in staged] == [paths.interim]
+    assert not staged[0].is_relative_to(paths.out.parent)

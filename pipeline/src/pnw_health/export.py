@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
@@ -99,23 +100,36 @@ def write_model(path: Path, model: ModelFile) -> Path:
     return _write_json(path, model.model_dump(mode="json"))
 
 
+def _move(src: Path, dst: Path) -> None:
+    try:
+        os.replace(src, dst)
+    except OSError as err:
+        if err.errno != errno.EXDEV:
+            raise
+        shutil.move(src, dst)
+
+
 def write_exports(
     out_dir: Path,
     manifest: Manifest,
     values: ValuesFile,
     topology: dict[str, Any],
     model: ModelFile,
+    *,
+    staging: Path,
 ) -> list[Path]:
     """Write the four web files as a set: all of them change, or none do.
 
-    Each file is written to a temporary directory beside ``out_dir`` (not inside it, so a
-    killed run can't leave a directory that Vite would copy into the site) and moved into
-    place only after all four writes succeed. The four renames are separate system calls,
-    so a crash between two of them could still mix vintages; nothing that can fail on
-    content runs between them.
+    Each file is written to a temporary directory under ``staging`` and moved into place
+    only after all four writes succeed. ``staging`` must be outside the site's public
+    folder (the CLI uses ``data/interim``): Vite copies everything in ``web/public``, so a
+    run killed before cleanup must not leave files there. A rename across filesystems
+    falls back to a move. The four moves are separate system calls, so a crash between two
+    of them could still mix vintages; nothing that can fail on content runs between them.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
-    tmp = Path(tempfile.mkdtemp(dir=out_dir.parent, prefix=f".{out_dir.name}-export-"))
+    staging.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(dir=staging, prefix=".export-"))
     try:
         written = [
             _write_json(tmp / "manifest.json", manifest.model_dump(mode="json")),
@@ -125,7 +139,7 @@ def write_exports(
         ]
         final = []
         for path in written:
-            os.replace(path, out_dir / path.name)
+            _move(path, out_dir / path.name)
             final.append(out_dir / path.name)
         return final
     finally:
