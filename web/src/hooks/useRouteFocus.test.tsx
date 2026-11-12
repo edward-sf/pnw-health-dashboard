@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import userEvent from "@testing-library/user-event";
-import { Link, MemoryRouter, Navigate, Route, Routes } from "react-router";
+import { Link, MemoryRouter, Navigate, Route, Routes, useNavigate } from "react-router";
 import { expect, test } from "vitest";
 import { useRouteFocus } from "./useRouteFocus";
 
@@ -19,11 +19,23 @@ function LatePage() {
   );
 }
 
+// Navigates in a transition, as React Router does in the browser, so React may run passive
+// effects (and their cleanups) after the commit's microtasks.
+function TransitionLink({ to, children }: { to: string; children: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => startTransition(() => void navigate(to))}>
+      {children}
+    </button>
+  );
+}
+
 function Shell() {
   useRouteFocus();
   return (
     <>
       <button type="button">Elsewhere</button>
+      <TransitionLink to="/b#sub">B sub in a transition</TransitionLink>
       <Link to="/late">Late</Link>
       <Link to="/">Home</Link>
       <Link to="/b">B</Link>
@@ -157,4 +169,27 @@ test("unmounting while waiting cancels the wait", async () => {
   });
   expect(stray).not.toHaveFocus();
   stray.remove();
+});
+
+test("a transition navigation cancels the wait before the new page's heading appears", async () => {
+  const user = userEvent.setup();
+  at("/");
+  const late = screen.getByRole("link", { name: "Late" });
+  await user.click(late);
+  // Outside act, React schedules a transition's passive effects as a separate task, after the
+  // MutationObserver's microtask, just as in the browser. A wait cancelled only in a passive
+  // cleanup would see B's heading first and take focus from "Late".
+  const env = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const prev = env.IS_REACT_ACT_ENVIRONMENT;
+  env.IS_REACT_ACT_ENVIRONMENT = false;
+  try {
+    late.focus();
+    screen.getByRole("button", { name: "B sub in a transition" }).click();
+    late.focus();
+    await new Promise((r) => setTimeout(r, 50));
+  } finally {
+    env.IS_REACT_ACT_ENVIRONMENT = prev;
+  }
+  expect(screen.getByRole("heading", { name: "B page" })).toBeInTheDocument();
+  expect(late).toHaveFocus();
 });

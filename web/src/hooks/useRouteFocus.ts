@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { useLocation } from "react-router";
+import { focusPageHeadingWhenReady } from "./focusPageHeading";
 
 /**
  * Moves focus to the new page's `[data-page-heading]` when the pathname changes. The first
@@ -23,23 +24,6 @@ export function useRouteFocus(): void {
     if (previous.current === pathname) return;
     previous.current = pathname;
     if (hash) return;
-    const find = () => document.querySelector<HTMLElement>("[data-page-heading]");
-    const heading = find();
-    if (heading) {
-      heading.focus();
-      return;
-    }
-    // Where focus was at navigation time. If the user moves it while the page loads, the late
-    // heading leaves it there.
-    const before = document.activeElement;
-    const observer = new MutationObserver(() => {
-      const late = find();
-      if (!late) return;
-      observer.disconnect();
-      const now = document.activeElement;
-      if (now === null || now === document.body || now === before) late.focus();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    return focusPageHeadingWhenReady(document.activeElement);
   }, [pathname, hash]);
 }
