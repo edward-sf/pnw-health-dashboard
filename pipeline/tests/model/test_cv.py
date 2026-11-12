@@ -240,3 +240,13 @@ def test_score_missing_prediction_raises() -> None:
     actual = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
     with pytest.raises(ModelDataError, match="c"):
         score(actual, pd.Series([1.0, 2.0], index=["a", "b"]))
+
+
+@pytest.mark.parametrize("which", ["actual", "predicted"])
+def test_score_nan_value_raises(which: str) -> None:
+    index = ["a", "b", "c"]
+    actual = pd.Series([1.0, 2.0, 3.0], index=index)
+    predicted = pd.Series([1.0, 2.0, 3.5], index=index)
+    {"actual": actual, "predicted": predicted}[which]["b"] = np.nan
+    with pytest.raises(ModelDataError, match=f"{which}.*b"):
+        score(actual, predicted)
