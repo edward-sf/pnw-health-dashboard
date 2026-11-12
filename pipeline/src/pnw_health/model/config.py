@@ -1,10 +1,10 @@
-"""Fixed modeling choices: feature lists, seeds and the interval z-scores."""
+"""Fixed modeling choices: targets, feature lists, seeds, interval z-scores and peer settings."""
 
 from __future__ import annotations
 
 from typing import Any
 
-# The first target is the default everywhere.
+# This order is the outcome picker's order; the web defaults to life_expectancy when present.
 TARGETS: tuple[str, ...] = (
     "life_expectancy",
     "premature_death",

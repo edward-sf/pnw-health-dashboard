@@ -6,7 +6,10 @@ export const DEFAULT_TARGET = "life_expectancy";
 export const defaultTargetId = (targetIds: readonly string[]): string =>
   targetIds.includes(DEFAULT_TARGET) ? DEFAULT_TARGET : (targetIds[0] ?? "");
 
-/** An outcome's label as running text: lower case, without a trailing "(years lost)" and the like. */
+/**
+ * An outcome's label as running text: lower-cased, with any trailing parenthetical such as
+ * "(years lost)" removed.
+ */
 export const outcomeName = (label: string): string =>
   label.replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();
 
@@ -17,7 +20,7 @@ export function targetModel(model: ModelFile, id: string): TargetModel {
   return target;
 }
 
-/** The sentence that says which way is worse, for targets where a positive difference is bad. */
+/** For higher_is_worse targets, the sentence saying a positive difference is worse; otherwise null. */
 export function directionNote(target: TargetModel): string | null {
   return target.direction === "higher_is_worse"
     ? "Higher is worse for this measure, so a positive difference means worse than expected."

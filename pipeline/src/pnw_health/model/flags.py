@@ -1,14 +1,15 @@
 """Tiered flags: how far a county sits from its expected value, given noise.
 
-A county is flagged only when its residual exceeds what sampling error in its
-own estimate plus model error would produce. Which sign is "better" depends on
-the target: a positive residual is better when higher is better (life
-expectancy) and worse when higher is worse (premature death).
+A county is flagged only when its residual (actual minus predicted) exceeds what
+sampling error in its own estimate plus model error would produce. Which sign is
+"better" follows the target's direction: a county above its prediction is doing
+better than expected when higher is better, and worse when higher is worse.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 

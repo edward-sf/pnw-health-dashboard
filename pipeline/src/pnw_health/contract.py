@@ -15,6 +15,7 @@ from typing import Any, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
+    PositiveInt,
     RootModel,
     SerializerFunctionWrapHandler,
     model_serializer,
@@ -217,8 +218,8 @@ class PeerMethod(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     features: list[str]
-    k: int
-    min_features: int
+    k: PositiveInt
+    min_features: PositiveInt
 
 
 class Peers(BaseModel):
