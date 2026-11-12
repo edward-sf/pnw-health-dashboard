@@ -31,3 +31,8 @@ def test_imputed_value_is_none() -> None:
 def test_global_importance() -> None:
     frame = pd.DataFrame({"a": [1.0, -3.0], "b": [0.0, 1.0]})
     assert global_importance(frame) == [("a", 2.0), ("b", 0.5)]
+
+
+def test_global_importance_ties_break_by_name() -> None:
+    frame = pd.DataFrame({"b": [1.0, -1.0], "a": [-1.0, 1.0]})
+    assert [name for name, _ in global_importance(frame)] == ["a", "b"]
