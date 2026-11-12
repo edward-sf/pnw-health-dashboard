@@ -174,3 +174,25 @@ def test_only_flag_one_is_unreliable(tmp_path: Path, flag: str, expected: bool) 
 def test_absent_flag_column_is_not_unreliable(tmp_path: Path) -> None:
     path = write_csv(tmp_path, ["53,033,53033,WA,King,2025,81,80,82"])
     assert not parse_chr(path, [chr_indicator()]).unreliable.any()
+
+
+def test_fetch_fails_when_ci_column_missing(tmp_path: Path) -> None:
+    header = HEADER.replace(",v147_cilow", "")
+    labels = LABELS.replace(",low", "")
+    body = "\n".join([labels, header, "53,033,53033,WA,King,2025,81,82"]).encode("latin-1")
+    handler = lambda r: httpx.Response(200, content=body)  # noqa: E731
+    with (
+        make_client(httpx.MockTransport(handler)) as client,
+        pytest.raises(FetchError, match="v147_cilow"),
+    ):
+        fetch_chr(client, tmp_path, [chr_indicator()])
+
+
+def test_fetch_does_not_need_ci_columns_without_ci_level(tmp_path: Path) -> None:
+    header = "statecode,countycode,fipscode,state,county,year,v147_rawvalue"
+    labels = "State FIPS,County FIPS,5-digit FIPS,State,Name,Release Year,Life exp"
+    body = "\n".join([labels, header, "53,033,53033,WA,King,2025,81"]).encode("latin-1")
+    handler = lambda r: httpx.Response(200, content=body)  # noqa: E731
+    no_ci = chr_indicator().model_copy(update={"ci_level": None})
+    with make_client(httpx.MockTransport(handler)) as client:
+        fetch_chr(client, tmp_path, [no_ci])

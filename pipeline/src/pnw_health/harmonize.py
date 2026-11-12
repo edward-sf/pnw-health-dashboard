@@ -6,12 +6,12 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from pnw_health.config import state_abbr
+from pnw_health.config import VALDEZ_CORDOVA_FIPS, state_abbr
 from pnw_health.long import LONG_COLUMNS
 
 FIPS_RENAMES: dict[str, str] = {"02270": "02158"}  # Wade Hampton -> Kusilvak
-FIPS_SPLITS: dict[str, tuple[str, ...]] = {"02261": ("02063", "02066")}  # Valdez-Cordova
-LEGACY_NAMES: dict[str, str] = {"02261": "Valdez-Cordova Census Area (former)"}
+FIPS_SPLITS: dict[str, tuple[str, ...]] = {VALDEZ_CORDOVA_FIPS: ("02063", "02066")}
+LEGACY_NAMES: dict[str, str] = {VALDEZ_CORDOVA_FIPS: "Valdez-Cordova Census Area (former)"}
 LEGACY_COLUMNS: list[str] = [
     "fips",
     "indicator_id",
@@ -22,6 +22,18 @@ LEGACY_COLUMNS: list[str] = [
     "ci_low",
     "ci_high",
 ]
+# The dtypes a populated legacy frame has, so an empty one round-trips through Parquet
+# with the same schema.
+LEGACY_DTYPES: dict[str, str] = {
+    "fips": "object",
+    "indicator_id": "object",
+    "legacy_fips": "object",
+    "legacy_name": "object",
+    "year": "int64",
+    "value": "float64",
+    "ci_low": "float64",
+    "ci_high": "float64",
+}
 
 
 @dataclass
@@ -73,7 +85,7 @@ def harmonize(frames: list[pd.DataFrame]) -> HarmonizeResult:
 
     return HarmonizeResult(
         values=values.reset_index(drop=True),
-        legacy=pd.DataFrame(legacy_rows, columns=LEGACY_COLUMNS),
+        legacy=pd.DataFrame(legacy_rows, columns=LEGACY_COLUMNS).astype(LEGACY_DTYPES),
         warnings=warnings,
     )
 

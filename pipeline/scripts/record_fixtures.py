@@ -20,7 +20,14 @@ from pathlib import Path
 
 import httpx
 
-from pnw_health.config import ACS_YEAR, CHR_LEGACY_YEAR, CHR_YEAR, PLACES_RELEASE, census_api_key
+from pnw_health.config import (
+    ACS_YEAR,
+    CHR_LEGACY_YEAR,
+    CHR_YEAR,
+    PLACES_RELEASE,
+    VALDEZ_CORDOVA_FIPS,
+    census_api_key,
+)
 from pnw_health.fetch import fetch_json, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.sources.chr import fetch_chr
@@ -108,7 +115,7 @@ def _record_chr_file(
             rows = [
                 [row[i] if i is not None else "" for i in index]
                 for row in reader
-                if keep(row[fips_at])
+                if len(row) > fips_at and keep(row[fips_at])
             ]
         labels_out = [labels[i] if i is not None else "" for i in index]
     out = FIXTURES / f"chr_{year}_sample.csv"
@@ -137,7 +144,7 @@ def record_chr_sample(client: httpx.Client | None = None) -> list[Path]:
             c, CHR_YEAR, wanted, lambda f: f[:2] in keep_states or f in keep_fips
         )
         legacy = _record_chr_file(
-            c, CHR_LEGACY_YEAR, wanted, lambda f: f in {"02261", "02000", "53033"}
+            c, CHR_LEGACY_YEAR, wanted, lambda f: f in {VALDEZ_CORDOVA_FIPS, "02000", "53033"}
         )
     finally:
         if client is None:
