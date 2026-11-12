@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useLocation } from "react-router";
 
 /**
@@ -7,13 +7,19 @@ import { useLocation } from "react-router";
  * target (`useHashFocus`). Search-only changes stay within a page and are left alone.
  *
  * If the heading isn't rendered yet (the Explorer while its data loads), it is focused as soon
- * as it appears. The wait ends on the next pathname change or unmount, so it can't move focus
- * after the user has gone elsewhere.
+ * as it appears, unless the user has moved focus in the meantime (focus left on `<body>`, for
+ * example because its element was removed, still moves). The wait ends on the next pathname or
+ * hash change, or on unmount.
+ *
+ * A layout effect, so a navigation's cleanup runs in the same commit that changes the DOM. The
+ * observer's records are queued by that commit and `disconnect()` drops them, so a leftover wait
+ * can't take the next page's heading. A passive effect's cleanup can run after the observer's
+ * microtask when React Router renders the navigation in a transition.
  */
 export function useRouteFocus(): void {
   const { pathname, hash } = useLocation();
   const previous = useRef(pathname);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (previous.current === pathname) return;
     previous.current = pathname;
     if (hash) return;
@@ -23,9 +29,8 @@ export function useRouteFocus(): void {
       heading.focus();
       return;
     }
-    // Focus at navigation time. If the user moves focus elsewhere while the page loads, the
-    // late heading leaves it there; focus that fell back to <body> (its element was removed)
-    // still moves.
+    // Where focus was at navigation time. If the user moves it while the page loads, the late
+    // heading leaves it there.
     const before = document.activeElement;
     const observer = new MutationObserver(() => {
       const late = find();

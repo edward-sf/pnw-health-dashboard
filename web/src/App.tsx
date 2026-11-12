@@ -21,7 +21,7 @@ function ExplorerRoute({ state }: { state: DataState }) {
     <>
       {state.status === "loading" && <p>Loading data…</p>}
       {state.status === "error" && (
-        <ErrorPage message={state.message} onRetry={state.retry} />
+        <ErrorPage message={state.message} onRetry={state.retry} pageHeading />
       )}
       {state.status === "ready" && <Explorer data={state.data} />}
     </>

@@ -3,7 +3,7 @@ import { formatBound, formatValue } from "../color/formatValue";
 import type { Indicator } from "../types";
 import { CountyCell } from "./CountyCell";
 import { SortHeader } from "./SortHeader";
-import { sortRows, type Row, type SortDir, type SortKey } from "./sortRows";
+import { sortRows, type Row, type Sort, type SortKey } from "./sortRows";
 
 type Props = {
   rows: Row[];
@@ -14,7 +14,7 @@ type Props = {
 
 export function CountyTable({ rows, indicator, selected, onSelect }: Props) {
   const neutral = indicator.direction === "neutral";
-  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>(
+  const [sort, setSort] = useState<Sort<SortKey>>(
     neutral ? { key: "value", dir: "desc" } : { key: "rank", dir: "asc" },
   );
   const sorted = useMemo(() => sortRows(rows, sort.key, sort.dir), [rows, sort]);

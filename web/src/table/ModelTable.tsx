@@ -3,7 +3,7 @@ import { formatSigned, formatValue } from "../color/formatValue";
 import { tierLabel } from "../model/modelView";
 import { CountyCell } from "./CountyCell";
 import { SortHeader } from "./SortHeader";
-import type { SortDir } from "./sortRows";
+import type { Sort } from "./sortRows";
 import { sortModelRows, type ModelRow, type ModelSortKey } from "./sortModelRows";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function ModelTable({ rows, selected, onSelect }: Props) {
-  const [sort, setSort] = useState<{ key: ModelSortKey; dir: SortDir }>({
+  const [sort, setSort] = useState<Sort<ModelSortKey>>({
     key: "result",
     dir: "asc",
   });

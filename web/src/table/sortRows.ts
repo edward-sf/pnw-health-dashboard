@@ -3,6 +3,8 @@ import type { County, ValueEntry } from "../types";
 export type Row = County & { entry: ValueEntry | undefined };
 export type SortKey = "name" | "state" | "value" | "rank" | "state_rank";
 export type SortDir = "asc" | "desc";
+/** A table's sort state: the column key and its direction. Shared by both tables and SortHeader. */
+export type Sort<K extends string> = { key: K; dir: SortDir };
 
 function numberFor(r: Row, key: "value" | "rank" | "state_rank"): number | null {
   const e = r.entry;
