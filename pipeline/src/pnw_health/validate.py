@@ -74,6 +74,9 @@ def validate_display(
     catalog_ids = {ind.id for ind in catalog}
     for unknown_id in sorted(set(PARTIAL_STATES) - catalog_ids):
         problems.append(f"PARTIAL_STATES lists {unknown_id} which is not in the catalog")
+    for ind_id, exempt_states in sorted(PARTIAL_STATES.items()):
+        for abbr in sorted(exempt_states - set(STATES.values())):
+            problems.append(f"PARTIAL_STATES lists {abbr} for {ind_id}, which is not a PNW state")
 
     for ind in catalog:
         rows = values[values.indicator_id == ind.id]
@@ -86,6 +89,11 @@ def validate_display(
         for abbr in STATES.values():
             if abbr not in covered and abbr not in exempt:
                 problems.append(f"{ind.id}: no values for {abbr}")
+            elif abbr in covered and abbr in exempt:
+                problems.append(
+                    f"PARTIAL_STATES exempts {abbr} for {ind.id}, but it has values; "
+                    "remove the exemption"
+                )
         problems += _range_problems(ind.id, present, ind)
         if legacy is not None:
             old = legacy[(legacy.indicator_id == ind.id) & legacy.value.notna()]

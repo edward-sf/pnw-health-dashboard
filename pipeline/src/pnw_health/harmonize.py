@@ -12,28 +12,20 @@ from pnw_health.long import LONG_COLUMNS
 FIPS_RENAMES: dict[str, str] = {"02270": "02158"}  # Wade Hampton -> Kusilvak
 FIPS_SPLITS: dict[str, tuple[str, ...]] = {VALDEZ_CORDOVA_FIPS: ("02063", "02066")}
 LEGACY_NAMES: dict[str, str] = {VALDEZ_CORDOVA_FIPS: "Valdez-Cordova Census Area (former)"}
-LEGACY_COLUMNS: list[str] = [
-    "fips",
-    "indicator_id",
-    "legacy_fips",
-    "legacy_name",
-    "year",
-    "value",
-    "ci_low",
-    "ci_high",
-]
-# The dtypes a populated legacy frame has, so an empty one round-trips through Parquet
-# with the same schema.
+# Column order and dtypes of the legacy frame. Text columns use pandas' string dtype: an
+# empty object column is written to Parquet as type null, a string column as string, so
+# an empty frame round-trips with the same schema as a populated one.
 LEGACY_DTYPES: dict[str, str] = {
-    "fips": "object",
-    "indicator_id": "object",
-    "legacy_fips": "object",
-    "legacy_name": "object",
+    "fips": "string",
+    "indicator_id": "string",
+    "legacy_fips": "string",
+    "legacy_name": "string",
     "year": "int64",
     "value": "float64",
     "ci_low": "float64",
     "ci_high": "float64",
 }
+LEGACY_COLUMNS: list[str] = list(LEGACY_DTYPES)
 
 
 @dataclass

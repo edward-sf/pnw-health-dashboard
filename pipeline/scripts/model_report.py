@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from pnw_health.config import CHR_YEAR, STATES
-from pnw_health.contract import CountyModel, ModelFile, RegionMetrics
+from pnw_health.contract import CountyModel, ModelFile
 from pnw_health.indicators import load_catalog
 from pnw_health.model.config import ALLOWED_CATEGORIES
 from pnw_health.sources.chr import chr_cache_path
@@ -58,8 +58,6 @@ def _metrics_section(model: ModelFile) -> list[str]:
     bc = model.behaviors_comparison
     rows = []
     for name, rm in (("main", bc.main), ("behaviors", bc.behaviors)):
-        if not isinstance(rm, RegionMetrics):
-            raise SystemExit(f"behaviors comparison {name} has no metrics")
         for region in ("national", "pnw"):
             m = getattr(rm, region)
             rows.append([name, region, str(m.n), _f(m.rmse), _f(m.mae), _f(m.r2)])

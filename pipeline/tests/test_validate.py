@@ -359,4 +359,20 @@ def test_unknown_partial_state_id_fails(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_partial_states_empty() -> None:
+    # Deliberate tripwire: an exemption hides a state's missing data from validation, so
+    # adding one should be a visible, reviewed change to this test too (M8 spec §3.5).
     assert validate.PARTIAL_STATES == {}
+
+
+def test_unknown_partial_state_abbreviation_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(validate.PARTIAL_STATES, "pct", frozenset({"CA"}))
+    fips = pnw_fips()
+    found = problems(valid_values(fips), set(fips))
+    assert "PARTIAL_STATES lists CA for pct, which is not a PNW state" in found
+
+
+def test_stale_partial_state_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(validate.PARTIAL_STATES, "pct", frozenset({"AK"}))
+    fips = pnw_fips()
+    found = problems(valid_values(fips), set(fips))
+    assert "PARTIAL_STATES exempts AK for pct, but it has values; remove the exemption" in found

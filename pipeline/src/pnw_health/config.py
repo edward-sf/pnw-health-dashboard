@@ -44,12 +44,22 @@ def state_abbr(fips: str) -> str | None:
     return STATES.get(fips[:2])
 
 
-def _dotenv_value(raw: str) -> str:
-    """A ``.env`` value: quoted up to its closing quote, else cut at an inline `` #`` comment."""
+def env_file_path(root: Path) -> Path:
+    """The git-ignored ``.env`` file that may hold ``CENSUS_API_KEY``."""
+    return root / ".env"
+
+
+def _dotenv_value(raw: str, where: str) -> str:
+    """A ``.env`` value: quoted up to its closing quote, else cut at an inline `` #`` comment.
+
+    An opening quote with no closing quote raises ValueError naming ``where``.
+    """
     quoted = raw.strip()
     if quoted[:1] in {'"', "'"}:
         end = quoted.find(quoted[0], 1)
-        return quoted[1:end] if end != -1 else quoted[1:]
+        if end == -1:
+            raise ValueError(f"{where}: unclosed quote in CENSUS_API_KEY")
+        return quoted[1:end]
     comment = re.search(r"\s#", raw)
     return (raw[: comment.start()] if comment else raw).strip()
 
@@ -59,19 +69,28 @@ def census_api_key(root: Path) -> str | None:
 
     An environment value that is empty or only whitespace counts as unset, so the
     ``.env`` file is read instead. The file may use shell syntax: an ``export`` prefix,
-    quotes, and ``# comments``.
+    quotes, and ``# comments``. As in a shell, the last ``CENSUS_API_KEY`` line wins.
+    A value with an unclosed quote, or a file that is not UTF-8, raises ValueError.
     """
     if key := os.environ.get("CENSUS_API_KEY", "").strip():
         return key
-    env_file = root / ".env"
+    env_file = env_file_path(root)
     if not env_file.exists():
         return None
-    for line in env_file.read_text().splitlines():
+    try:
+        # utf-8-sig drops the byte-order mark some Windows editors add.
+        text = env_file.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as err:
+        raise ValueError(f"cannot read {env_file}: not UTF-8 ({err.reason})") from err
+    except OSError as err:
+        raise ValueError(f"cannot read {env_file}: {err.strerror or err}") from err
+    found: str | None = None
+    for number, line in enumerate(text.splitlines(), start=1):
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         line = re.sub(r"^export\s+", "", line)
         name, sep, value = line.partition("=")
         if sep and name.strip() == "CENSUS_API_KEY":
-            return _dotenv_value(value) or None
-    return None
+            found = _dotenv_value(value, f"{env_file} line {number}") or None
+    return found

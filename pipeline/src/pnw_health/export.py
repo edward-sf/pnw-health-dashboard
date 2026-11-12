@@ -6,6 +6,7 @@ import errno
 import json
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -100,13 +101,38 @@ def write_model(path: Path, model: ModelFile) -> Path:
     return _write_json(path, model.model_dump(mode="json"))
 
 
+class ExportError(Exception):
+    """Moving the staged export into place failed partway."""
+
+
 def _move(src: Path, dst: Path) -> None:
+    """Rename ``src`` to ``dst``; across filesystems, copy beside ``dst`` and then rename.
+
+    Either way ``dst`` only ever appears complete: a crash mid-copy leaves a hidden
+    ``.<name>.partial`` file next to it, never a truncated ``dst``.
+    """
     try:
         os.replace(src, dst)
     except OSError as err:
         if err.errno != errno.EXDEV:
             raise
-        shutil.move(src, dst)
+        partial = dst.with_name(f".{dst.name}.partial")
+        try:
+            shutil.copyfile(src, partial)
+            os.replace(partial, dst)
+        finally:
+            # Never let a failed cleanup hide the copy error, or a move that succeeded.
+            try:
+                partial.unlink(missing_ok=True)
+            except OSError as cleanup_err:
+                print(f"warning: could not remove {partial}: {cleanup_err}", file=sys.stderr)
+
+
+def _remove(tmp: Path) -> None:
+    try:
+        shutil.rmtree(tmp)
+    except OSError as err:
+        print(f"warning: could not remove staging directory {tmp}: {err}", file=sys.stderr)
 
 
 def write_exports(
@@ -118,15 +144,21 @@ def write_exports(
     *,
     staging: Path,
 ) -> list[Path]:
-    """Write the four web files as a set: all of them change, or none do.
+    """Write the four web files, replacing the previous export only once all four are written.
 
-    Each file is written to a temporary directory under ``staging`` and moved into place
-    only after all four writes succeed. ``staging`` must be outside the site's public
-    folder (the CLI uses ``data/interim``): Vite copies everything in ``web/public``, so a
-    run killed before cleanup must not leave files there. A rename across filesystems
-    falls back to a move. The four moves are separate system calls, so a crash between two
-    of them could still mix vintages; nothing that can fail on content runs between them.
+    Each file is written to a temporary directory under ``staging``. ``staging`` must be
+    outside the site's public folder (the CLI uses ``data/interim``): Vite copies
+    everything in ``web/public``, so a run killed before cleanup must not leave files
+    there. A failed write leaves the previous export untouched.
+
+    The files are then moved into place one at a time. On one filesystem each move is a
+    rename; across filesystems it is a copy beside the target and then a rename, so no
+    file is ever seen half-written. The moves are still four steps, so a crash, or an
+    error such as a full disk on the copy path, between two of them leaves a mix of old
+    and new files. An error raises ExportError naming the files already replaced.
     """
+    if staging.resolve().is_relative_to(out_dir.resolve()):
+        raise ValueError(f"staging {staging} must not be inside the output folder {out_dir}")
     out_dir.mkdir(parents=True, exist_ok=True)
     staging.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(dir=staging, prefix=".export-"))
@@ -137,10 +169,22 @@ def write_exports(
             _write_json(tmp / "counties.topojson", topology),
             write_model(tmp / "model.json", model),
         ]
-        final = []
+        final: list[Path] = []
         for path in written:
-            _move(path, out_dir / path.name)
-            final.append(out_dir / path.name)
+            target = out_dir / path.name
+            try:
+                _move(path, target)
+            except OSError as err:
+                if final:
+                    done = ", ".join(p.name for p in final)
+                    state = f"already replaced: {done}. The folder may mix two exports"
+                else:
+                    state = "nothing was replaced"
+                raise ExportError(
+                    f"export stopped moving {path.name} into {out_dir} ({err}); {state}: "
+                    "re-run `pnw-health run --stage export`"
+                ) from err
+            final.append(target)
         return final
     finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        _remove(tmp)

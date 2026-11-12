@@ -5,7 +5,9 @@ from types import ModuleType
 import pandas as pd
 import pytest
 
+from pnw_health.config import CHR_YEAR
 from pnw_health.contract import ShapEntry
+from pnw_health.sources.chr import chr_cache_path
 from tests.helpers import make_county_model, make_model_file, make_null_county_model
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "model_report.py"
@@ -54,7 +56,7 @@ def test_named_shap_sorted_by_magnitude() -> None:
         (["web/public/data/model.json"], "data/interim/long.parquet", "harmonize"),
         (
             ["web/public/data/model.json", "data/interim/long.parquet"],
-            "data/raw/chr/analytic_data2025_v3.csv",
+            str(chr_cache_path(Path("data/raw"), CHR_YEAR)),
             "fetch",
         ),
     ],
@@ -82,3 +84,16 @@ def test_missing_input_message(
     assert f"{missing} not found; run `pnw-health run --stage {stage}` first" in (
         capsys.readouterr().err
     )
+
+
+def test_tercile_with_no_flaggable_county_shows_na() -> None:
+    mr = load_script()
+    flags = [None, None, None, "none", "none", "none", "none", "none", "none"]
+    counties = {
+        f"53{i:03d}": make_null_county_model() if f is None else make_county_model(flag=f)
+        for i, f in enumerate(flags, start=1)
+    }
+    pop = pd.Series({fips: float(i) for i, fips in enumerate(counties, start=1)})
+    text = "\n".join(mr._flags_section(make_model_file(counties), pop))
+    low = next(line for line in text.splitlines() if line.startswith("| low |"))
+    assert low.rstrip().endswith("| 0.0% | n/a |")

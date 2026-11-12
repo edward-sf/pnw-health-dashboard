@@ -133,5 +133,5 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
             )
         )
     if empty:
-        raise ValueError(f"PLACES has no rows for: {', '.join(empty)}")
+        raise _invalid(f"no rows for {', '.join(empty)}")
     return pd.concat(frames, ignore_index=True)[LONG_COLUMNS]
