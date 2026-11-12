@@ -102,20 +102,23 @@ def make_null_county_model() -> Any:
     )
 
 
-def make_model_file(counties: dict[str, Any], features: list[str] | None = None) -> Any:
+def make_target_model(counties: dict[str, Any], features: list[str] | None = None) -> Any:
     from pnw_health.contract import (
         BehaviorsComparison,
         Metrics,
         ModelCard,
-        ModelFile,
         ModelMetricsBlock,
         RegionMetrics,
+        TargetModel,
         Thresholds,
     )
 
     metrics = Metrics(rmse=1.23456, mae=1.0, r2=0.5, n=10)
     region = RegionMetrics(national=metrics, pnw=metrics)
-    return ModelFile(
+    return TargetModel(
+        label="Life expectancy",
+        unit="years",
+        direction="higher_is_better",
         metrics=ModelMetricsBlock(ridge=region, lightgbm=region),
         behaviors_comparison=BehaviorsComparison(main=region, behaviors=region, excluded_states=[]),
         global_importance=[],
@@ -133,3 +136,16 @@ def make_model_file(counties: dict[str, Any], features: list[str] | None = None)
             lightgbm_version="4.0.0",
         ),
     )
+
+
+def make_model_file(
+    counties: dict[str, Any],
+    features: list[str] | None = None,
+    target_id: str = "life_expectancy",
+) -> Any:
+    """A model file with one target, `life_expectancy` unless `target_id` says otherwise."""
+    from pnw_health.contract import ModelFile
+
+    target = make_target_model(counties, features)
+    target.model_card.target = target_id
+    return ModelFile(targets={target_id: target})

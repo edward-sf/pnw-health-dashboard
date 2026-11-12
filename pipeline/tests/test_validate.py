@@ -199,6 +199,8 @@ def target_rows(feature_value: float | None = 10.0) -> pd.DataFrame:
     rows = [
         row(WITH_TARGET, "life_expectancy", 78.0),
         row(NO_TARGET, "life_expectancy", float("nan")),
+        row(WITH_TARGET, "injury_deaths", 78.0),
+        row(NO_TARGET, "injury_deaths", float("nan")),
         row(WITH_TARGET, "poverty_rate", feature_value),
     ]
     return pd.DataFrame(rows, columns=LONG_COLUMNS)
@@ -218,7 +220,7 @@ def test_valid_model_passes() -> None:
 
 def test_model_missing_county() -> None:
     model = make_model_file({WITH_TARGET: make_county_model()})
-    assert model_problems(model) == [f"model is missing counties: {NO_TARGET}"]
+    assert model_problems(model) == [f"life_expectancy: model is missing counties: {NO_TARGET}"]
 
 
 def test_model_flag_where_target_present() -> None:
@@ -226,14 +228,14 @@ def test_model_flag_where_target_present() -> None:
         {WITH_TARGET: make_null_county_model(), NO_TARGET: make_null_county_model()}
     )
     assert model_problems(model) == [
-        f"model flags counties insufficient_data despite a target: {WITH_TARGET}"
+        f"life_expectancy: model flags counties insufficient_data despite a target: {WITH_TARGET}"
     ]
 
 
 def test_model_flag_missing_where_target_null() -> None:
     model = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_county_model()})
     assert model_problems(model) == [
-        f"model is not insufficient_data for counties with no target: {NO_TARGET}"
+        f"life_expectancy: model is not insufficient_data for counties with no target: {NO_TARGET}"
     ]
 
 
@@ -245,7 +247,7 @@ def test_model_additivity_broken() -> None:
         }
     )
     assert model_problems(model) == [
-        f"model contributions do not sum to the prediction: {WITH_TARGET}"
+        f"life_expectancy: model contributions do not sum to the prediction: {WITH_TARGET}"
     ]
 
 
@@ -254,7 +256,7 @@ def test_model_additivity_needs_a_prediction() -> None:
         {WITH_TARGET: make_county_model(predicted=None), NO_TARGET: make_null_county_model()}
     )
     assert model_problems(model) == [
-        f"model contributions do not sum to the prediction: {WITH_TARGET}"
+        f"life_expectancy: model contributions do not sum to the prediction: {WITH_TARGET}"
     ]
 
 
@@ -264,7 +266,9 @@ def test_model_excluded_feature_present(feature: str) -> None:
         {WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()},
         features=["poverty_rate", feature],
     )
-    assert model_problems(model) == [f"model uses features outside allowed categories: {feature}"]
+    assert model_problems(model) == [
+        f"life_expectancy: model uses features outside allowed categories: {feature}"
+    ]
 
 
 RERUN = "re-run `pnw-health run --stage model`"
@@ -282,13 +286,14 @@ def test_model_actual_differs_from_data() -> None:
         }
     )
     assert model_problems(model) == [
-        f"model actual does not match the current data for: {WITH_TARGET}; {RERUN}"
+        f"life_expectancy: model actual does not match the current data for: {WITH_TARGET}; {RERUN}"
     ]
 
 
 def test_model_shap_value_differs_from_data() -> None:
     assert model_problems(valid_model(), target_rows(feature_value=5.0)) == [
-        f"model SHAP feature values do not match the current data for: {WITH_TARGET}; {RERUN}"
+        "life_expectancy: model SHAP feature values do not match the current data for: "
+        f"{WITH_TARGET}; {RERUN}"
     ]
 
 
@@ -302,7 +307,8 @@ def test_model_shap_null_value_needs_missing_feature() -> None:
         }
     )
     assert model_problems(model) == [
-        f"model SHAP feature values do not match the current data for: {WITH_TARGET}; {RERUN}"
+        "life_expectancy: model SHAP feature values do not match the current data for: "
+        f"{WITH_TARGET}; {RERUN}"
     ]
 
 
@@ -326,7 +332,9 @@ def test_model_has_county_outside_the_pnw() -> None:
             "06037": make_null_county_model(),
         }
     )
-    assert model_problems(model) == [f"model has counties outside the PNW: 06037; {RERUN}"]
+    assert model_problems(model) == [
+        f"life_expectancy: model has counties outside the PNW: 06037; {RERUN}"
+    ]
 
 
 def test_state_with_no_rows_fails() -> None:
@@ -376,3 +384,17 @@ def test_stale_partial_state_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     fips = pnw_fips()
     found = problems(valid_values(fips), set(fips))
     assert "PARTIAL_STATES exempts AK for pct, but it has values; remove the exemption" in found
+
+
+def test_validate_model_prefixes_problems_with_target() -> None:
+    good = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
+    broken = make_model_file(
+        {WITH_TARGET: make_county_model(predicted=77.00001), NO_TARGET: make_null_county_model()},
+        target_id="injury_deaths",
+    )
+    model = ModelFile(
+        targets={"life_expectancy": good.targets["life_expectancy"], **broken.targets}
+    )
+    problems = model_problems(model)
+    assert len(problems) == 1
+    assert problems[0].startswith("injury_deaths: model contributions do not sum")

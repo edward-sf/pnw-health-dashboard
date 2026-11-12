@@ -86,15 +86,24 @@ def _rounded(data: Any) -> Any:
 
 def finalize_model(model: ModelFile) -> ModelFile:
     """Keep each county's top factors, ranked at full precision, then round every float."""
-    counties = {
-        fips: county.model_copy(
+    targets = {
+        target_id: target.model_copy(
             update={
-                "shap": sorted(county.shap, key=lambda e: (-abs(e.contribution), e.feature))[:TOP_N]
+                "counties": {
+                    fips: county.model_copy(
+                        update={
+                            "shap": sorted(
+                                county.shap, key=lambda e: (-abs(e.contribution), e.feature)
+                            )[:TOP_N]
+                        }
+                    )
+                    for fips, county in target.counties.items()
+                }
             }
         )
-        for fips, county in model.counties.items()
+        for target_id, target in model.targets.items()
     }
-    trimmed = model.model_copy(update={"counties": counties})
+    trimmed = model.model_copy(update={"targets": targets})
     return ModelFile.model_validate(_rounded(trimmed.model_dump()))
 
 

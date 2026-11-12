@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from pnw_health.model import cv
-from pnw_health.model.config import BEHAVIORS, FEATURES, N_FOLDS
+from pnw_health.model.config import BEHAVIORS, FEATURES, N_FOLDS, TARGETS
 from pnw_health.model.cv import (
     assign_folds,
     fit_lightgbm_oof,
@@ -22,7 +22,7 @@ ALL_FEATURES = [*FEATURES, *BEHAVIORS]
 
 
 def _frame() -> pd.DataFrame:
-    return build_table(make_long()).frame
+    return build_table(make_long(), target=TARGETS[0]).frame
 
 
 def test_every_state_gets_one_fold() -> None:
@@ -82,8 +82,8 @@ def test_lightgbm_is_deterministic() -> None:
 
 def test_row_order_does_not_change_predictions() -> None:
     long = make_long()
-    frame = build_table(long).frame
-    shuffled = build_table(long.sample(frac=1, random_state=1)).frame
+    frame = build_table(long, target=TARGETS[0]).frame
+    shuffled = build_table(long.sample(frac=1, random_state=1), target=TARGETS[0]).frame
     folds = assign_folds(frame["state"])
     pd.testing.assert_series_equal(
         fit_ridge_oof(frame, ALL_FEATURES, folds),

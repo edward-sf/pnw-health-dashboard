@@ -125,8 +125,9 @@ def _model(paths: Paths) -> None:
     model_path = write_model(paths.interim / "model.json", model)
     # Lets export reject a model trained on other data, including non-PNW counties.
     (paths.interim / MODEL_INPUT_DIGEST).write_text(_digest(long_path) + "\n")
-    dropped = len(model.model_card.excluded_counties)
-    typer.echo(f"model: {dropped} dropped county(ies), see {model_path}", err=True)
+    for target_id, target in model.targets.items():
+        dropped = len(target.model_card.excluded_counties)
+        typer.echo(f"model: {target_id}: {dropped} dropped county(ies), see {model_path}", err=True)
 
 
 def _export(paths: Paths) -> None:
