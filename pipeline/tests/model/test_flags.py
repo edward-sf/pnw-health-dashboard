@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import math
-from typing import Literal
 
 import pandas as pd
 import pytest
 
+from pnw_health.contract import Direction
 from pnw_health.model.config import Z_75, Z_90
 from pnw_health.model.features import ModelDataError
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
@@ -40,7 +40,7 @@ def test_sigma_mean_ignores_missing_ci() -> None:
 
 
 @pytest.mark.parametrize("direction, sign", DIRECTIONS)
-def test_tiers(direction: Literal["higher_is_better", "higher_is_worse"], sign: int) -> None:
+def test_tiers(direction: Direction, sign: int) -> None:
     scale = 3.0  # sqrt(sigma_sq + se**2) with se = 0
     above_90, above_75, below_75 = (
         scale * (Z_90 + 0.01),
@@ -60,9 +60,7 @@ def test_tiers(direction: Literal["higher_is_better", "higher_is_worse"], sign: 
 
 
 @pytest.mark.parametrize("direction, sign", DIRECTIONS)
-def test_exactly_on_threshold_is_lower_tier(
-    direction: Literal["higher_is_better", "higher_is_worse"], sign: int
-) -> None:
+def test_exactly_on_threshold_is_lower_tier(direction: Direction, sign: int) -> None:
     residuals = sign * pd.Series([Z_75 * 3.0, Z_90 * 3.0])
     flags = classify(
         residuals, pd.Series([0.0, 0.0]), sigma_sq=9.0, mean_se_sq=0.0, direction=direction
@@ -138,3 +136,10 @@ def test_zero_residuals_are_none() -> None:
 def test_all_nan_se_raises() -> None:
     with pytest.raises(ModelDataError, match="^no standard errors: cannot compute sigma$"):
         sigma_model_sq(pd.Series([1.0, -1.0]), pd.Series([NAN, NAN]))
+
+
+def test_unknown_direction_raises() -> None:
+    residuals = pd.Series([1.0])
+    se = pd.Series([0.1])
+    with pytest.raises(ValueError, match="neutral"):
+        classify(residuals, se, 1.0, 0.01, "neutral")  # type: ignore[arg-type]

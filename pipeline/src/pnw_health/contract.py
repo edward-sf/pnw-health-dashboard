@@ -22,6 +22,9 @@ from pydantic import (
 
 from pnw_health.indicators import Indicator, Unit
 
+# Which way is better for a model target. Unlike the catalog's direction, never "neutral".
+Direction = Literal["higher_is_better", "higher_is_worse"]
+
 
 class SourceVintage(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -201,7 +204,7 @@ class TargetModel(BaseModel):
 
     label: str
     unit: Unit
-    direction: Literal["higher_is_better", "higher_is_worse"]
+    direction: Direction
     metrics: ModelMetricsBlock
     behaviors_comparison: BehaviorsComparison
     global_importance: list[ImportanceEntry]

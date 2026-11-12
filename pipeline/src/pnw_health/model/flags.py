@@ -9,11 +9,10 @@ expectancy) and worse when higher is worse (premature death).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
-
 import numpy as np
 import pandas as pd
 
+from pnw_health.contract import Direction
 from pnw_health.model.config import Z_75, Z_90
 from pnw_health.model.features import ModelDataError
 
@@ -46,7 +45,7 @@ def classify(
     se: pd.Series,
     sigma_sq: float,
     mean_se_sq: float,
-    direction: Literal["higher_is_better", "higher_is_worse"],
+    direction: Direction,
 ) -> Flags:
     """Assign tiers; `mean_se_sq` stands in for counties with no CI."""
     se_sq = (se**2).fillna(mean_se_sq)
@@ -54,7 +53,12 @@ def classify(
     t75 = Z_75 * scale
     t90 = Z_90 * scale
     magnitude = residuals.abs()
-    better = residuals > 0 if direction == "higher_is_better" else residuals < 0
+    if direction == "higher_is_better":
+        better = residuals > 0
+    elif direction == "higher_is_worse":
+        better = residuals < 0
+    else:
+        raise ValueError(f"cannot flag direction {direction!r}")
 
     tier = np.select(
         [residuals.isna(), magnitude > t90, magnitude > t75],
