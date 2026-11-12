@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,6 +79,51 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "Couldn't load the data" }),
     ).toHaveFocus();
+  });
+
+  // fetch rejects until `heal()`; then it serves the fixtures.
+  const flakyFetch = () => {
+    let ok = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        ok
+          ? new Response(JSON.stringify(bodies[url.split("/").pop() as string]))
+          : Promise.reject(new Error("offline")),
+      ),
+    );
+    return () => (ok = true);
+  };
+
+  it("Try again on the Explorer focuses the Explorer heading once the data loads", async () => {
+    const heal = flakyFetch();
+    const user = userEvent.setup();
+    at("/");
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    heal();
+    await user.click(retry);
+    const title = await screen.findByRole("heading", { level: 2, name: "Poverty rate" });
+    await waitFor(() => expect(title).toHaveFocus());
+  });
+
+  it("Try again that fails again focuses the new error heading", async () => {
+    flakyFetch();
+    const user = userEvent.setup();
+    at("/");
+    await user.click(await screen.findByRole("button", { name: "Try again" }));
+    const heading = await screen.findByRole("heading", { name: "Couldn't load the data" });
+    await waitFor(() => expect(heading).toHaveFocus());
+  });
+
+  it("Try again on Methodology focuses the Methodology heading", async () => {
+    const heal = flakyFetch();
+    const user = userEvent.setup();
+    at("/methodology");
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    heal();
+    await user.click(retry);
+    await screen.findByRole("heading", { name: "At a glance" });
+    expect(screen.getByRole("heading", { level: 2, name: "Methodology" })).toHaveFocus();
   });
 
   it("an unknown path redirects to the explorer", async () => {
