@@ -10,7 +10,13 @@ from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
 from pnw_health.contract import CountyModel, ModelFile, Peers, TargetModel
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
-from pnw_health.model.config import ALLOWED_CATEGORIES, TARGETS
+from pnw_health.model.config import (
+    ALLOWED_CATEGORIES,
+    FEATURES,
+    PEER_K,
+    PEER_MIN_FEATURES,
+    TARGETS,
+)
 
 NON_NEGATIVE_UNITS = frozenset({"dollars", "count", "rate_per_100k"})
 ADDITIVITY_TOLERANCE = 1e-6
@@ -154,6 +160,23 @@ def _validate_target(
     """Problems with one target's model; the caller prefixes them with the target id."""
     problems: list[str] = []
 
+    # The model-input digest covers only the data, so a catalog edit needs these checks.
+    indicator = next((ind for ind in catalog if ind.id == target_id), None)
+    if indicator is None:
+        problems.append(f"target is not in the catalog; {RERUN_MODEL}")
+    else:
+        for field in ("direction", "label", "unit"):
+            stale, current = getattr(model, field), getattr(indicator, field)
+            if stale != current:
+                problems.append(
+                    f"model {field} {stale!r} does not match the catalog {current!r}; {RERUN_MODEL}"
+                )
+    if model.model_card.target != target_id:
+        problems.append(
+            f"model card target {model.model_card.target!r} does not match {target_id!r}; "
+            f"{RERUN_MODEL}"
+        )
+
     missing = sorted(county_fips - set(model.counties))
     if missing:
         problems.append(f"model is missing counties: {', '.join(missing)}")
@@ -203,9 +226,22 @@ def _validate_target(
 
 
 def _peer_problems(peers: Peers, county_fips: set[str]) -> list[str]:
-    """Problems with the peer lists; each names the counties involved."""
+    """Problems with the peer method and lists; each list problem names the counties."""
     problems: list[str] = []
-    k = peers.method.k
+    method = peers.method
+    if method.features != list(FEATURES):
+        problems.append(
+            f"peer method features {method.features} do not match FEATURES {list(FEATURES)}; "
+            f"{RERUN_MODEL}"
+        )
+    if method.k != PEER_K:
+        problems.append(f"peer method k {method.k} does not match PEER_K {PEER_K}; {RERUN_MODEL}")
+    if method.min_features != PEER_MIN_FEATURES:
+        problems.append(
+            f"peer method min_features {method.min_features} does not match "
+            f"PEER_MIN_FEATURES {PEER_MIN_FEATURES}; {RERUN_MODEL}"
+        )
+    k = method.k
     missing = sorted(county_fips - set(peers.counties))
     if missing:
         problems.append(f"peers are missing counties: {', '.join(missing)}")
@@ -226,6 +262,14 @@ def _peer_problems(peers: Peers, county_fips: set[str]) -> list[str]:
     wrong = sorted(f for f, found in peers.counties.items() if len(found) not in (0, k))
     if wrong:
         problems.append(f"peer lists must have exactly {k} entries or none: {', '.join(wrong)}")
+    # Ineligible counties (an empty list) are never anyone's peer.
+    listed = {p for found in peers.counties.values() for p in found}
+    empty_but_listed = sorted(f for f in listed if peers.counties.get(f) == [])
+    if empty_but_listed:
+        problems.append(
+            "counties with no peers are listed as another county's peer: "
+            f"{', '.join(empty_but_listed)}; {RERUN_MODEL}"
+        )
     return problems
 
 

@@ -15,7 +15,7 @@ from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
 from pnw_health.contract import Manifest, ModelFile, ValuesFile, write_schemas
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
-from pnw_health.model.config import TARGETS, TOP_N
+from pnw_health.model.config import PEER_K, TARGETS, TOP_N
 from pnw_health.sources.acs import acs_cache_path
 from pnw_health.sources.chr import chr_cache_path
 from pnw_health.sources.places import places_cache_path
@@ -126,6 +126,10 @@ def test_full_run_writes_model(tmp_path: Path, full_zip: Path) -> None:
         assert len(target.counties) == 149
         assert "02013" in target.counties
         assert all(len(county.shap) <= TOP_N for county in target.counties.values())
+    assert model.peers.method.k == PEER_K
+    full = sum(len(found) == PEER_K for found in model.peers.counties.values())
+    assert len(model.peers.counties) == 149
+    assert full >= 0.9 * len(model.peers.counties)
 
 
 def test_legacy_counties_are_insufficient_data(tmp_path: Path, full_zip: Path) -> None:
@@ -158,6 +162,9 @@ def test_model_stage_reports_dropped_counties(
     err = capsys.readouterr().err
     for target_id in TARGETS:
         assert f"model: {target_id}: 0 dropped county(ies)" in err
+    model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
+    no_peers = sum(1 for found in model.peers.counties.values() if not found)
+    assert f"model: peers: {no_peers} of 149 counties have no peers" in err
 
 
 def test_fetch_error_propagates(tmp_path: Path) -> None:
