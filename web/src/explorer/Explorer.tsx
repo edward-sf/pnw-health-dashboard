@@ -110,7 +110,7 @@ export function Explorer({ data }: { data: AppData }) {
   );
   if (!indicator || !scale) return null;
   const modelMode = params.mode === "model";
-  const lifeExpectancy = manifest.indicators.find((x) => x.id === "life_expectancy");
+  const targetIndicator = manifest.indicators.find((x) => x.id === params.target);
 
   return (
     <div
@@ -166,21 +166,26 @@ export function Explorer({ data }: { data: AppData }) {
           </button>
         </div>
         <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
-          {modelMode ? "Life expectancy: compared with expected" : indicator.label}
+          {modelMode ? `${model.label}: compared with expected` : indicator.label}
         </h2>
         <p className="indicator-description">
           {modelMode
-            ? "How each county's life expectancy compares with what the model expects for counties nationwide with a similar social and economic profile."
+            ? `How each county's ${model.label.toLowerCase()} compares with what the model expects for counties nationwide with a similar social and economic profile.`
             : indicator.description}
         </p>
         {modelMode ? (
-          lifeExpectancy && <p className="indicator-source">{sourceLine(lifeExpectancy)}</p>
+          targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>
         ) : (
           <p className="indicator-source">{sourceLine(indicator)}</p>
         )}
         {params.view === "table" ? (
           modelMode ? (
-            <ModelTable rows={modelRows} selected={params.county} onSelect={onSelectWithOpener} />
+            <ModelTable
+              rows={modelRows}
+              selected={params.county}
+              onSelect={onSelectWithOpener}
+              target={model}
+            />
           ) : (
             <CountyTable
               key={indicator.id}
@@ -202,7 +207,7 @@ export function Explorer({ data }: { data: AppData }) {
               tooltipFor={(fips) => {
                 const p = paths.find((x) => x.fips === fips);
                 if (modelMode) {
-                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips));
+                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
                 }
                 return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
               }}
@@ -224,6 +229,7 @@ export function Explorer({ data }: { data: AppData }) {
           entries={entries ?? {}}
           counties={counties}
           modelEntry={countyModel(model, selectedCounty.fips)}
+          target={model}
           manifest={manifest}
           values={values}
           modelMode={params.mode === "model"}

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
-import { lifeExpectancy as model } from "../test/fixtures";
+import { lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import {
   countyModel,
   hasModelResult,
@@ -62,12 +62,18 @@ test("tierCounts", () => {
 });
 
 test("modelTooltip", () => {
-  expect(modelTooltip("King", "WA", countyModel(model, "53033"))).toBe(
+  expect(modelTooltip("King", "WA", countyModel(model, "53033"), "years")).toBe(
     "King, WA: notably better than expected (+3.7 years)",
   );
-  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"))).toBe(
+  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"), "years")).toBe(
     "Chugach, AK: not enough data for the model",
   );
+});
+
+test("modelTooltip formats the difference in the target's unit", () => {
+  expect(
+    modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k"),
+  ).toBe("Aleutians West, AK: notably worse than expected (+1,800 per 100k)");
 });
 
 test("hasModelResult is false for insufficient data or any null field", () => {

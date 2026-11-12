@@ -1,17 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { expect, test } from "vitest";
-import { manifest, lifeExpectancy as model } from "../test/fixtures";
-import type { CountyModel, Flag } from "../types";
+import { manifest, lifeExpectancy as model, prematureDeath } from "../test/fixtures";
+import type { CountyModel, Flag, TargetModel } from "../types";
 import { ModelCard } from "./ModelCard";
 import { rangeDomain } from "./ResidualRange";
 
 const king = { fips: "53033", name: "King", state: "WA" };
 
-function renderCard(entry: CountyModel, county = king) {
+function renderCard(entry: CountyModel, county = king, target: TargetModel = model) {
   return render(
     <MemoryRouter>
-      <ModelCard county={county} entry={entry} indicators={manifest.indicators} />
+      <ModelCard county={county} entry={entry} indicators={manifest.indicators} target={target} />
     </MemoryRouter>,
   );
 }
@@ -34,7 +34,7 @@ test("King: comparison, badge, range sentence and factors", () => {
     screen.getByRole("heading", { level: 4, name: "Factors associated with the expected value" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/starting point of 75\.00 to 77\.10 years\. They describe what the model expects/),
+    screen.getByText(/starting point of 75\.00 years to 77\.10 years\. They describe what the model expects/),
   ).toBeInTheDocument();
   expect(screen.getAllByText(/All other factors/).length).toBeGreaterThan(0);
 });
@@ -112,4 +112,42 @@ test("the factors section notes that some factors stand in for others", () => {
 test("a county with no result shows no proxy note", () => {
   const { container } = renderCard(model.counties["02063"]!);
   expect(container.querySelector(".model-factors-note")).toBeNull();
+});
+
+const aleutians = { fips: "02016", name: "Aleutians West", state: "AK" };
+const NOTE = "Higher is worse for this measure, so a positive difference means worse than expected.";
+
+test("heads the card with the target label", () => {
+  renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
+  ).toBeInTheDocument();
+});
+
+test("formats actual and expected in the target unit", () => {
+  const { container } = renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
+  expect(screen.getByText("Actual 8,800 per 100k")).toBeInTheDocument();
+  expect(screen.getByText("Expected 7,000 per 100k")).toBeInTheDocument();
+  expect(screen.getByText("Difference +1,800 per 100k")).toBeInTheDocument();
+  expect(container.textContent).toContain("beyond ±1,200 per 100k is flagged");
+  expect(container.textContent).toContain("starting point of 7,000 per 100k to 7,000 per 100k.");
+  expect(container.textContent).not.toMatch(/\d years/);
+});
+
+test("adds the direction note for higher_is_worse only", () => {
+  const worse = renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
+  expect(screen.getByText(NOTE)).toBeInTheDocument();
+  worse.unmount();
+  renderCard(model.counties["53033"]!);
+  expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
+});
+
+test("names the chosen target when the county has no result", () => {
+  renderCard(prematureDeath.counties["16001"]!, { fips: "16001", name: "Ada", state: "ID" }, prematureDeath);
+  expect(
+    screen.getByText(
+      /because its premature death \(years lost\) isn't reported\./,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
 });

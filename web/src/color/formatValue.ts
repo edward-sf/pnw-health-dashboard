@@ -35,9 +35,9 @@ const SUFFIX: Record<Unit, string> = {
   count: "",
 };
 
-export function formatValue(v: number | null, unit: Unit): string {
+export function formatValue(v: number | null, unit: Unit, digits?: number): string {
   if (v === null) return "Suppressed or not available";
-  return `${formatBound(v, unit)}${SUFFIX[unit]}`;
+  return `${formatBound(v, unit, digits)}${SUFFIX[unit]}`;
 }
 
 /** Signed value with + or the true minus (U+2212), and no sign when it rounds to zero. */
