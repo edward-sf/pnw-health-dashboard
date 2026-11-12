@@ -53,10 +53,10 @@ test("indicator title survives filtering", async () => {
 test("changing indicator re-renders the panel", async () => {
   setup("/?i=poverty_rate&c=02016");
   expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
-  expect(screen.getByText("14.2%")).toBeInTheDocument();
+  expect(screen.getByText("14.2%", { selector: ".panel-value" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
-  expect(screen.queryByText("14.2%")).not.toBeInTheDocument();
+  expect(screen.queryByText("14.2%", { selector: ".panel-value" })).not.toBeInTheDocument();
   expect(screen.getByText("5.0%", { selector: ".panel-value" })).toBeInTheDocument();
 });
 

@@ -233,6 +233,8 @@ export function Explorer({ data }: { data: AppData }) {
           manifest={manifest}
           values={values}
           modelMode={params.mode === "model"}
+          peers={data.model.peers}
+          onSelectCounty={onSelectFromMap}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
           onFocusHandled={onFocusHandled}
           onClose={onClosePanel}

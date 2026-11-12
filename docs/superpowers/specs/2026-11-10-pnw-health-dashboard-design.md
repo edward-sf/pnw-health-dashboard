@@ -152,6 +152,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - Strip plot of all 149 counties with the selected one highlighted.
   - Model card (shown in both modes): actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
+  - "Similar counties" (last, in both modes; added in M9, #183): the selected county followed by its nearest PNW peers on the 9 social and economic features, with the peers' median. Values mode shows the indicator value; model mode shows actual, expected and flag tier. Each peer name is a button that selects that county like a map click. A county with too few features shows "Not enough data to find similar counties." The copy never relates peers to the flag and uses no causal wording.
 - **Table view:** sortable table of the current indicator across all counties (in model mode: actual, expected, difference and flag tier); together with a county search box, this is the keyboard and screen-reader path to every county.
 
 ### State and data loading
