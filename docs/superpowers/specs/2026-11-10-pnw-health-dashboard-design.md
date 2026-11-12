@@ -90,6 +90,8 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 
 Defined once as Pydantic models in `contract.py`. JSON Schema generated from those models is committed in `schema/`, and a pipeline test fails if it drifts from them; the web build generates TypeScript types from it, so contract drift breaks the build.
 
+The four files are written as a set: into a temporary directory beside `web/public/data/`, then moved into place only after all four writes succeed, so a failed export leaves the previous one untouched (M8 spec §3.1).
+
 | File | Contents |
 |---|---|
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |

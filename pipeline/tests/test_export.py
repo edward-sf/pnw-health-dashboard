@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
+from pnw_health import export
 from pnw_health.contract import Manifest, ModelFile, ShapEntry, SourceVintage, ValuesFile
 from pnw_health.export import build_values_file, finalize_model, write_exports
 from pnw_health.harmonize import LEGACY_COLUMNS
@@ -206,3 +208,46 @@ def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
     text = (tmp_path / "model.json").read_text()
     assert "NaN" not in text
     assert json.loads(text)["counties"]["02063"]["predicted"] is None
+
+
+def _export_args() -> tuple[Manifest, ValuesFile, ModelFile]:
+    vf = build_values_file(ranked([("53001", 1.0, None, None)]), no_legacy(), COUNTIES, CATALOG)
+    return make_manifest(), vf, make_model_file({"53001": make_county_model()})
+
+
+def test_write_exports_failure_keeps_previous_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out = tmp_path / "data"
+    manifest, vf, model = _export_args()
+    write_exports(out, manifest, vf, TOPOLOGY, model)
+    before = {p.name: p.read_bytes() for p in out.iterdir()}
+
+    real = export._write_json
+    calls = 0
+
+    def flaky(path: Path, data: object) -> Path:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("disk full")
+        return real(path, data)
+
+    monkeypatch.setattr(export, "_write_json", flaky)
+    changed = manifest.model_copy(update={"schema_version": "9.9.9"})
+    with pytest.raises(OSError, match="disk full"):
+        write_exports(out, changed, vf, TOPOLOGY, model)
+    assert {p.name: p.read_bytes() for p in out.iterdir()} == before
+    assert list(tmp_path.glob(".data-export-*")) == []
+
+
+def test_write_exports_leaves_only_the_four_files(tmp_path: Path) -> None:
+    out = tmp_path / "data"
+    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2])
+    assert sorted(p.name for p in out.iterdir()) == [
+        "counties.topojson",
+        "manifest.json",
+        "model.json",
+        "values.json",
+    ]
+    assert list(tmp_path.glob(".data-export-*")) == []
