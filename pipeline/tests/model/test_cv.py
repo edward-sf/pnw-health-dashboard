@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pnw_health.model import cv
 from pnw_health.model.config import BEHAVIORS, FEATURES, N_FOLDS
 from pnw_health.model.cv import (
     assign_folds,
@@ -128,12 +129,16 @@ def test_base_value_comes_from_own_fold() -> None:
     assert oof.base_value.nunique() > 1
 
 
-def test_explanation_ignores_own_state_target() -> None:
+STATES = sorted(set(make_long()["fips"].str[:2]))
+
+
+@pytest.mark.parametrize("state", STATES)
+def test_explanation_ignores_own_state_target(state: str) -> None:
     frame = _frame()
     folds = assign_folds(frame["state"])
     base = fit_lightgbm_oof(frame, ALL_FEATURES, folds)
     shifted = frame.copy()
-    in_state = shifted["state"] == "53"
+    in_state = shifted["state"] == state
     shifted.loc[in_state, "target"] += 100.0
     after = fit_lightgbm_oof(shifted, ALL_FEATURES, folds)
     pd.testing.assert_frame_equal(base.contributions[in_state], after.contributions[in_state])
@@ -167,3 +172,81 @@ def test_missing_values_are_explained_as_training_medians() -> None:
     b = fit_lightgbm_oof(prefilled, ALL_FEATURES, folds)
     pd.testing.assert_series_equal(a.contributions.loc[county], b.contributions.loc[county])
     assert a.predicted[county] == b.predicted[county]
+
+
+def _fit(model: str, frame: pd.DataFrame, folds: dict[str, int]) -> pd.Series:
+    if model == "ridge":
+        return fit_ridge_oof(frame, ALL_FEATURES, folds)
+    return fit_lightgbm_oof(frame, ALL_FEATURES, folds).predicted
+
+
+@pytest.mark.parametrize("model", ["ridge", "lightgbm"])
+def test_feature_leakage_within_held_out_fold(model: str) -> None:
+    """Rows held out together must not influence each other's predictions.
+
+    Every other fold trains on the changed state, so its predictions are meant to change;
+    the leak to rule out is through the held-out rows (imputation or scaling fitted on
+    them), which only the changed state's fold-mates would show.
+    """
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    mates_of = {s: [t for t, f in folds.items() if f == folds[s] and t != s] for s in folds}
+    state = next(s for s in sorted(folds) if mates_of[s])
+    # Some fold-mates miss a feature the changed state scales, so imputation fitted on the
+    # held-out rows would move their filled-in values.
+    mates = frame["state"].isin(mates_of[state])
+    frame.loc[frame.index[mates][:5], ALL_FEATURES[1]] = np.nan
+    changed = frame.copy()
+    rows = changed["state"] == state
+    changed.loc[rows, ALL_FEATURES[0]] = np.nan
+    changed.loc[rows, ALL_FEATURES[1:]] *= 10.0
+
+    before, after = _fit(model, frame, folds), _fit(model, changed, folds)
+    pd.testing.assert_series_equal(before[mates], after[mates], check_exact=True)
+    assert not before[rows].equals(after[rows])
+    trains_on_state = frame["state"].map(folds) != folds[state]
+    assert not before[trains_on_state].equals(after[trains_on_state])
+
+
+def test_unmapped_state_raises() -> None:
+    frame = _frame()
+    folds = assign_folds(frame["state"])
+    folds.pop(sorted(folds)[0])
+    with pytest.raises(ModelDataError, match="no fold assignment"):
+        cv._oof(frame, ALL_FEATURES, folds, lambda: None)
+
+
+def test_contribution_belongs_to_its_feature() -> None:
+    frame = _frame()
+    rng = np.random.default_rng(1)
+    frame["target"] = 78.0 + 2.0 * (frame["poverty_rate"] - 50.0) + rng.normal(0, 0.1, len(frame))
+    contributions = fit_lightgbm_oof(frame, FEATURES, assign_folds(frame["state"])).contributions
+    assert contributions.abs().mean().idxmax() == "poverty_rate"
+    assert (contributions.abs().idxmax(axis=1) == "poverty_rate").mean() >= 0.9
+
+
+def test_score_aligns_on_index() -> None:
+    actual = pd.Series([1.0, 2.0, 4.0, 8.0], index=["a", "b", "c", "d"])
+    predicted = pd.Series([1.5, 2.0, 3.0, 9.0], index=["a", "b", "c", "d"])
+    assert score(actual, predicted.sample(frac=1, random_state=0)) == score(actual, predicted)
+
+
+def test_score_needs_two_rows() -> None:
+    with pytest.raises(ModelDataError, match="at least 2"):
+        score(pd.Series([1.0], index=["a"]), pd.Series([1.0], index=["a"]))
+
+
+def test_score_missing_prediction_raises() -> None:
+    actual = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
+    with pytest.raises(ModelDataError, match="c"):
+        score(actual, pd.Series([1.0, 2.0], index=["a", "b"]))
+
+
+@pytest.mark.parametrize("which", ["actual", "predicted"])
+def test_score_nan_value_raises(which: str) -> None:
+    index = ["a", "b", "c"]
+    actual = pd.Series([1.0, 2.0, 3.0], index=index)
+    predicted = pd.Series([1.0, 2.0, 3.5], index=index)
+    {"actual": actual, "predicted": predicted}[which]["b"] = np.nan
+    with pytest.raises(ModelDataError, match=f"{which}.*b"):
+        score(actual, predicted)

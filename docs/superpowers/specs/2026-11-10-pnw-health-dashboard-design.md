@@ -84,11 +84,13 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 - Exactly 149 display FIPS; per-state counts match (39/36/44/30).
 - Percent-unit values within [0, 100]; non-negative counts/rates.
 - No duplicate `(fips, indicator_id)` keys in display data.
-- Every catalog indicator has data for at least one county.
+- Every catalog indicator has data for at least one county, and for at least one county in every PNW state unless that state is listed for it in `PARTIAL_STATES` (pipeline-only, empty in M8; M8 spec §3.5).
 
 ## 4. Export contract (`web/public/data/`)
 
 Defined once as Pydantic models in `contract.py`. JSON Schema generated from those models is committed in `schema/`, and a pipeline test fails if it drifts from them; the web build generates TypeScript types from it, so contract drift breaks the build.
+
+The four files are written as a set: into a temporary directory under `data/interim/` (never under `web/public/`, which Vite copies into the site), then moved into place only after all four writes succeed, so a failed export leaves the previous one untouched (M8 spec §3.1).
 
 | File | Contents |
 |---|---|

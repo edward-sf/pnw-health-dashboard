@@ -1,9 +1,12 @@
 import math
+from pathlib import Path
 
 import pandas as pd
+import pyarrow.parquet as pq
 import pytest
 
-from pnw_health.harmonize import LEGACY_COLUMNS, harmonize, pnw_only
+from pnw_health.errors import InputError
+from pnw_health.harmonize import LEGACY_COLUMNS, LEGACY_DTYPES, harmonize, pnw_only
 from pnw_health.long import LONG_COLUMNS
 
 
@@ -75,7 +78,7 @@ def test_null_value_survives() -> None:
 
 
 def test_duplicate_after_rename_raises() -> None:
-    with pytest.raises(ValueError, match="02158"):
+    with pytest.raises(InputError, match="02158"):
         harmonize([long_rows([("02270", "x", 1.0), ("02158", "x", 2.0)])])
 
 
@@ -105,3 +108,23 @@ def test_legacy_with_null_successors() -> None:
     assert sorted(res.legacy.fips) == ["02063", "02066"]
     assert sorted(res.values.fips) == ["02063", "02066"]
     assert res.values.value.isna().all()
+
+
+def test_empty_legacy_has_populated_dtypes() -> None:
+    empty = harmonize([long_rows([("53033", "x", 80.0)])]).legacy
+    populated = harmonize([long_rows([("02261", "x", 78.2), ("53033", "x", 80.0)])]).legacy
+    assert empty.empty
+    assert empty.dtypes.to_dict() == populated.dtypes.to_dict()
+    assert list(empty.columns) == LEGACY_COLUMNS == list(LEGACY_DTYPES)
+
+
+def test_empty_legacy_round_trips_like_populated(tmp_path: Path) -> None:
+    empty = harmonize([long_rows([("53033", "x", 80.0)])]).legacy
+    populated = harmonize([long_rows([("02261", "x", 78.2), ("53033", "x", 80.0)])]).legacy
+    empty.to_parquet(tmp_path / "empty.parquet", index=False)
+    populated.to_parquet(tmp_path / "populated.parquet", index=False)
+    schema = {
+        name: pq.read_schema(tmp_path / f"{name}.parquet").remove_metadata()
+        for name in ("empty", "populated")
+    }
+    assert schema["empty"] == schema["populated"]

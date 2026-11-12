@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from pnw_health.model.config import Z_75, Z_90
+from pnw_health.model.features import ModelDataError
 
 CI_Z = 1.96
 
@@ -32,6 +33,8 @@ def se_from_ci(ci_low: pd.Series, ci_high: pd.Series) -> pd.Series:
 
 def sigma_model_sq(residuals: pd.Series, se: pd.Series) -> float:
     """Model variance: residual variance less mean sampling variance, floored at 0."""
+    if se.isna().all():
+        raise ModelDataError("no standard errors: cannot compute sigma")
     value = float(residuals.var(ddof=0) - (se**2).mean())
     return max(value, 0.0)
 
@@ -45,12 +48,14 @@ def classify(residuals: pd.Series, se: pd.Series, sigma_sq: float, mean_se_sq: f
     magnitude = residuals.abs()
     better = residuals > 0
 
-    flag = pd.Series("none", index=residuals.index, dtype=object)
-    flag[magnitude > t75] = np.where(better, "somewhat_better", "somewhat_worse")[
-        (magnitude > t75).to_numpy()
-    ]
-    flag[magnitude > t90] = np.where(better, "notably_better", "notably_worse")[
-        (magnitude > t90).to_numpy()
-    ]
-    flag[residuals.isna()] = "insufficient_data"
+    tier = np.select(
+        [residuals.isna(), magnitude > t90, magnitude > t75],
+        [
+            "insufficient_data",
+            np.where(better, "notably_better", "notably_worse"),
+            np.where(better, "somewhat_better", "somewhat_worse"),
+        ],
+        default="none",
+    )
+    flag = pd.Series(tier, index=residuals.index, dtype=object)
     return Flags(se_sq=se_sq, threshold_75=t75, threshold_90=t90, flag=flag)

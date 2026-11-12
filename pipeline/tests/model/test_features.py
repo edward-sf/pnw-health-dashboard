@@ -119,3 +119,26 @@ def test_all_nan_training_column_fails() -> None:
     test = pd.DataFrame({"x": [1.0], "poverty_rate": [1.0]})
     with pytest.raises(ModelDataError, match="poverty_rate"):
         impute_fold(train, test)
+
+
+def test_asymmetric_target_ci() -> None:
+    long = make_long()
+    row = (long["indicator_id"] == TARGET) & (long["fips"] == "53001")
+    value = float(long.loc[row, "value"].iloc[0])
+    long.loc[row, "ci_low"] = value - 1.0
+    long.loc[row, "ci_high"] = value + 3.0
+    frame = build_table(long).frame
+    assert frame.loc["53001", "ci_low"] == value - 1.0
+    assert frame.loc["53001", "ci_high"] == value + 3.0
+
+
+def test_duplicate_rows_raise() -> None:
+    long = make_long()
+    long = pd.concat([long, long.iloc[[0]]], ignore_index=True)
+    first = long.iloc[0]
+    with pytest.raises(ModelDataError, match=f"{first.fips}/{first.indicator_id}"):
+        build_table(long)
+
+
+def test_dropped_is_tuple() -> None:
+    assert isinstance(build_table(make_long()).dropped, tuple)

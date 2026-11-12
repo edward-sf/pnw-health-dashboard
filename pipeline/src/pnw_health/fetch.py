@@ -10,11 +10,13 @@ from urllib.parse import quote
 
 import httpx
 
+from pnw_health.errors import PipelineError
+
 USER_AGENT = "pnw-health-dashboard-pipeline"
 REDACTED_PARAMS = frozenset({"key"})
 
 
-class FetchError(Exception):
+class FetchError(PipelineError):
     """A request returned something other than a usable 2xx response."""
 
 

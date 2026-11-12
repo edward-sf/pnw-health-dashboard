@@ -6,8 +6,9 @@ from collections import Counter
 
 import pandas as pd
 
-from pnw_health.config import EXPECTED_COUNTY_COUNTS, state_abbr
+from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
 from pnw_health.contract import CountyModel, ModelFile
+from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import ALLOWED_CATEGORIES, TARGET
 
@@ -16,8 +17,12 @@ ADDITIVITY_TOLERANCE = 1e-6
 STALE_TOLERANCE = 1e-9
 RERUN_MODEL = "re-run `pnw-health run --stage model`"
 
+# Indicator id -> PNW states (abbreviations) it legitimately has no values for. Any other
+# state with no values fails validation (M8 spec §3.5). Pipeline-only: not exported.
+PARTIAL_STATES: dict[str, frozenset[str]] = {}
 
-class DataValidationError(Exception):
+
+class DataValidationError(PipelineError):
     def __init__(self, problems: list[str]) -> None:
         self.problems = problems
         super().__init__("\n".join(problems))
@@ -67,12 +72,29 @@ def validate_display(
         keys = sorted({f"{r.fips}/{r.indicator_id}" for r in dupes.itertuples()})
         problems.append(f"duplicate (fips, indicator_id): {', '.join(keys)}")
 
+    catalog_ids = {ind.id for ind in catalog}
+    for unknown_id in sorted(set(PARTIAL_STATES) - catalog_ids):
+        problems.append(f"PARTIAL_STATES lists {unknown_id} which is not in the catalog")
+    for ind_id, exempt_states in sorted(PARTIAL_STATES.items()):
+        for abbr in sorted(exempt_states - set(STATES.values())):
+            problems.append(f"PARTIAL_STATES lists {abbr} for {ind_id}, which is not a PNW state")
+
     for ind in catalog:
         rows = values[values.indicator_id == ind.id]
         present = rows[rows.value.notna()]
         if present.empty:
             problems.append(f"{ind.id}: no non-null values")
             continue
+        covered = set(present.fips.map(state_abbr))
+        exempt = PARTIAL_STATES.get(ind.id, frozenset())
+        for abbr in STATES.values():
+            if abbr not in covered and abbr not in exempt:
+                problems.append(f"{ind.id}: no values for {abbr}")
+            elif abbr in covered and abbr in exempt:
+                problems.append(
+                    f"PARTIAL_STATES exempts {abbr} for {ind.id}, but it has values; "
+                    "remove the exemption"
+                )
         problems += _range_problems(ind.id, present, ind)
         if legacy is not None:
             old = legacy[(legacy.indicator_id == ind.id) & legacy.value.notna()]

@@ -40,6 +40,7 @@ from pnw_health.model.cv import assign_folds, fit_lightgbm_oof, fit_ridge_oof, s
 from pnw_health.model.explain import global_importance, ranked_contributions
 from pnw_health.model.features import build_table, check_features
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
+from pnw_health.numeric import nan_to_none
 
 DROPPED_REASON = (
     "Target reported but no features available; for Connecticut, CHR reports former counties "
@@ -64,10 +65,6 @@ NO_DATA = CountyModel(
     flag="insufficient_data",
     shap=[],
 )
-
-
-def _num(x: float) -> float | None:
-    return None if math.isnan(x) else float(x)
 
 
 def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
@@ -95,13 +92,13 @@ def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
             cast(pd.Series, feature_values.loc[fips]),
         )
         counties[fips] = CountyModel(
-            actual=_num(frame["target"][fips]),
-            predicted=_num(lgbm.predicted[fips]),
-            residual=_num(residuals[fips]),
-            se=_num(se[fips]),
-            threshold_75=_num(flags.threshold_75[fips]),
-            threshold_90=_num(flags.threshold_90[fips]),
-            base_value=_num(lgbm.base_value[fips]),
+            actual=nan_to_none(frame["target"][fips]),
+            predicted=nan_to_none(lgbm.predicted[fips]),
+            residual=nan_to_none(residuals[fips]),
+            se=nan_to_none(se[fips]),
+            threshold_75=nan_to_none(flags.threshold_75[fips]),
+            threshold_90=nan_to_none(flags.threshold_90[fips]),
+            base_value=nan_to_none(lgbm.base_value[fips]),
             flag=flags.flag[fips],
             shap=[
                 ShapEntry(feature=c.feature, value=c.value, contribution=c.contribution)

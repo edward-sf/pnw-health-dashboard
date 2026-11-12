@@ -6,22 +6,27 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from pnw_health.config import state_abbr
+from pnw_health.config import VALDEZ_CORDOVA_FIPS, state_abbr
+from pnw_health.errors import InputError
 from pnw_health.long import LONG_COLUMNS
 
 FIPS_RENAMES: dict[str, str] = {"02270": "02158"}  # Wade Hampton -> Kusilvak
-FIPS_SPLITS: dict[str, tuple[str, ...]] = {"02261": ("02063", "02066")}  # Valdez-Cordova
-LEGACY_NAMES: dict[str, str] = {"02261": "Valdez-Cordova Census Area (former)"}
-LEGACY_COLUMNS: list[str] = [
-    "fips",
-    "indicator_id",
-    "legacy_fips",
-    "legacy_name",
-    "year",
-    "value",
-    "ci_low",
-    "ci_high",
-]
+FIPS_SPLITS: dict[str, tuple[str, ...]] = {VALDEZ_CORDOVA_FIPS: ("02063", "02066")}
+LEGACY_NAMES: dict[str, str] = {VALDEZ_CORDOVA_FIPS: "Valdez-Cordova Census Area (former)"}
+# Column order and dtypes of the legacy frame. Text columns use pandas' string dtype: an
+# empty object column is written to Parquet as type null, a string column as string, so
+# an empty frame round-trips with the same schema as a populated one.
+LEGACY_DTYPES: dict[str, str] = {
+    "fips": "string",
+    "indicator_id": "string",
+    "legacy_fips": "string",
+    "legacy_name": "string",
+    "year": "int64",
+    "value": "float64",
+    "ci_low": "float64",
+    "ci_high": "float64",
+}
+LEGACY_COLUMNS: list[str] = list(LEGACY_DTYPES)
 
 
 @dataclass
@@ -39,7 +44,7 @@ def harmonize(frames: list[pd.DataFrame]) -> HarmonizeResult:
     dupes = values[values.duplicated(["fips", "indicator_id"], keep=False)]
     if not dupes.empty:
         keys = sorted({f"{r.fips}/{r.indicator_id}" for r in dupes.itertuples()})
-        raise ValueError(f"duplicate (fips, indicator_id) after renames: {', '.join(keys)}")
+        raise InputError(f"duplicate (fips, indicator_id) after renames: {', '.join(keys)}")
 
     legacy_rows: list[dict[str, object]] = []
     warnings: list[str] = []
@@ -73,7 +78,7 @@ def harmonize(frames: list[pd.DataFrame]) -> HarmonizeResult:
 
     return HarmonizeResult(
         values=values.reset_index(drop=True),
-        legacy=pd.DataFrame(legacy_rows, columns=LEGACY_COLUMNS),
+        legacy=pd.DataFrame(legacy_rows, columns=LEGACY_COLUMNS).astype(LEGACY_DTYPES),
         warnings=warnings,
     )
 

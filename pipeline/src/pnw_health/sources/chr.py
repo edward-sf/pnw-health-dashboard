@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pandas.errors
 
-from pnw_health.config import CHR_FILES, CHR_LEGACY_YEAR, CHR_YEAR
+from pnw_health.config import CHR_FILES, CHR_LEGACY_YEAR, CHR_YEAR, VALDEZ_CORDOVA_FIPS
 from pnw_health.fetch import FetchError, cached_get
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
@@ -33,8 +33,8 @@ def _invalid(reason: str) -> FetchError:
     )
 
 
-def _fields(catalog: list[Indicator], year: int | None = None) -> list[Indicator]:
-    return [i for i in catalog if i.source == "chr" and (year is None or i.year == year)]
+def _fields(catalog: list[Indicator]) -> list[Indicator]:
+    return [i for i in catalog if i.source == "chr"]
 
 
 def _ci_columns(field: str) -> tuple[str, str]:
@@ -68,7 +68,10 @@ def fetch_chr(
     """
     needed = list(ID_COLUMNS)
     if year == CHR_YEAR:
-        needed += [i.source_field for i in _fields(catalog)]
+        for ind in _fields(catalog):
+            needed.append(ind.source_field)
+            if ind.ci_level is not None:
+                needed += _ci_columns(ind.source_field)
 
     return cached_get(
         client,
@@ -131,7 +134,7 @@ def parse_chr(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
 
 
 def parse_chr_legacy(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
-    """Non-null values for the retired Valdez-Cordova FIPS ``02261`` from the 2023 file.
+    """Non-null values for the retired Valdez-Cordova FIPS from the 2023 file.
 
     Catalog fields missing from the older file are skipped, not errors.
     """
@@ -139,7 +142,7 @@ def parse_chr_legacy(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     missing = sorted(set(ID_COLUMNS) - set(table.columns))
     if missing:
         raise _invalid(f"missing column(s) {', '.join(missing)}")
-    retired = table[table["fipscode"] == "02261"]
+    retired = table[table["fipscode"] == VALDEZ_CORDOVA_FIPS]
     frames = [
         _long_frame(retired, ind, CHR_LEGACY_YEAR)
         for ind in _fields(catalog)

@@ -2,25 +2,24 @@
 
 from __future__ import annotations
 
+import errno
 import json
-import math
+import os
+import shutil
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from pnw_health.contract import Legacy, Manifest, ModelFile, ValueEntry, ValuesFile
+from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import TOP_N
+from pnw_health.numeric import nan_to_none
 
 MODEL_DECIMALS = 4
-
-
-def _num(x: object) -> float | None:
-    if x is None or x is pd.NA:
-        return None
-    f = float(x)  # type: ignore[arg-type]
-    return None if math.isnan(f) else f
 
 
 def _int(x: object) -> int | None:
@@ -47,18 +46,18 @@ def build_values_file(
             r = rows.get((ind.id, fips))
             lg = legacies.get((ind.id, fips))
             entries[fips] = ValueEntry(
-                v=_num(r.value) if r is not None else None,
-                lo=_num(r.ci_low) if r is not None else None,
-                hi=_num(r.ci_high) if r is not None else None,
+                v=nan_to_none(r.value) if r is not None else None,
+                lo=nan_to_none(r.ci_low) if r is not None else None,
+                hi=nan_to_none(r.ci_high) if r is not None else None,
                 rank=_int(r.rank) if r is not None else None,
                 state_rank=_int(r.state_rank) if r is not None else None,
                 legacy=Legacy(
                     fips=str(lg.legacy_fips),
                     name=str(lg.legacy_name),
                     year=int(lg.year),  # type: ignore[arg-type]
-                    v=_num(lg.value),
-                    lo=_num(lg.ci_low),
-                    hi=_num(lg.ci_high),
+                    v=nan_to_none(lg.value),
+                    lo=nan_to_none(lg.ci_low),
+                    hi=nan_to_none(lg.ci_high),
                 )
                 if lg is not None
                 else None,
@@ -103,17 +102,90 @@ def write_model(path: Path, model: ModelFile) -> Path:
     return _write_json(path, model.model_dump(mode="json"))
 
 
+class ExportError(PipelineError):
+    """Moving the staged export into place failed partway."""
+
+
+def _move(src: Path, dst: Path) -> None:
+    """Rename ``src`` to ``dst``; across filesystems, copy beside ``dst`` and then rename.
+
+    Either way ``dst`` only ever appears complete: a crash mid-copy leaves a hidden
+    ``.<name>.partial`` file next to it, never a truncated ``dst``.
+    """
+    try:
+        os.replace(src, dst)
+    except OSError as err:
+        if err.errno != errno.EXDEV:
+            raise
+        partial = dst.with_name(f".{dst.name}.partial")
+        try:
+            shutil.copyfile(src, partial)
+            os.replace(partial, dst)
+        finally:
+            # Never let a failed cleanup hide the copy error, or a move that succeeded.
+            try:
+                partial.unlink(missing_ok=True)
+            except OSError as cleanup_err:
+                print(f"warning: could not remove {partial}: {cleanup_err}", file=sys.stderr)
+
+
+def _remove(tmp: Path) -> None:
+    try:
+        shutil.rmtree(tmp)
+    except OSError as err:
+        print(f"warning: could not remove staging directory {tmp}: {err}", file=sys.stderr)
+
+
 def write_exports(
     out_dir: Path,
     manifest: Manifest,
     values: ValuesFile,
     topology: dict[str, Any],
     model: ModelFile,
+    *,
+    staging: Path,
 ) -> list[Path]:
+    """Write the four web files, replacing the previous export only once all four are written.
+
+    Each file is written to a temporary directory under ``staging``. ``staging`` must be
+    outside the site's public folder (the CLI uses ``data/interim``): Vite copies
+    everything in ``web/public``, so a run killed before cleanup must not leave files
+    there. A failed write leaves the previous export untouched.
+
+    The files are then moved into place one at a time. On one filesystem each move is a
+    rename; across filesystems it is a copy beside the target and then a rename, so no
+    file is ever seen half-written. The moves are still four steps, so a crash, or an
+    error such as a full disk on the copy path, between two of them leaves a mix of old
+    and new files. An error raises ExportError naming the files already replaced.
+    """
+    if staging.resolve().is_relative_to(out_dir.resolve()):
+        raise ValueError(f"staging {staging} must not be inside the output folder {out_dir}")
     out_dir.mkdir(parents=True, exist_ok=True)
-    return [
-        _write_json(out_dir / "manifest.json", manifest.model_dump(mode="json")),
-        _write_json(out_dir / "values.json", values.model_dump(mode="json")),
-        _write_json(out_dir / "counties.topojson", topology),
-        write_model(out_dir / "model.json", model),
-    ]
+    staging.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(dir=staging, prefix=".export-"))
+    try:
+        written = [
+            _write_json(tmp / "manifest.json", manifest.model_dump(mode="json")),
+            _write_json(tmp / "values.json", values.model_dump(mode="json")),
+            _write_json(tmp / "counties.topojson", topology),
+            write_model(tmp / "model.json", model),
+        ]
+        final: list[Path] = []
+        for path in written:
+            target = out_dir / path.name
+            try:
+                _move(path, target)
+            except OSError as err:
+                if final:
+                    done = ", ".join(p.name for p in final)
+                    state = f"already replaced: {done}. The folder may mix two exports"
+                else:
+                    state = "nothing was replaced"
+                raise ExportError(
+                    f"export stopped moving {path.name} into {out_dir} ({err}); {state}: "
+                    "re-run `pnw-health run --stage export`"
+                ) from err
+            final.append(target)
+        return final
+    finally:
+        _remove(tmp)

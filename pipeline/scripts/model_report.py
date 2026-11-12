@@ -6,12 +6,13 @@ Usage: ``uv run python scripts/model_report.py --root ..``. Reads files, writes 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import pandas as pd
 
 from pnw_health.config import CHR_YEAR, STATES
-from pnw_health.contract import CountyModel, ModelFile, RegionMetrics
+from pnw_health.contract import CountyModel, ModelFile
 from pnw_health.indicators import load_catalog
 from pnw_health.model.config import ALLOWED_CATEGORIES
 from pnw_health.sources.chr import chr_cache_path
@@ -57,7 +58,6 @@ def _metrics_section(model: ModelFile) -> list[str]:
     bc = model.behaviors_comparison
     rows = []
     for name, rm in (("main", bc.main), ("behaviors", bc.behaviors)):
-        assert isinstance(rm, RegionMetrics)
         for region in ("national", "pnw"):
             m = getattr(rm, region)
             rows.append([name, region, str(m.n), _f(m.rmse), _f(m.mae), _f(m.r2)])
@@ -77,14 +77,7 @@ def _flag_counts(counties: dict[str, CountyModel]) -> dict[str, int]:
 
 def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
     counties = model.counties
-    keys = [
-        "notably_better",
-        "somewhat_better",
-        "none",
-        "somewhat_worse",
-        "notably_worse",
-        "insufficient_data",
-    ]
+    keys = [*FLAGS, "insufficient_data"]
     out = ["## Flags by state", ""]
     rows = []
     for fips, abbr in STATES.items():
@@ -122,6 +115,7 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
         ks = list(tercile[tercile == t].index)
         somewhat = sum(counties[k].flag in ("somewhat_better", "somewhat_worse") for k in ks)
         notably = sum(counties[k].flag in ("notably_better", "notably_worse") for k in ks)
+        flaggable = sum(counties[k].flag != "insufficient_data" for k in ks)
         lo, hi = pops[ks].min(), pops[ks].max()
         rows.append(
             [
@@ -131,6 +125,7 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
                 str(somewhat),
                 str(notably),
                 f"{(somewhat + notably) / len(ks):.1%}",
+                f"{(somewhat + notably) / flaggable:.1%}" if flaggable else "n/a",
             ]
         )
     out.append(
@@ -142,6 +137,7 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
                 "flagged somewhat",
                 "flagged notably",
                 "share flagged",
+                "share among flaggable",
             ],
             rows,
         )
@@ -149,7 +145,8 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
     out += [
         "",
         "Somewhat and notably counts each include both better and worse flags. "
-        "Share flagged = (somewhat + notably) / counties in the tercile. "
+        "Share flagged = (somewhat + notably) / counties in the tercile; share among "
+        "flaggable leaves insufficient_data counties out of the denominator. "
         f"Counties without a population value (excluded): {missing}.",
         "",
     ]
@@ -186,7 +183,10 @@ def _named_section(model: ModelFile, long: pd.DataFrame) -> list[str]:
         out.append(
             _table(
                 ["feature", "value", "contribution"],
-                [[s.feature, _f(s.value), f"{s.contribution:+.4f}"] for s in c.shap[:5]],
+                [
+                    [s.feature, _f(s.value), f"{s.contribution:+.4f}"]
+                    for s in sorted(c.shap, key=lambda s: (-abs(s.contribution), s.feature))[:5]
+                ],
             )
         )
         out.append("")
@@ -232,12 +232,23 @@ def _population(root: Path) -> pd.Series:
     return df.drop_duplicates("fipscode").set_index("fipscode")["v051_rawvalue"]
 
 
-def main() -> None:
+def _require(path: Path, stage: str) -> Path:
+    """Exit 1 with the CLI's message when an input from an earlier stage is missing."""
+    if not path.exists():
+        print(f"{path} not found; run `pnw-health run --stage {stage}` first", file=sys.stderr)
+        raise SystemExit(1)
+    return path
+
+
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=Path(".."))
-    root = ap.parse_args().root
-    model = ModelFile.model_validate_json((root / "web/public/data/model.json").read_text())
-    long = pd.read_parquet(root / "data/interim/long.parquet")
+    root = ap.parse_args(argv).root
+    model_path = _require(root / "web/public/data/model.json", "export")
+    long_path = _require(root / "data/interim/long.parquet", "harmonize")
+    _require(chr_cache_path(root / "data" / "raw", CHR_YEAR), "fetch")
+    model = ModelFile.model_validate_json(model_path.read_text())
+    long = pd.read_parquet(long_path)
     long["fips"] = long["fips"].astype(str)
     lines = [
         "# Model checkpoint report",

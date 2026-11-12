@@ -106,6 +106,17 @@ def fit_lightgbm_oof(
 
 
 def score(actual: pd.Series, predicted: pd.Series) -> Metrics:
+    """Metrics for ``predicted`` against ``actual``, matched on the index."""
+    if len(actual) < 2:
+        raise ModelDataError(f"scoring needs at least 2 counties, got {len(actual)}")
+    missing = actual.index.difference(predicted.index)
+    if len(missing):
+        raise ModelDataError(f"no prediction for: {', '.join(map(str, missing[:10]))}")
+    predicted = predicted.reindex(actual.index)
+    for name, series in (("actual", actual), ("predicted", predicted)):
+        blank = series.index[series.isna()]
+        if len(blank):
+            raise ModelDataError(f"{name} is NaN for: {', '.join(map(str, blank[:10]))}")
     return Metrics(
         rmse=float(root_mean_squared_error(actual, predicted)),
         mae=float(mean_absolute_error(actual, predicted)),
