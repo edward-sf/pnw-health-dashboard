@@ -1,6 +1,6 @@
 import { formatSigned } from "../color/formatValue";
 import { HATCH_FILL } from "../color/makeColorScale";
-import type { CountyModel, Flag, ModelFile } from "../types";
+import type { CountyModel, Flag, TargetModel, Unit } from "../types";
 
 export const TIERS: readonly Flag[] = [
   "notably_worse",
@@ -28,6 +28,10 @@ const FILLS: Record<Flag, string> = {
   insufficient_data: HATCH_FILL,
 };
 
+/** Decimal places for model figures: rates are whole numbers, other units keep `fallback`. */
+export const modelDigits = (unit: Unit, fallback?: number): number | undefined =>
+  unit === "rate_per_100k" ? 0 : fallback;
+
 export const tierLabel = (flag: Flag): string => LABELS[flag];
 export const tierFill = (flag: Flag): string => FILLS[flag];
 
@@ -48,11 +52,11 @@ const MISSING: CountyModel = {
   shap: [],
 };
 
-export function countyModel(model: ModelFile, fips: string): CountyModel {
+export function countyModel(model: TargetModel, fips: string): CountyModel {
   return model.counties[fips] ?? MISSING;
 }
 
-export function tierCounts(model: ModelFile, fipsList: string[]): Record<Flag, number> {
+export function tierCounts(model: TargetModel, fipsList: string[]): Record<Flag, number> {
   const counts: Record<Flag, number> = {
     notably_worse: 0,
     somewhat_worse: 0,
@@ -86,9 +90,9 @@ export function hasModelResult(entry: CountyModel): entry is CompleteModel {
   );
 }
 
-export function modelTooltip(name: string, state: string, entry: CountyModel): string {
+export function modelTooltip(name: string, state: string, entry: CountyModel, unit: Unit): string {
   if (!hasModelResult(entry) || entry.residual === null) {
     return `${name}, ${state}: not enough data for the model`;
   }
-  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, "years")})`;
+  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, unit, modelDigits(unit))})`;
 }

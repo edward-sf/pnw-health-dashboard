@@ -7,7 +7,8 @@ export type AppData = {
   model: ModelFile;
 };
 
-const SUPPORTED_SCHEMA_MAJOR = 1;
+/** Must match the major of the pipeline's `SCHEMA_VERSION`; a test checks it. */
+export const SUPPORTED_SCHEMA_MAJOR = 2;
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, { signal });
@@ -26,7 +27,7 @@ export async function loadData(
     fetchJson<Manifest>(`${dir}manifest.json`, signal),
     fetchJson<ValuesFile>(`${dir}values.json`, signal),
     fetchJson<CountiesTopology>(`${dir}counties.topojson`, signal),
-    fetchJson<ModelFile>(`${dir}model.json`, signal),
+    fetchJson<unknown>(`${dir}model.json`, signal),
   ]);
   const major = Number.parseInt(String(manifest.schema_version).split(".")[0] ?? "", 10);
   if (major !== SUPPORTED_SCHEMA_MAJOR) {
@@ -34,5 +35,26 @@ export async function loadData(
       `Unsupported data schema version ${manifest.schema_version}; this site supports major version ${SUPPORTED_SCHEMA_MAJOR}.`,
     );
   }
+  if (!isModelFile(model)) {
+    throw new Error(
+      "The model data (model.json) is incomplete or malformed. Reload the page to try again.",
+    );
+  }
   return { manifest, values, topology, model };
+}
+
+const isObject = (x: unknown): x is Record<string, unknown> =>
+  typeof x === "object" && x !== null && !Array.isArray(x);
+
+/** The parts of model.json every page relies on: at least one target, and the peers. */
+function isModelFile(model: unknown): model is ModelFile {
+  if (!isObject(model)) return false;
+  const { targets, peers } = model;
+  return (
+    isObject(targets) &&
+    Object.keys(targets).length > 0 &&
+    isObject(peers) &&
+    isObject(peers.method) &&
+    isObject(peers.counties)
+  );
 }

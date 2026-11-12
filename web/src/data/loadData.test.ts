@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { manifest, model, topology, values } from "../test/fixtures";
-import { loadData } from "./loadData";
+import { loadData, SUPPORTED_SCHEMA_MAJOR } from "./loadData";
 
 const bodies: Record<string, unknown> = {
   "manifest.json": manifest,
@@ -63,13 +65,43 @@ describe("loadData", () => {
     await expect(loadData("/")).rejects.toThrow(/values\.json/);
   });
 
-  it("rejects an unsupported schema major", async () => {
-    stubFetch({ "manifest.json": { ...manifest, schema_version: "2.0.0" } });
+  it.each([
+    ["an empty model", {}],
+    ["no targets", { ...model, targets: {} }],
+    ["missing peers", { targets: model.targets }],
+    ["peers without counties", { ...model, peers: { method: model.peers.method } }],
+    ["peers without a method", { ...model, peers: { counties: model.peers.counties } }],
+  ])("rejects a v2 manifest with %s in model.json", async (_name, body) => {
+    stubFetch({ "model.json": body });
+    await expect(loadData("/")).rejects.toThrow(/model\.json.*reload/i);
+  });
+
+  it("rejects an older schema major", async () => {
+    stubFetch({ "manifest.json": { ...manifest, schema_version: "1.3.0" } });
+    await expect(loadData("/")).rejects.toThrow(/schema/i);
+  });
+
+  it("rejects a newer schema major", async () => {
+    stubFetch({ "manifest.json": { ...manifest, schema_version: "3.0.0" } });
     await expect(loadData("/")).rejects.toThrow(/schema/i);
   });
 
   it("accepts a newer minor of the supported major", async () => {
-    stubFetch({ "manifest.json": { ...manifest, schema_version: "1.4.2" } });
+    stubFetch({ "manifest.json": { ...manifest, schema_version: "2.4.2" } });
     await expect(loadData("/")).resolves.toBeDefined();
+  });
+
+  it("supports the major version the pipeline exports", () => {
+    const config = readFileSync(
+      resolve(process.cwd(), "../pipeline/src/pnw_health/config.py"),
+      "utf8",
+    );
+    const version = /^SCHEMA_VERSION = "(\d+)\.\d+\.\d+"$/m.exec(config);
+    expect(version).not.toBeNull();
+    expect(SUPPORTED_SCHEMA_MAJOR).toBe(Number(version?.[1]));
+  });
+
+  it("uses a fixture manifest of the supported major", () => {
+    expect(manifest.schema_version.split(".")[0]).toBe(String(SUPPORTED_SCHEMA_MAJOR));
   });
 });

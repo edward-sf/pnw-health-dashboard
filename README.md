@@ -1,6 +1,6 @@
 # PNW Health Dashboard
 
-Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county's life expectancy compares with what a model expects from its social and economic profile.
+Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county's life expectancy, premature death or injury deaths compares with what a model expects from its social and economic profile.
 
 [![CI](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml)
 [![Build and deploy](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml)
@@ -13,7 +13,8 @@ Explore public health data for the 149 counties of Washington, Oregon, Idaho and
 ## What it does
 
 - **Explorer.** A county map and sortable table of health, access and social indicators, with confidence intervals and state and regional ranks. Selecting a county opens a panel with its values and a comparison against the other counties.
-- **Model mode.** A model trained on all US counties estimates each county's life expectancy from social and economic factors. The map shows how far the actual value sits above or below the estimate, and the county panel lists the factors associated with the estimate.
+- **Model mode.** A model trained on all US counties estimates each county's value for one of three County Health Rankings outcomes (life expectancy by default, premature death, injury deaths) from social and economic factors. The map shows how far the actual value sits above or below the estimate, and the county panel lists the factors associated with the estimate.
+- **Similar counties.** The county panel lists the nearest Pacific Northwest counties on social and economic factors, with their values side by side.
 - **Methodology.** The [methodology page](https://edward-sf.github.io/pnw-health-dashboard/methodology) covers data sources and vintages, harmonization rules, the model and its card, and the caveats. Read it before drawing conclusions: the factors are associated with the estimate, not shown to cause it.
 
 ## Architecture

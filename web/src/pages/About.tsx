@@ -12,8 +12,13 @@ export function About() {
       <h3>What this is</h3>
       <p>
         An explorer for county-level health and social indicators across Washington, Oregon, Idaho
-        and Alaska. It also shows a model of county life expectancy, so you can compare each county's
-        actual value with the value expected from its other indicators.
+        and Alaska. It also shows a model of three County Health Rankings outcomes (life expectancy by
+        default, premature death and injury deaths), so you can compare each county's actual value
+        with the value expected from its social and economic factors.
+      </p>
+      <p>
+        Each county's panel also lists its similar counties, the nearest Pacific Northwest
+        counties on social and economic factors, with their values side by side.
       </p>
       <p>
         The model shows associations, not causes. It is not medical advice or a forecast.
@@ -21,7 +26,7 @@ export function About() {
 
       <h3>How to use it</h3>
       <ul>
-        <li>Values mode colors the map by one indicator; model mode compares life expectancy with the expected value.</li>
+        <li>Values mode colors the map by one indicator; model mode compares one of the three outcomes with its expected value.</li>
         <li>Switch between the map and a sortable table of the same counties.</li>
         <li>Search for a county by name, or select one on the map or in the table, to see its details.</li>
       </ul>

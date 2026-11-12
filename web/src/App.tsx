@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import ErrorPage from "./data/ErrorPage";
+import { RouteErrorBoundary } from "./data/RouteErrorBoundary";
 import { type DataState, useData } from "./data/useData";
 import { usePageTitle } from "./hooks/usePageTitle";
 import { useRouteFocus } from "./hooks/useRouteFocus";
@@ -31,6 +32,7 @@ function ExplorerRoute({ state }: { state: DataState }) {
 export default function App() {
   const state = useData();
   const explorerSearch = useLastExplorerSearch();
+  const { pathname } = useLocation();
   useRouteFocus();
   return (
     <>
@@ -45,12 +47,14 @@ export default function App() {
         </nav>
       </header>
       <main>
-        <Routes>
-          <Route path="/" element={<ExplorerRoute state={state} />} />
-          <Route path="/methodology" element={<Methodology state={state} />} />
-          <Route path="/about" element={<About />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <RouteErrorBoundary key={pathname}>
+          <Routes>
+            <Route path="/" element={<ExplorerRoute state={state} />} />
+            <Route path="/methodology" element={<Methodology state={state} />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </RouteErrorBoundary>
       </main>
     </>
   );

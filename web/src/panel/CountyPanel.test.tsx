@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
-import { manifest, model, values } from "../test/fixtures";
+import { manifest, lifeExpectancy as model, values } from "../test/fixtures";
+import { model as modelFile } from "../test/fixtures/model";
+import type { Peers } from "../types";
 import { mockMatchMedia } from "../test/matchMedia";
 import type { County, Indicator } from "../types";
 import { CountyPanel } from "./CountyPanel";
@@ -14,7 +16,7 @@ const counties: County[] = [
   { fips: "02063", name: "Chugach", state: "AK" },
 ];
 
-function setup(fips: string, indicatorId: string, modelMode = false) {
+function setup(fips: string, indicatorId: string, modelMode = false, peers: Peers = modelFile.peers) {
   const indicator = manifest.indicators.find((i) => i.id === indicatorId) as Indicator;
   const county = counties.find((c) => c.fips === fips)!;
   render(
@@ -25,9 +27,12 @@ function setup(fips: string, indicatorId: string, modelMode = false) {
         entries={values[indicatorId]!}
         counties={counties}
         modelEntry={countyModel(model, "02016")}
+        target={model}
         manifest={manifest}
         values={values}
         modelMode={modelMode}
+        peers={peers}
+        onSelectCounty={() => {}}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -41,7 +46,7 @@ test("shows header, value, CI and ranks", () => {
   expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
   expect(screen.getByText("WA")).toBeInTheDocument();
-  expect(screen.getByText("9.5%")).toBeInTheDocument();
+  expect(document.querySelector(".panel-value")).toHaveTextContent("9.5%");
   expect(screen.getByText("90% CI 9.1–9.9")).toBeInTheDocument();
   expect(screen.getByText(/2nd of 2 counties/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
@@ -50,7 +55,7 @@ test("shows header, value, CI and ranks", () => {
 test("names the measure directly above the value", () => {
   setup("53033", "poverty_rate");
   const measure = screen.getByText("Poverty rate");
-  expect(measure.nextElementSibling).toBe(screen.getByText("9.5%"));
+  expect(measure.nextElementSibling).toBe(document.querySelector(".panel-value"));
 });
 
 test("names the measure directly above the missing-data message", () => {
@@ -74,9 +79,12 @@ test("suppressed county", () => {
         entries={{ "02016": { v: null, lo: null, hi: null, rank: null, state_rank: null } }}
         counties={counties}
         modelEntry={countyModel(model, "02016")}
+        target={model}
         manifest={manifest}
         values={values}
         modelMode={false}
+        peers={modelFile.peers}
+        onSelectCounty={() => {}}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -84,7 +92,7 @@ test("suppressed county", () => {
     </MemoryRouter>,
   );
   expect(screen.getAllByText("Suppressed or not available")).toHaveLength(1);
-  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+  expect(screen.getAllByRole("link", { name: /methodology/i })[0]).toHaveAttribute(
     "href",
     "/methodology#suppression",
   );
@@ -99,7 +107,7 @@ test("legacy county", () => {
       { exact: false },
     ),
   ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+  expect(screen.getAllByRole("link", { name: /methodology/i })[0]).toHaveAttribute(
     "href",
     "/methodology#legacy",
   );
@@ -108,8 +116,8 @@ test("legacy county", () => {
 
 test("neutral indicator has no ranks", () => {
   setup("02016", "pct_asian");
-  // The value also appears in the Who lives here section, so match both.
-  expect(screen.getAllByText("5.0%")).toHaveLength(2);
+  // The value also appears in Who lives here and the similar-counties table.
+  expect(screen.getAllByText("5.0%")).toHaveLength(3);
   expect(document.querySelector(".panel-ranks")).toBeNull();
 });
 
@@ -136,9 +144,12 @@ test("strip plot summary omitted for a null selection", () => {
         }}
         counties={counties}
         modelEntry={countyModel(model, "02016")}
+        target={model}
         manifest={manifest}
         values={values}
         modelMode={false}
+        peers={modelFile.peers}
+        onSelectCounty={() => {}}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={() => {}}
@@ -152,7 +163,7 @@ test("strip plot summary omitted for a null selection", () => {
 test("cautions about an estimate the source marks unreliable", () => {
   setup("02016", "poverty_rate");
   expect(screen.getByText(/marks this estimate as unreliable/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /methodology/i })).toHaveAttribute(
+  expect(screen.getAllByRole("link", { name: /methodology/i })[0]).toHaveAttribute(
     "href",
     "/methodology#unreliable",
   );
@@ -182,9 +193,12 @@ describe("phone sheet", () => {
         entries={values.poverty_rate!}
         counties={counties}
         modelEntry={countyModel(model, fips)}
+        target={model}
         manifest={manifest}
         values={values}
         modelMode={false}
+        peers={modelFile.peers}
+        onSelectCounty={() => {}}
         focusRequested={false}
         onFocusHandled={() => {}}
         onClose={onClose}
@@ -292,4 +306,20 @@ test("values mode keeps the indicator section before the model card", () => {
   const card = screen.getByRole("heading", { name: "Life expectancy model" });
   const measure = document.querySelector(".panel-measure")!;
   expect(precedes(measure, card)).toBe(true);
+});
+
+describe("similar counties", () => {
+  test.each([false, true])("renders after Who lives here (model mode %s)", (modelMode) => {
+    setup("02016", "poverty_rate", modelMode);
+    const who = screen.getByRole("heading", { name: "Who lives here" });
+    const similar = screen.getByRole("heading", { name: "Similar counties" });
+    expect(who.compareDocumentPosition(similar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Chugach, AK" })).toBeInTheDocument();
+  });
+
+  test("shows a note when there are no peers", () => {
+    setup("02016", "poverty_rate", false, { ...modelFile.peers, counties: { "02016": [] } });
+    expect(screen.getByText("Not enough data to find similar counties.")).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: /Similar counties/ })).not.toBeInTheDocument();
+  });
 });

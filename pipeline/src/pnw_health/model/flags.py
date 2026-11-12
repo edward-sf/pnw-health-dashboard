@@ -1,8 +1,9 @@
 """Tiered flags: how far a county sits from its expected value, given noise.
 
-A county is flagged only when its residual exceeds what sampling error in its
-own estimate plus model error would produce. A positive residual means the
-county is doing better than expected from the factors associated with it.
+A county is flagged only when its residual (actual minus predicted) exceeds what
+sampling error in its own estimate plus model error would produce. Which sign is
+"better" follows the target's direction: a county above its prediction is doing
+better than expected when higher is better, and worse when higher is worse.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from pnw_health.contract import Direction
 from pnw_health.model.config import Z_75, Z_90
 from pnw_health.model.features import ModelDataError
 
@@ -39,14 +41,25 @@ def sigma_model_sq(residuals: pd.Series, se: pd.Series) -> float:
     return max(value, 0.0)
 
 
-def classify(residuals: pd.Series, se: pd.Series, sigma_sq: float, mean_se_sq: float) -> Flags:
+def classify(
+    residuals: pd.Series,
+    se: pd.Series,
+    sigma_sq: float,
+    mean_se_sq: float,
+    direction: Direction,
+) -> Flags:
     """Assign tiers; `mean_se_sq` stands in for counties with no CI."""
     se_sq = (se**2).fillna(mean_se_sq)
     scale = np.sqrt(sigma_sq + se_sq)
     t75 = Z_75 * scale
     t90 = Z_90 * scale
     magnitude = residuals.abs()
-    better = residuals > 0
+    if direction == "higher_is_better":
+        better = residuals > 0
+    elif direction == "higher_is_worse":
+        better = residuals < 0
+    else:
+        raise ValueError(f"cannot flag direction {direction!r}")
 
     tier = np.select(
         [residuals.isna(), magnitude > t90, magnitude > t75],

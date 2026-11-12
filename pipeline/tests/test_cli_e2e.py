@@ -15,7 +15,7 @@ from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
 from pnw_health.contract import Manifest, ModelFile, ValuesFile, write_schemas
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
-from pnw_health.model.config import TOP_N
+from pnw_health.model.config import PEER_K, TARGETS, TOP_N
 from pnw_health.sources.acs import acs_cache_path
 from pnw_health.sources.chr import chr_cache_path
 from pnw_health.sources.places import places_cache_path
@@ -121,9 +121,15 @@ def test_full_run_writes_model(tmp_path: Path, full_zip: Path) -> None:
     with client_for(transport(full_zip)) as client:
         run_pipeline(paths, Stage.all, client=client, api_key="K")
     model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
-    assert len(model.counties) == 149
-    assert "02013" in model.counties
-    assert all(len(county.shap) <= TOP_N for county in model.counties.values())
+    assert list(model.targets) == list(TARGETS)
+    for target in model.targets.values():
+        assert len(target.counties) == 149
+        assert "02013" in target.counties
+        assert all(len(county.shap) <= TOP_N for county in target.counties.values())
+    assert model.peers.method.k == PEER_K
+    full = sum(len(found) == PEER_K for found in model.peers.counties.values())
+    assert len(model.peers.counties) == 149
+    assert full >= 0.9 * len(model.peers.counties)
 
 
 def test_legacy_counties_are_insufficient_data(tmp_path: Path, full_zip: Path) -> None:
@@ -132,8 +138,9 @@ def test_legacy_counties_are_insufficient_data(tmp_path: Path, full_zip: Path) -
         run_pipeline(paths, Stage.all, client=client, api_key="K")
     model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
     for fips in ("02063", "02066"):
-        assert model.counties[fips].flag == "insufficient_data"
-        assert model.counties[fips].actual is None
+        counties = model.targets["life_expectancy"].counties
+        assert counties[fips].flag == "insufficient_data"
+        assert counties[fips].actual is None
 
 
 def test_two_runs_are_byte_identical(tmp_path: Path, full_zip: Path) -> None:
@@ -152,7 +159,12 @@ def test_model_stage_reports_dropped_counties(
     paths = Paths.default(tmp_path / "repo")
     with client_for(transport(full_zip)) as client:
         run_pipeline(paths, Stage.all, client=client, api_key="K")
-    assert "model: 0 dropped county(ies)" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    for target_id in TARGETS:
+        assert f"model: {target_id}: 0 dropped county(ies)" in err
+    model = ModelFile.model_validate_json((paths.out / "model.json").read_text())
+    no_peers = sum(1 for found in model.peers.counties.values() if not found)
+    assert f"model: peers: {no_peers} of 149 counties have no peers" in err
 
 
 def test_fetch_error_propagates(tmp_path: Path) -> None:
@@ -309,7 +321,8 @@ def test_model_validation_failure_writes_nothing(tmp_path: Path, full_zip: Path)
         run_pipeline(paths, Stage.model, client=client)
         model_path = paths.interim / "model.json"
         model = ModelFile.model_validate_json(model_path.read_text())
-        county = next(c for c in model.counties.values() if c.predicted is not None)
+        counties = model.targets["life_expectancy"].counties
+        county = next(c for c in counties.values() if c.predicted is not None)
         county.predicted = county.predicted + 1.0
         model_path.write_text(model.model_dump_json())
         with pytest.raises(DataValidationError) as err:

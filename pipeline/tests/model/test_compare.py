@@ -11,14 +11,14 @@ from pnw_health.model.compare import (
     EXCLUSION_REASON_SOME,
     compare_behaviors,
 )
-from pnw_health.model.config import BEHAVIORS, FEATURES
+from pnw_health.model.config import BEHAVIORS, FEATURES, TARGETS
 from pnw_health.model.cv import assign_folds
 from pnw_health.model.features import ModelDataError, build_table
 from tests.model.synthetic import make_long
 
 
 def _frame() -> pd.DataFrame:
-    return build_table(make_long()).frame
+    return build_table(make_long(), target=TARGETS[0]).frame
 
 
 def _blank_state(frame: pd.DataFrame, state: str) -> pd.DataFrame:

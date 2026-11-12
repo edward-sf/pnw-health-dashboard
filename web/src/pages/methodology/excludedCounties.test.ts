@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { model } from "../../test/fixtures";
+import { lifeExpectancy as model } from "../../test/fixtures";
 import { groupExcludedCounties } from "./excludedCounties";
 
 test("groups the fixture's excluded counties by reason", () => {

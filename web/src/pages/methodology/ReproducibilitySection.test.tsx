@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { manifest, model } from "../../test/fixtures";
+import { manifest, lifeExpectancy as model } from "../../test/fixtures";
 import { ReproducibilitySection } from "./ReproducibilitySection";
 
 test("seed, folds, LightGBM version and parameters, and build date", () => {
@@ -13,4 +13,10 @@ test("seed, folds, LightGBM version and parameters, and build date", () => {
   expect(text).toContain("January 1, 2026");
   expect(text).toContain("learning_rate0.03");
   expect(text).toContain("deterministictrue");
+});
+
+test("shows the selected outcome's training counties", () => {
+  render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
+  expect(document.body.textContent).toContain("OutcomeLife expectancy");
+  expect(document.body.textContent).toContain("Training counties3,000");
 });

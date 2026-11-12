@@ -141,7 +141,9 @@ describe("App", () => {
       </MemoryRouter>,
     );
     await screen.findByRole("heading", { level: 2, name: "Life expectancy: compared with expected" });
-    await user.click(screen.getByRole("link", { name: "Methodology" }));
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Primary" })).getByRole("link", { name: "Methodology" }),
+    );
     expect(search).toBe("");
     await user.click(screen.getByRole("link", { name: "Explorer" }));
     expect(search).toBe("?i=poverty_rate&c=53033&mode=model&view=table");

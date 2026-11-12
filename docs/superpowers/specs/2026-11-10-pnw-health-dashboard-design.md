@@ -59,7 +59,7 @@ pnw-health-dashboard/
 | Source | Use | Access |
 |---|---|---|
 | CDC PLACES (county) | Model-based prevalence of chronic conditions, behaviors, prevention | Socrata API on data.cdc.gov |
-| County Health Rankings (CHR) | Life expectancy (ML target), premature death, access measures, rurality | Annual national CSV download |
+| County Health Rankings (CHR) | Model outcomes (life expectancy, premature death, injury deaths), access measures, rurality | Annual national CSV download |
 | Census ACS 5-year | Social/economic features and display indicators | Census Data API (**key required**: `CENSUS_API_KEY` env var / repo secret; keyless requests are redirected to an HTML error page) |
 | Census cartographic boundary files | County geometry (`cb_2024_us_county_5m`; same county set as 2020-vintage FIPS for the four states) | Census TIGER/cartographic downloads |
 
@@ -97,7 +97,7 @@ The four files are written as a set: into a temporary directory under `data/inte
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
-| `model.json` | Metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
+| `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value`. A top-level `peers` block (M9 spec §3.2) holds `method` `{features, k, min_features}` and `counties`: for each PNW county, its `k` nearest PNW counties on the model features, nearest first, or `[]` when it has too few features |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
@@ -105,10 +105,10 @@ All files are small enough to load up front.
 
 ## 5. Machine learning
 
-**Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of life expectancy the features leave unexplained.
+**Question answered:** given a county's social and economic profile, how does its outcome (one of three, named under Targets below) compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of the outcome the features leave unexplained.
 
 - **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
-- **Target:** CHR life expectancy. Target is configurable; v1 ships one target.
+- **Targets:** CHR life expectancy (the default), premature death and injury deaths (M9 spec §2.1). Each is modelled separately with the shared features, folds and parameters.
 - **Features:** social/economic only, from ACS and CHR — median household income, poverty rate, uninsured rate, educational attainment, unemployment, age structure (% 65+), rurality, severe housing cost burden, broadband access. Final list lives in config.
   - **Excluded:** health behaviors (on the causal path; would restate the outcome) and race/ethnicity shares (proxies for structural factors; SHAP attributions would mislead). Rationale documented on the methodology page.
   - Missing feature values: median imputation fitted within each training fold.
@@ -117,10 +117,10 @@ All files are small enough to load up front.
 - **Validation:** 5-fold CV grouped by state. Metrics: RMSE, MAE, R² — national and PNW subset.
 - **Residuals:** `residual = actual − predicted`, from out-of-fold predictions of the main LightGBM model only.
 - **Flags (two tiers):** each county gets its own threshold combining model error and its own measurement uncertainty.
-  - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's life-expectancy CI.
+  - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's CI for the selected target.
   - `σ_resid²` = variance of national OOF residuals; `σ_model² = max(σ_resid² − mean(se_i²), 0)` (removes average measurement noise already present in residuals; mean over counties with a CI).
   - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
-  - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign: positive residual = better.
+  - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign is direction-aware: for a `higher_is_better` target (life expectancy) a positive residual is better; for a `higher_is_worse` target (premature death, injury deaths) a negative residual is better.
   - `insufficient_data` when the target is null.
 - **Explanations:** TreeSHAP through LightGBM's built-in `pred_contrib`, from the fold model that produced each county's out-of-fold prediction, so `base_value` plus contributions equals `predicted`; top-5 contributions per PNW county plus global mean |SHAP| importance across all out-of-fold explanations. Contributions explain the expected value relative to the base value, not the residual.
 - **Reproducibility:** fixed seeds, pinned dependencies (uv lockfile), auto-generated model card rendered on the methodology page.
@@ -133,7 +133,7 @@ All files are small enough to load up front.
 **Why SVG + d3-geo rather than MapLibre:** a composite projection (Albers for WA/OR/ID plus a scaled Alaska inset) avoids Mercator distortion of Alaska; no tile basemap or API keys; 149 DOM elements are easy to style, test, and make accessible.
 
 ### Routes
-- `/` — Explorer. All state in URL: `?i=<indicator_id>&c=<fips>&mode=values|model&view=map|table`.
+- `/` — Explorer. All state in URL: `?i=<indicator_id>&c=<fips>&t=<target_id>&mode=values|model&view=map|table`. `t` defaults to the first model target and is kept in both modes.
 - `/methodology` — sources and vintages, harmonization rules, ML method, model card, caveats.
 - `/about` — project overview and author links.
 
@@ -145,13 +145,14 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
   - *Values mode:* direction-aware sequential color scale, quantile bins, legend; hatch pattern for suppressed/missing.
   - *Neutral indicators (Demographics):* neutral single-hue sequential scale; no ranks.
   - *Model mode:* 5-class diverging scale by flag tier (notably worse → notably better), hatch for `insufficient_data`.
-  - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode the indicator picker stays usable but dimmed, and `i` is kept for values mode; the title and legend describe life expectancy compared with expected.
+  - *Mode toggle:* a Values/Model toggle beside Map/Table sets `mode`. In model mode an "Outcome" select (the model targets, `t`) replaces the indicator picker, and `i` is kept for values mode; the title and legend describe the chosen outcome compared with expected.
   - Hover tooltip; click selects county.
 - **County panel** (right drawer on desktop, bottom sheet on mobile; phone behavior is specified in `2026-11-11-m6-methodology-polish-design.md` §5), in this order in values mode. In model mode the model card comes first, then the indicator value with its strip plot, then "Who lives here" (amended in M7, #130):
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
-  - Model card (shown in both modes): actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
+  - Model card (shown in both modes): actual vs expected value of the selected target, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
+  - "Similar counties" (last, in both modes; added in M9, #183): the selected county followed by its nearest PNW peers on the 9 social and economic features, with the peers' median. Values mode shows the indicator value; model mode shows actual, expected and flag tier. Each peer name is a button that selects that county like a map click. A county with too few features shows "Not enough data to find similar counties." The copy never relates peers to the flag and uses no causal wording.
 - **Table view:** sortable table of the current indicator across all counties (in model mode: actual, expected, difference and flag tier); together with a county search box, this is the keyboard and screen-reader path to every county.
 
 ### State and data loading
@@ -196,6 +197,4 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 - **Race-stratified outcomes** ("which groups are impacted"): CHR county measures by race/ethnicity, displayed only where not suppressed; needs its own design for suppression-heavy AK/ID counties.
 - **State health-department datasets** (WA DOH, OHA, IDHW, AK DOH) as state-specific spotlight indicators.
-- **County peer-group clustering** and "compare to similar counties."
 - **Forecasting** from time series (pending a credible approach for small counties).
-- **Additional model targets** (e.g., diabetes prevalence) — config change plus UI target picker.

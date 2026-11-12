@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from pnw_health.config import CHR_YEAR, STATES
-from pnw_health.contract import CountyModel, ModelFile
+from pnw_health.contract import CountyModel, ModelFile, TargetModel
 from pnw_health.indicators import load_catalog
 from pnw_health.model.config import ALLOWED_CATEGORIES
 from pnw_health.sources.chr import chr_cache_path
@@ -37,7 +37,7 @@ def _f(x: float | None, nd: int = 4) -> str:
     return "null" if x is None else f"{x:.{nd}f}"
 
 
-def _metrics_section(model: ModelFile) -> list[str]:
+def _metrics_section(model: TargetModel) -> list[str]:
     out = ["## Metrics", ""]
     rows = []
     for name, rm in (("ridge", model.metrics.ridge), ("lightgbm", model.metrics.lightgbm)):
@@ -75,7 +75,7 @@ def _flag_counts(counties: dict[str, CountyModel]) -> dict[str, int]:
     return counts
 
 
-def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
+def _flags_section(model: TargetModel, pop: pd.Series) -> list[str]:
     counties = model.counties
     keys = [*FLAGS, "insufficient_data"]
     out = ["## Flags by state", ""]
@@ -99,7 +99,8 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
         "",
     ]
 
-    out += ["## Mean residual by state (positive means better than expected)", ""]
+    better_sign = "positive" if model.direction == "higher_is_better" else "negative"
+    out += [f"## Mean residual by state ({better_sign} means better than expected)", ""]
     rows = []
     for fips, abbr in STATES.items():
         res = [c.residual for k, c in counties.items() if k[:2] == fips and c.residual is not None]
@@ -153,7 +154,7 @@ def _flags_section(model: ModelFile, pop: pd.Series) -> list[str]:
     return out
 
 
-def _named_section(model: ModelFile, long: pd.DataFrame) -> list[str]:
+def _named_section(model: TargetModel, long: pd.DataFrame) -> list[str]:
     out = ["## Named counties: top-5 factors associated with the prediction", ""]
     target = model.model_card.target
     for fips, name in NAMED.items():
@@ -193,7 +194,7 @@ def _named_section(model: ModelFile, long: pd.DataFrame) -> list[str]:
     return out
 
 
-def _importance_section(model: ModelFile) -> list[str]:
+def _importance_section(model: TargetModel) -> list[str]:
     cat = {i.id: i.category for i in load_catalog()}
     out = ["## Global importance and feature categories", ""]
     rows = [
@@ -216,6 +217,11 @@ def _importance_section(model: ModelFile) -> list[str]:
     for f in model.model_card.features:
         out.append(f"- {f}: {cat.get(f, 'NOT IN CATALOG')}")
     return out + [""]
+
+
+def _demoted(lines: list[str]) -> list[str]:
+    """Push each markdown heading one level down, to sit under a target's heading."""
+    return [f"#{line}" if line.startswith("#") else line for line in lines]
 
 
 def _population(root: Path) -> pd.Series:
@@ -250,17 +256,21 @@ def main(argv: list[str] | None = None) -> None:
     model = ModelFile.model_validate_json(model_path.read_text())
     long = pd.read_parquet(long_path)
     long["fips"] = long["fips"].astype(str)
-    lines = [
-        "# Model checkpoint report",
-        "",
-        f"Target: {model.model_card.target}. Training counties: "
-        f"{model.model_card.training_counties}. Folds: {model.model_card.n_folds}.",
-        "",
-    ]
-    lines += _metrics_section(model)
-    lines += _flags_section(model, _population(root))
-    lines += _named_section(model, long)
-    lines += _importance_section(model)
+    pop = _population(root)
+    lines = ["# Model checkpoint report", ""]
+    for target in model.targets.values():
+        card = target.model_card
+        lines += [
+            f"## {target.label}",
+            "",
+            f"Target: {card.target}. Training counties: {card.training_counties}. "
+            f"Folds: {card.n_folds}.",
+            "",
+        ]
+        lines += _demoted(_metrics_section(target))
+        lines += _demoted(_flags_section(target, pop))
+        lines += _demoted(_named_section(target, long))
+        lines += _demoted(_importance_section(target))
     print("\n".join(lines))
 
 

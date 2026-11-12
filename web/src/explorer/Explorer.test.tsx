@@ -1,19 +1,20 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
-import { manifest, model, topology, values } from "../test/fixtures";
+import { manifest, model, prematureDeath, topology, values } from "../test/fixtures";
+import { tierFill } from "../model/modelView";
 import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
 
-function setup(url = "/") {
+function setup(url = "/", data = { manifest, values, topology, model }) {
   const router = createMemoryRouter(
     [
       {
         path: "/",
         element: (
-          <Explorer data={{ manifest, values, topology, model }} />
+          <Explorer data={data} />
         ),
       },
     ],
@@ -52,10 +53,10 @@ test("indicator title survives filtering", async () => {
 test("changing indicator re-renders the panel", async () => {
   setup("/?i=poverty_rate&c=02016");
   expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
-  expect(screen.getByText("14.2%")).toBeInTheDocument();
+  expect(screen.getByText("14.2%", { selector: ".panel-value" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
-  expect(screen.queryByText("14.2%")).not.toBeInTheDocument();
+  expect(screen.queryByText("14.2%", { selector: ".panel-value" })).not.toBeInTheDocument();
   expect(screen.getByText("5.0%", { selector: ".panel-value" })).toBeInTheDocument();
 });
 
@@ -78,6 +79,14 @@ test("select from search moves focus to panel heading", async () => {
   await userEvent.keyboard("{ArrowDown}{Enter}");
   expect(router.state.location.search).toBe("?c=41051");
   expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+});
+
+test("clicking a peer in the panel moves focus to the new county's heading", async () => {
+  const router = setup("/?i=poverty_rate&c=53033");
+  const panel = screen.getByRole("complementary", { name: "County details" });
+  await userEvent.click(within(panel).getByRole("button", { name: /^Multnomah/ }));
+  expect(router.state.location.search).toContain("c=41051");
+  expect(screen.getByRole("heading", { level: 2, name: "Multnomah" })).toHaveFocus();
 });
 
 test("close returns focus to opener", async () => {
@@ -217,16 +226,63 @@ test("Model toggle sets mode, fills the map by tier, and shows the model title a
     screen.getByRole("heading", { level: 2, name: "Life expectancy: compared with expected" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Source: County Health Rankings, 2025 release.")).toBeInTheDocument();
-  expect(
-    screen.getByText(/Model mode shows life expectancy compared with what the model expects\./),
-  ).toBeInTheDocument();
   expect(document.querySelectorAll(".legend li")).toHaveLength(6);
 });
 
-test("picking an indicator in model mode keeps mode=model", async () => {
-  const router = setup("/?mode=model");
-  await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
-  expect(router.state.location.search).toBe("?mode=model&i=median_household_income");
+const twoTargets = {
+  ...model,
+  targets: {
+    ...model.targets,
+    premature_death: {
+      ...model.targets.life_expectancy!,
+      label: "Premature death (years lost)",
+      unit: "rate_per_100k" as const,
+      direction: "higher_is_worse" as const,
+      // Flags differ from life_expectancy's, so the map fill shows which target is rendered.
+      counties: {
+        ...model.targets.life_expectancy!.counties,
+        "53033": { ...model.targets.life_expectancy!.counties["53033"]!, flag: "notably_worse" as const },
+      },
+    },
+  },
+};
+
+function setupTwo(url: string) {
+  const router = createMemoryRouter(
+    [{ path: "/", element: <Explorer data={{ manifest, values, topology, model: twoTargets }} /> }],
+    { initialEntries: [url] },
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+test("shows the Outcome select in model mode instead of the indicator picker", async () => {
+  const router = setupTwo("/?mode=model&i=pct_asian");
+  const select = screen.getByRole("combobox", { name: "Outcome" });
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
+    "Life expectancy",
+    "Premature death (years lost)",
+  ]);
+  expect(screen.queryByRole("button", { name: "Median household income" })).not.toBeInTheDocument();
+  await userEvent.selectOptions(select, "premature_death");
+  expect(router.state.location.search).toBe("?mode=model&i=pct_asian&t=premature_death");
+  expect(screen.getByRole("combobox", { name: "Outcome" })).toHaveValue("premature_death");
+});
+
+test("the selected target drives the map fill", () => {
+  setupTwo("/?mode=model");
+  const king = () => screen.getByLabelText("King, WA").getAttribute("fill");
+  expect(king()).toBe(tierFill("notably_better"));
+  cleanup();
+  setupTwo("/?mode=model&t=premature_death");
+  expect(king()).toBe(tierFill("notably_worse"));
+  expect(king()).not.toBe(tierFill("notably_better"));
+});
+
+test("hides the Outcome select in values mode", () => {
+  setupTwo("/?t=premature_death");
+  expect(screen.queryByRole("combobox", { name: "Outcome" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Median household income" })).toBeInTheDocument();
 });
 
 test("a pending focus request doesn't fire for a different county", async () => {
@@ -343,4 +399,37 @@ test("switching to model mode with a county open puts the card first and keeps f
   const card = within(panel).getByRole("heading", { name: "Life expectancy model" });
   const measure = panel.querySelector(".panel-measure")!;
   expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test("titles the map and subtitle from the target", () => {
+  setup("/?mode=model&t=premature_death");
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Premature death (years lost): compared with expected" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/^How each county compares on premature death with what the model expects/),
+  ).toBeInTheDocument();
+});
+
+test("the table, tooltip and card follow the selected target", async () => {
+  setup("/?mode=model&view=table&t=premature_death&c=02016");
+  expect(screen.getByRole("columnheader", { name: "Premature death (years lost)" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByText(/Higher is worse for this measure/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/\+1,800 per 100k/).length).toBeGreaterThan(0);
+});
+
+test.each([
+  ["life_expectancy", "life expectancy"],
+  ["premature_death", "premature death"],
+  ["injury_deaths", "injury deaths"],
+])("the model subtitle for %s reads without parentheses", (id, name) => {
+  const injury = { ...prematureDeath, label: "Injury deaths" };
+  const withInjury = { ...model, targets: { ...model.targets, injury_deaths: injury } };
+  setup(`/?mode=model&t=${id}`, { manifest, values, topology, model: withInjury });
+  const text = document.querySelector(".indicator-description")!.textContent!;
+  expect(text).toContain(`How each county compares on ${name} with what the model expects`);
+  expect(text).not.toContain("(");
 });

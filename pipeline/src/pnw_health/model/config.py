@@ -1,10 +1,15 @@
-"""Fixed modeling choices: feature lists, seeds and the interval z-scores."""
+"""Fixed modeling choices: targets, feature lists, seeds, interval z-scores and peer settings."""
 
 from __future__ import annotations
 
 from typing import Any
 
-TARGET = "life_expectancy"
+# This order is the outcome picker's order; the web defaults to life_expectancy when present.
+TARGETS: tuple[str, ...] = (
+    "life_expectancy",
+    "premature_death",
+    "injury_deaths",
+)
 FEATURES: tuple[str, ...] = (
     "median_household_income",
     "poverty_rate",
@@ -25,6 +30,8 @@ RIDGE_ALPHA = 1.0
 Z_75 = 1.150
 Z_90 = 1.645
 TOP_N = 5
+PEER_K = 5
+PEER_MIN_FEATURES = 6
 
 # Smaller trees chosen at the M4 checkpoint; see M4 spec §3 "Checkpoint outcome".
 LGBM_PARAMS: dict[str, Any] = {

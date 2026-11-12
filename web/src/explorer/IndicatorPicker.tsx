@@ -5,7 +5,6 @@ type Props = {
   indicators: Indicator[];
   selectedId: string;
   onSelect: (id: string) => void;
-  dimmed?: boolean;
   /** Phone layout: hide the search and list behind an "Indicator: …" disclosure button. */
   collapsible?: boolean;
 };
@@ -14,7 +13,6 @@ export function IndicatorPicker({
   indicators,
   selectedId,
   onSelect,
-  dimmed = false,
   collapsible = false,
 }: Props) {
   const [filter, setFilter] = useState("");
@@ -48,7 +46,7 @@ export function IndicatorPicker({
   const selectedLabel = indicators.find((x) => x.id === selectedId)?.label ?? selectedId;
 
   return (
-    <div className={dimmed ? "picker indicator-picker--dimmed" : "picker"} onKeyDown={onKeyDown}>
+    <div className="picker" onKeyDown={onKeyDown}>
       {collapsible && (
         <button
           ref={toggleRef}
@@ -62,12 +60,6 @@ export function IndicatorPicker({
       )}
       {(!collapsible || open) && (
         <>
-          {dimmed && (
-            <p className="picker-note">
-              Model mode shows life expectancy compared with what the model expects. Your indicator
-              choice is kept for values mode.
-            </p>
-          )}
           <label htmlFor={inputId} className="picker-label">
             Filter indicators
           </label>

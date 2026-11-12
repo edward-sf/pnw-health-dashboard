@@ -1,9 +1,13 @@
+import { defaultTargetId } from "../model/targetView";
 import type { Manifest } from "../types";
 
-export type ParamKey = "i" | "c" | "mode" | "view";
+export { defaultTargetId };
+
+export type ParamKey = "i" | "c" | "t" | "mode" | "view";
 export type ExplorerParams = {
   indicator: string;
   county: string | null;
+  target: string;
   mode: "values" | "model";
   view: "map" | "table";
   invalid: ParamKey[];
@@ -13,6 +17,7 @@ export function parseParams(
   search: string,
   manifest: Manifest,
   fipsSet: ReadonlySet<string>,
+  targetIds: readonly string[],
 ): ExplorerParams {
   const q = new URLSearchParams(search);
   const invalid: ParamKey[] = [];
@@ -32,10 +37,17 @@ export function parseParams(
     else invalid.push("c");
   }
 
+  let target = defaultTargetId(targetIds);
+  const t = q.get("t");
+  if (t !== null) {
+    if (targetIds.includes(t)) target = t;
+    else invalid.push("t");
+  }
+
   const mode = q.get("mode");
   if (mode !== null && mode !== "values" && mode !== "model") invalid.push("mode");
   const view = q.get("view");
   if (view !== null && view !== "map" && view !== "table") invalid.push("view");
 
-  return { indicator, county, mode: mode === "model" ? "model" : "values", view: view === "table" ? "table" : "map", invalid };
+  return { indicator, county, target, mode: mode === "model" ? "model" : "values", view: view === "table" ? "table" : "map", invalid };
 }

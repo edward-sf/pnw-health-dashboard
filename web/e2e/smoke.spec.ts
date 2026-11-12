@@ -17,7 +17,7 @@ test("table view and county search", async ({ page }) => {
   await page.goto("./");
   await page.getByRole("button", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
-  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.getByRole("combobox", { name: "Search counties" }).fill("Multnomah");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
@@ -88,7 +88,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await page.getByRole("button", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
-  await expect(page.locator("tbody tr")).toHaveCount(149);
+  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.goBack();
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(page).toHaveURL(/[?&]mode=model/);
@@ -100,6 +100,35 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.locator(".legend")).toContainText("%");
   expect(new URL(page.url()).search).toBe("?i=poverty_rate");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
+});
+
+test("model mode: change the outcome", async ({ page }) => {
+  await page.goto("./?mode=model&c=53033");
+  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await page
+    .getByRole("combobox", { name: "Outcome" })
+    .selectOption({ label: "Premature death (years lost)" });
+  await expect(page).toHaveURL(/[?&]t=premature_death/);
+  await expect(page).toHaveURL(/[?&]c=53033/);
+  await expect(
+    page.getByText("Premature death (years lost): compared with expected").first(),
+  ).toBeVisible();
+});
+
+test("select a similar county", async ({ page }) => {
+  await page.goto("./?c=53033");
+  const panel = page.getByRole("complementary", { name: "County details" });
+  const similar = panel.getByRole("region", { name: "Similar counties" });
+  const peer = similar.getByRole("button").first();
+  const label = (await peer.textContent())?.trim() ?? "";
+  expect(label).toMatch(/^.+, [A-Z]{2}$/);
+  const name = label.replace(/, [A-Z]{2}$/, "");
+  await peer.click();
+  await expect(page).toHaveURL(/[?&]c=\d{5}/);
+  await expect(page).not.toHaveURL(/[?&]c=53033/);
+  const heading = panel.getByRole("heading", { level: 2 });
+  await expect(heading).toContainText(name);
+  await expect(heading).toBeFocused();
 });
 
 test("methodology and about pages render", async ({ page }) => {
@@ -114,10 +143,11 @@ test("methodology and about pages render", async ({ page }) => {
 });
 
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
-  // King County (53033) shows no panel Methodology link, so use Chugach, which has no model result.
+  // King County (53033) has a model result, so its model card has no Methodology link. Chugach
+  // doesn't, so its card links to #no-result (the panel's Similar counties link is a different one).
   await page.goto("./?i=poverty_rate&c=02063&mode=model");
   const panel = page.getByRole("complementary", { name: "County details" });
-  await panel.getByRole("link", { name: "Methodology", exact: true }).click();
+  await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
   const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
   await expect(heading).toBeFocused();
