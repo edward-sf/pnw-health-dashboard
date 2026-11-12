@@ -7,7 +7,14 @@ import pandas as pd
 import pytest
 
 from pnw_health import export
-from pnw_health.contract import Manifest, ModelFile, ShapEntry, SourceVintage, ValuesFile
+from pnw_health.contract import (
+    Manifest,
+    ModelFile,
+    ShapEntry,
+    SourceVintage,
+    TargetModel,
+    ValuesFile,
+)
 from pnw_health.export import build_values_file, finalize_model, write_exports
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.ranks import add_ranks
@@ -169,37 +176,41 @@ def test_unreliable_exported_only_when_true() -> None:
     assert "unreliable" not in dumped["x"]["53003"]
 
 
+def le(model: ModelFile) -> TargetModel:
+    return model.targets["life_expectancy"]
+
+
 def test_finalize_keeps_top_five_by_absolute_value() -> None:
     contributions = {"a": 0.1, "b": -5.0, "c": 4.0, "d": -3.0, "e": 2.0, "f": 1.0, "g": 0.2}
     shap = [ShapEntry(feature=k, value=1.0, contribution=v) for k, v in contributions.items()]
     final = finalize_model(make_model_file({"53001": make_county_model(shap=shap)}))
-    assert [e.feature for e in final.counties["53001"].shap] == ["b", "c", "d", "e", "f"]
+    assert [e.feature for e in le(final).counties["53001"].shap] == ["b", "c", "d", "e", "f"]
 
 
 def test_finalize_ranks_before_rounding() -> None:
     contributions = {"a": 1.00001, "b": 1.00002, "c": 3.0, "d": 4.0, "e": 5.0, "f": 6.0}
     shap = [ShapEntry(feature=k, value=1.0, contribution=v) for k, v in contributions.items()]
     final = finalize_model(make_model_file({"53001": make_county_model(shap=shap)}))
-    assert [e.feature for e in final.counties["53001"].shap] == ["f", "e", "d", "c", "b"]
+    assert [e.feature for e in le(final).counties["53001"].shap] == ["f", "e", "d", "c", "b"]
 
 
 def test_finalize_rounds_to_four_decimals() -> None:
     shap = [ShapEntry(feature="a", value=1.23456, contribution=-0.98765)]
     county = make_county_model(predicted=77.123456, shap=shap)
     final = finalize_model(make_model_file({"53001": county}))
-    assert final.counties["53001"].predicted == 77.1235
-    assert final.counties["53001"].shap[0].value == 1.2346
-    assert final.counties["53001"].shap[0].contribution == -0.9877
-    assert final.thresholds.sigma_model == 1.2346
-    assert final.metrics.lightgbm.national.rmse == 1.2346
-    assert final.metrics.lightgbm.national.n == 10
-    assert final.model_card.lightgbm_params["deterministic"] is True
+    assert le(final).counties["53001"].predicted == 77.1235
+    assert le(final).counties["53001"].shap[0].value == 1.2346
+    assert le(final).counties["53001"].shap[0].contribution == -0.9877
+    assert le(final).thresholds.sigma_model == 1.2346
+    assert le(final).metrics.lightgbm.national.rmse == 1.2346
+    assert le(final).metrics.lightgbm.national.n == 10
+    assert le(final).model_card.lightgbm_params["deterministic"] is True
 
 
 def test_finalize_leaves_input_full_precision() -> None:
     model = make_model_file({"53001": make_county_model(predicted=77.123456)})
     finalize_model(model)
-    assert model.counties["53001"].predicted == 77.123456
+    assert le(model).counties["53001"].predicted == 77.123456
 
 
 def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
@@ -209,7 +220,7 @@ def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
     write_exports(out, make_manifest(), vf, TOPOLOGY, finalize_model(model), staging=tmp_path / "s")
     text = (out / "model.json").read_text()
     assert "NaN" not in text
-    assert json.loads(text)["counties"]["02063"]["predicted"] is None
+    assert json.loads(text)["targets"]["life_expectancy"]["counties"]["02063"]["predicted"] is None
 
 
 def _export_args() -> tuple[Manifest, ValuesFile, ModelFile]:

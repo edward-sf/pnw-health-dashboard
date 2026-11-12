@@ -22,6 +22,7 @@ from pnw_health.contract import (
     ModelFile,
     ModelMetricsBlock,
     ShapEntry,
+    TargetModel,
     Thresholds,
 )
 from pnw_health.indicators import Indicator
@@ -32,13 +33,13 @@ from pnw_health.model.config import (
     LGBM_PARAMS,
     N_FOLDS,
     SEED,
-    TARGET,
+    TARGETS,
     Z_75,
     Z_90,
 )
 from pnw_health.model.cv import assign_folds, fit_lightgbm_oof, fit_ridge_oof, score_regions
 from pnw_health.model.explain import global_importance, ranked_contributions
-from pnw_health.model.features import build_table, check_features
+from pnw_health.model.features import ModelDataError, build_table, check_features, check_targets
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
 from pnw_health.numeric import nan_to_none
 
@@ -68,18 +69,31 @@ NO_DATA = CountyModel(
 
 
 def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
-    """Fit, flag and explain from the national long table, at full precision."""
+    """Fit, flag and explain every target from the national long table, at full precision."""
     check_features(FEATURES, catalog)
-    table = build_table(long)
-    frame = table.frame
-    folds = assign_folds(frame["state"])
-    ridge = fit_ridge_oof(frame, FEATURES, folds)
-    lgbm = fit_lightgbm_oof(frame, FEATURES, folds)
+    check_targets(TARGETS, catalog)
+    by_id = {ind.id: ind for ind in catalog}
+    return ModelFile(targets={name: run_target(long, by_id[name]) for name in TARGETS})
 
-    residuals = frame["target"] - lgbm.predicted
-    se = se_from_ci(frame["ci_low"], frame["ci_high"])
-    sigma_sq = sigma_model_sq(residuals, se)
-    flags = classify(residuals, se, sigma_sq, float((se**2).mean()))
+
+def run_target(long: pd.DataFrame, target: Indicator) -> TargetModel:
+    """Fit, flag and explain one target. A data problem names the target."""
+    if target.direction == "neutral":
+        raise ModelDataError(f"{target.id}: direction 'neutral' cannot be flagged")
+    try:
+        table = build_table(long, target=target.id)
+        frame = table.frame
+        folds = assign_folds(frame["state"])
+        ridge = fit_ridge_oof(frame, FEATURES, folds)
+        lgbm = fit_lightgbm_oof(frame, FEATURES, folds)
+
+        residuals = frame["target"] - lgbm.predicted
+        se = se_from_ci(frame["ci_low"], frame["ci_high"])
+        sigma_sq = sigma_model_sq(residuals, se)
+        flags = classify(residuals, se, sigma_sq, float((se**2).mean()))
+        behaviors_comparison = compare_behaviors(frame, FEATURES, BEHAVIORS, folds)
+    except ModelDataError as err:
+        raise ModelDataError(f"{target.id}: {err}") from err
     feature_values = frame[list(FEATURES)]
 
     counties: dict[str, CountyModel] = {}
@@ -106,12 +120,15 @@ def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
             ],
         )
 
-    return ModelFile(
+    return TargetModel(
+        label=target.label,
+        unit=target.unit,
+        direction=target.direction,
         metrics=ModelMetricsBlock(
             ridge=score_regions(frame, ridge),
             lightgbm=score_regions(frame, lgbm.predicted),
         ),
-        behaviors_comparison=compare_behaviors(frame, FEATURES, BEHAVIORS, folds),
+        behaviors_comparison=behaviors_comparison,
         global_importance=[
             ImportanceEntry(feature=feature, mean_abs_shap=value)
             for feature, value in global_importance(lgbm.contributions)
@@ -119,7 +136,7 @@ def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
         thresholds=Thresholds(sigma_model=math.sqrt(sigma_sq), z_75=Z_75, z_90=Z_90),
         counties=counties,
         model_card=ModelCard(
-            target=TARGET,
+            target=target.id,
             training_counties=len(frame),
             features=list(FEATURES),
             excluded_counties=[

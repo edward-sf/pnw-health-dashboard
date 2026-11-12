@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { model } from "../test/fixtures";
+import { lifeExpectancy as model } from "../test/fixtures";
 import { countyModel } from "../model/modelView";
 import { sortModelRows, type ModelRow } from "./sortModelRows";
 

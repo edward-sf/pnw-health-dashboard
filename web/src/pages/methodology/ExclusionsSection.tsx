@@ -1,4 +1,4 @@
-import type { ModelFile } from "../../types";
+import type { TargetModel } from "../../types";
 import { groupExcludedCounties } from "./excludedCounties";
 import { formatCount, joinList } from "./format";
 import { MetricsTable } from "./MetricsTable";
@@ -6,7 +6,7 @@ import { stateNameForFips } from "./stateFipsNames";
 
 const counties = (n: number) => `${formatCount(n)} ${n === 1 ? "county" : "counties"}`;
 
-export function ExclusionsSection({ model }: { model: ModelFile }) {
+export function ExclusionsSection({ model }: { model: TargetModel }) {
   const comparison = model.behaviors_comparison;
   const groups = groupExcludedCounties(model.model_card.excluded_counties);
   return (

@@ -1,4 +1,4 @@
-import type { ModelFile } from "../../types";
+import type { TargetModel } from "../../types";
 
 function formatDate(iso: string): string {
   const date = new Date(iso);
@@ -12,7 +12,7 @@ function formatDate(iso: string): string {
       });
 }
 
-export function ReproducibilitySection({ model, builtAt }: { model: ModelFile; builtAt: string }) {
+export function ReproducibilitySection({ model, builtAt }: { model: TargetModel; builtAt: string }) {
   const card = model.model_card;
   return (
     <section aria-labelledby="model-card">

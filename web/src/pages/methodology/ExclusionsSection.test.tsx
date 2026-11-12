@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { model } from "../../test/fixtures";
+import { lifeExpectancy as model } from "../../test/fixtures";
 import { ExclusionsSection } from "./ExclusionsSection";
 
 test("feature groups, behaviors comparison and excluded counties", () => {

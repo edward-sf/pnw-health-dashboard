@@ -9,7 +9,7 @@ import pandas as pd
 
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
-from pnw_health.model.config import ALLOWED_CATEGORIES, BEHAVIORS, FEATURES, TARGET
+from pnw_health.model.config import ALLOWED_CATEGORIES, BEHAVIORS, FEATURES
 
 
 class ModelDataError(PipelineError, ValueError):
@@ -28,7 +28,8 @@ def build_table(
     long: pd.DataFrame,
     features: Sequence[str] = FEATURES,
     behaviors: Sequence[str] = BEHAVIORS,
-    target: str = TARGET,
+    *,
+    target: str,
 ) -> ModelTable:
     """Pivot the long table to one row per county.
 
@@ -76,6 +77,21 @@ def check_features(features: Sequence[str], catalog: list[Indicator]) -> None:
                 f"feature {name!r} has category {ind.category!r}; "
                 f"allowed: {', '.join(sorted(ALLOWED_CATEGORIES))}"
             )
+
+
+def check_targets(targets: Sequence[str], catalog: list[Indicator]) -> None:
+    """Fail unless every target is a catalog outcome with a CI and a better/worse direction."""
+    by_id = {ind.id: ind for ind in catalog}
+    for name in targets:
+        ind = by_id.get(name)
+        if ind is None:
+            raise ModelDataError(f"target {name!r} is not in the indicator catalog")
+        if ind.category != "Outcomes":
+            raise ModelDataError(f"target {name!r} has category {ind.category!r}; need 'Outcomes'")
+        if ind.ci_level is None:
+            raise ModelDataError(f"target {name!r} has no ci_level; flags need a CI")
+        if ind.direction == "neutral":
+            raise ModelDataError(f"target {name!r} has direction 'neutral'; flags need a direction")
 
 
 def impute_fold(

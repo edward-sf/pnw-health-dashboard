@@ -7,10 +7,10 @@ from collections import Counter
 import pandas as pd
 
 from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
-from pnw_health.contract import CountyModel, ModelFile
+from pnw_health.contract import CountyModel, ModelFile, TargetModel
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
-from pnw_health.model.config import ALLOWED_CATEGORIES, TARGET
+from pnw_health.model.config import ALLOWED_CATEGORIES
 
 NON_NEGATIVE_UNITS = frozenset({"dollars", "count", "rate_per_100k"})
 ADDITIVITY_TOLERANCE = 1e-6
@@ -116,7 +116,7 @@ def _close(a: float, b: float) -> bool:
 
 
 def _stale_counties(
-    model: ModelFile, values: pd.DataFrame, has_target: set[str]
+    target_id: str, model: TargetModel, values: pd.DataFrame, has_target: set[str]
 ) -> tuple[list[str], list[str]]:
     """Counties whose model actual or SHAP feature values differ from the current data."""
     present = values[values.value.notna()]
@@ -131,7 +131,7 @@ def _stale_counties(
     for fips, county in sorted(model.counties.items()):
         if county.predicted is None or fips not in has_target:
             continue
-        actual = lookup.get((fips, TARGET))
+        actual = lookup.get((fips, target_id))
         if county.actual is None or actual is None or not _close(county.actual, actual):
             stale_actual.append(fips)
         for entry in county.shap:
@@ -144,20 +144,21 @@ def _stale_counties(
     return stale_actual, stale_shap
 
 
-def validate_model(
-    model: ModelFile,
+def _validate_target(
+    target_id: str,
+    model: TargetModel,
     values: pd.DataFrame,
     county_fips: set[str],
     catalog: list[Indicator],
-) -> None:
-    """Check a full-precision model against PNW display data; collect every problem, then raise."""
+) -> list[str]:
+    """Problems with one target's model; the caller prefixes them with the target id."""
     problems: list[str] = []
 
     missing = sorted(county_fips - set(model.counties))
     if missing:
         problems.append(f"model is missing counties: {', '.join(missing)}")
 
-    targets = values[(values.indicator_id == TARGET) & values.value.notna()]
+    targets = values[(values.indicator_id == target_id) & values.value.notna()]
     has_target = set(targets.fips)
     insufficient = {f for f, c in model.counties.items() if c.flag == "insufficient_data"}
     unflagged = sorted(insufficient & has_target)
@@ -181,7 +182,7 @@ def validate_model(
     if outside:
         problems.append(f"model has counties outside the PNW: {', '.join(outside)}; {RERUN_MODEL}")
 
-    stale_actual, stale_shap = _stale_counties(model, values, has_target)
+    stale_actual, stale_shap = _stale_counties(target_id, model, values, has_target)
     if stale_actual:
         problems.append(
             f"model actual does not match the current data for: {', '.join(stale_actual)}; "
@@ -198,5 +199,20 @@ def validate_model(
     if excluded:
         problems.append(f"model uses features outside allowed categories: {', '.join(excluded)}")
 
+    return problems
+
+
+def validate_model(
+    model: ModelFile,
+    values: pd.DataFrame,
+    county_fips: set[str],
+    catalog: list[Indicator],
+) -> None:
+    """Check a full-precision model against PNW display data; collect every problem, then raise."""
+    problems = [
+        f"{target_id}: {problem}"
+        for target_id, target in model.targets.items()
+        for problem in _validate_target(target_id, target, values, county_fips, catalog)
+    ]
     if problems:
         raise DataValidationError(problems)

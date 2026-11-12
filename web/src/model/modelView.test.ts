@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
-import { model } from "../test/fixtures";
+import { lifeExpectancy as model } from "../test/fixtures";
 import {
   countyModel,
   hasModelResult,

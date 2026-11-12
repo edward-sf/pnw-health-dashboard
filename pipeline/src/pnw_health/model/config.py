@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-TARGET = "life_expectancy"
+# The first target is the default everywhere.
+TARGETS: tuple[str, ...] = (
+    "life_expectancy",
+    "premature_death",
+    "injury_deaths",
+    "low_birth_weight",
+)
 FEATURES: tuple[str, ...] = (
     "median_household_income",
     "poverty_rate",

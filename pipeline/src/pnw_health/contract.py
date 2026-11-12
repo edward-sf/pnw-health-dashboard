@@ -20,7 +20,7 @@ from pydantic import (
     model_serializer,
 )
 
-from pnw_health.indicators import Indicator
+from pnw_health.indicators import Indicator, Unit
 
 
 class SourceVintage(BaseModel):
@@ -194,15 +194,26 @@ class ModelMetricsBlock(BaseModel):
     lightgbm: RegionMetrics
 
 
-class ModelFile(BaseModel):
+class TargetModel(BaseModel):
+    """Everything the model says about one outcome."""
+
     model_config = ConfigDict(extra="forbid")
 
+    label: str
+    unit: Unit
+    direction: Literal["higher_is_better", "higher_is_worse"]
     metrics: ModelMetricsBlock
     behaviors_comparison: BehaviorsComparison
     global_importance: list[ImportanceEntry]
     thresholds: Thresholds
     counties: dict[str, CountyModel]
     model_card: ModelCard
+
+
+class ModelFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    targets: dict[str, TargetModel]
 
 
 SCHEMAS: dict[str, type[BaseModel]] = {

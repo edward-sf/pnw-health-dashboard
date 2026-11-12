@@ -394,6 +394,74 @@
       "title": "ShapEntry",
       "type": "object"
     },
+    "TargetModel": {
+      "additionalProperties": false,
+      "description": "Everything the model says about one outcome.",
+      "properties": {
+        "behaviors_comparison": {
+          "$ref": "#/$defs/BehaviorsComparison"
+        },
+        "counties": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CountyModel"
+          },
+          "title": "Counties",
+          "type": "object"
+        },
+        "direction": {
+          "enum": [
+            "higher_is_better",
+            "higher_is_worse"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "global_importance": {
+          "items": {
+            "$ref": "#/$defs/ImportanceEntry"
+          },
+          "title": "Global Importance",
+          "type": "array"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "metrics": {
+          "$ref": "#/$defs/ModelMetricsBlock"
+        },
+        "model_card": {
+          "$ref": "#/$defs/ModelCard"
+        },
+        "thresholds": {
+          "$ref": "#/$defs/Thresholds"
+        },
+        "unit": {
+          "enum": [
+            "percent",
+            "dollars",
+            "years",
+            "rate_per_100k",
+            "count"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "unit",
+        "direction",
+        "metrics",
+        "behaviors_comparison",
+        "global_importance",
+        "thresholds",
+        "counties",
+        "model_card"
+      ],
+      "title": "TargetModel",
+      "type": "object"
+    },
     "Thresholds": {
       "additionalProperties": false,
       "properties": {
@@ -421,40 +489,16 @@
   },
   "additionalProperties": false,
   "properties": {
-    "behaviors_comparison": {
-      "$ref": "#/$defs/BehaviorsComparison"
-    },
-    "counties": {
+    "targets": {
       "additionalProperties": {
-        "$ref": "#/$defs/CountyModel"
+        "$ref": "#/$defs/TargetModel"
       },
-      "title": "Counties",
+      "title": "Targets",
       "type": "object"
-    },
-    "global_importance": {
-      "items": {
-        "$ref": "#/$defs/ImportanceEntry"
-      },
-      "title": "Global Importance",
-      "type": "array"
-    },
-    "metrics": {
-      "$ref": "#/$defs/ModelMetricsBlock"
-    },
-    "model_card": {
-      "$ref": "#/$defs/ModelCard"
-    },
-    "thresholds": {
-      "$ref": "#/$defs/Thresholds"
     }
   },
   "required": [
-    "metrics",
-    "behaviors_comparison",
-    "global_importance",
-    "thresholds",
-    "counties",
-    "model_card"
+    "targets"
   ],
   "title": "ModelFile",
   "type": "object"
