@@ -102,6 +102,35 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
 });
 
+test("model mode: change the outcome", async ({ page }) => {
+  await page.goto("./?mode=model&c=53033");
+  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await page
+    .getByRole("combobox", { name: "Outcome" })
+    .selectOption({ label: "Premature death (years lost)" });
+  await expect(page).toHaveURL(/[?&]t=premature_death/);
+  await expect(page).toHaveURL(/[?&]c=53033/);
+  await expect(
+    page.getByText("Premature death (years lost): compared with expected").first(),
+  ).toBeVisible();
+});
+
+test("select a similar county", async ({ page }) => {
+  await page.goto("./?c=53033");
+  const panel = page.getByRole("complementary", { name: "County details" });
+  const similar = panel.getByRole("region", { name: "Similar counties" });
+  const peer = similar.getByRole("button").first();
+  const label = (await peer.textContent())?.trim() ?? "";
+  expect(label).toMatch(/^.+, [A-Z]{2}$/);
+  const name = label.replace(/, [A-Z]{2}$/, "");
+  await peer.click();
+  await expect(page).toHaveURL(/[?&]c=\d{5}/);
+  await expect(page).not.toHaveURL(/[?&]c=53033/);
+  const heading = panel.getByRole("heading", { level: 2 });
+  await expect(heading).toContainText(name);
+  await expect(heading).toBeFocused();
+});
+
 test("methodology and about pages render", async ({ page }) => {
   await page.goto("./methodology");
   await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
