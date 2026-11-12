@@ -62,7 +62,24 @@ test("displayed numbers reconcile exactly at 2 decimals (02130-like values)", ()
 
 test("contributions are formatted in the target's unit", () => {
   const bars = buildShapBars(prematureDeath.counties["53033"]!, indicators, "rate_per_100k");
-  expect(bars[0]!.contributionText).toBe("−300.00 per 100k");
-  expect(bars.at(-1)!.contributionText).toBe("+200.00 per 100k");
+  expect(bars[0]!.contributionText).toBe("−300 per 100k");
+  expect(bars.at(-1)!.contributionText).toBe("+200 per 100k");
   expect(bars.some((b) => b.contributionText.includes("years"))).toBe(false);
+});
+
+test("rate contributions are whole numbers and still reconcile exactly", () => {
+  const entry: CountyModel = {
+    ...prematureDeath.counties["53033"]!,
+    base_value: 7000.4,
+    predicted: 11510.2,
+    shap: [
+      { feature: "bachelors_or_higher", value: 43.0, contribution: 4509.77 },
+      { feature: "poverty_rate", value: 9.5, contribution: -0.4 },
+    ],
+  };
+  const bars = buildShapBars(entry, indicators, "rate_per_100k");
+  expect(bars[0]!.contributionText).toBe("+4,510 per 100k");
+  expect(bars.every((b) => Number.isInteger(b.contribution))).toBe(true);
+  const total = Math.round(entry.base_value!) + bars.reduce((t, b) => t + b.contribution, 0);
+  expect(total).toBe(Math.round(entry.predicted!));
 });

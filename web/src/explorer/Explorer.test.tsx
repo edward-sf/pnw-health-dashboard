@@ -409,6 +409,6 @@ test("the table, tooltip and card follow the selected target", async () => {
   expect(
     screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
   ).toBeInTheDocument();
-  expect(screen.getByText(/Higher is worse for this measure/)).toBeInTheDocument();
-  expect(screen.getAllByText(/\+1,800\.0 per 100k/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Higher is worse for this measure/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/\+1,800 per 100k/).length).toBeGreaterThan(0);
 });

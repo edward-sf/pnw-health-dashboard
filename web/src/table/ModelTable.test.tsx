@@ -121,7 +121,7 @@ test("labels columns and formats cells from the target", () => {
     "Premature death (years lost) compared with expected, by county",
   );
   const r = rowOf("Aleutians West, AK");
-  expect(r).toHaveTextContent("8,800.0 per 100k");
-  expect(r).toHaveTextContent("+1,800.0 per 100k");
+  expect(r).toHaveTextContent("8,800 per 100k");
+  expect(r).toHaveTextContent("+1,800 per 100k");
   expect(document.querySelector("tbody")!.textContent).not.toContain("years");
 });

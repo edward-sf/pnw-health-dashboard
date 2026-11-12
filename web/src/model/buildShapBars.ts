@@ -1,4 +1,5 @@
 import { formatSigned, formatValue } from "../color/formatValue";
+import { modelDigits } from "./modelView";
 import type { CountyModel, Indicator, Unit } from "../types";
 
 export type ShapBar = {
@@ -19,15 +20,20 @@ function labelFor(feature: string, value: number | null, indicators: Indicator[]
   return `${name}: ${shown}`;
 }
 
-const round2 = (v: number) => Math.round(v * 100) / 100;
+const roundTo = (v: number, digits: number) => {
+  const f = 10 ** digits;
+  return Math.round(v * f) / f;
+};
 
 export function buildShapBars(entry: CountyModel, indicators: Indicator[], unit: Unit): ShapBar[] {
   if (entry.predicted === null || entry.base_value === null) return [];
+  const digits = modelDigits(unit, 2) ?? 2;
+  const round2 = (v: number) => roundTo(v, digits);
   const bars: ShapBar[] = entry.shap.map((s) => ({
     key: s.feature,
     label: labelFor(s.feature, s.value, indicators),
     contribution: round2(s.contribution),
-    contributionText: formatSigned(round2(s.contribution), unit, 2),
+    contributionText: formatSigned(round2(s.contribution), unit, digits),
     other: false,
   }));
   const rest = round2(
@@ -37,7 +43,7 @@ export function buildShapBars(entry: CountyModel, indicators: Indicator[], unit:
     key: "other",
     label: "All other factors",
     contribution: rest,
-    contributionText: formatSigned(rest, unit, 2),
+    contributionText: formatSigned(rest, unit, digits),
     other: true,
   });
   return bars;

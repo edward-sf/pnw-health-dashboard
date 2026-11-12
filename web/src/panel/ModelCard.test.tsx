@@ -126,11 +126,11 @@ test("heads the card with the target label", () => {
 
 test("formats actual and expected in the target unit", () => {
   const { container } = renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
-  expect(screen.getByText("Actual 8,800.0 per 100k")).toBeInTheDocument();
-  expect(screen.getByText("Expected 7,000.0 per 100k")).toBeInTheDocument();
-  expect(screen.getByText("Difference +1,800.0 per 100k")).toBeInTheDocument();
-  expect(container.textContent).toContain("beyond ±1,200.0 per 100k is flagged");
-  expect(container.textContent).toContain("starting point of 7,000.00 per 100k to 7,000.00 per 100k.");
+  expect(screen.getByText("Actual 8,800 per 100k")).toBeInTheDocument();
+  expect(screen.getByText("Expected 7,000 per 100k")).toBeInTheDocument();
+  expect(screen.getByText("Difference +1,800 per 100k")).toBeInTheDocument();
+  expect(container.textContent).toContain("beyond ±1,200 per 100k is flagged");
+  expect(container.textContent).toContain("starting point of 7,000 per 100k to 7,000 per 100k.");
   expect(container.textContent).not.toMatch(/\d years/);
 });
 

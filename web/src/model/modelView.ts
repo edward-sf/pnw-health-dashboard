@@ -28,6 +28,10 @@ const FILLS: Record<Flag, string> = {
   insufficient_data: HATCH_FILL,
 };
 
+/** Decimal places for model figures: rates are whole numbers, other units keep `fallback`. */
+export const modelDigits = (unit: Unit, fallback?: number): number | undefined =>
+  unit === "rate_per_100k" ? 0 : fallback;
+
 export const tierLabel = (flag: Flag): string => LABELS[flag];
 export const tierFill = (flag: Flag): string => FILLS[flag];
 
@@ -90,5 +94,5 @@ export function modelTooltip(name: string, state: string, entry: CountyModel, un
   if (!hasModelResult(entry) || entry.residual === null) {
     return `${name}, ${state}: not enough data for the model`;
   }
-  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, unit)})`;
+  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, unit, modelDigits(unit))})`;
 }

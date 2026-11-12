@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatSigned, formatValue } from "../color/formatValue";
-import { tierLabel } from "../model/modelView";
+import { modelDigits, tierLabel } from "../model/modelView";
 import type { TargetModel } from "../types";
 import { CountyCell } from "./CountyCell";
 import { SortHeader } from "./SortHeader";
@@ -19,6 +19,7 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
     key: "result",
     dir: "asc",
   });
+  const d = modelDigits(target.unit);
   const sorted = useMemo(() => sortModelRows(rows, sort.key, sort.dir), [rows, sort]);
 
   return (
@@ -50,9 +51,9 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
                   onSelect={onSelect}
                 />
                 <td>{r.state}</td>
-                <td className="num">{actual !== null ? formatValue(actual, target.unit) : ""}</td>
-                <td className="num">{predicted !== null ? formatValue(predicted, target.unit) : ""}</td>
-                <td className="num">{residual !== null ? formatSigned(residual, target.unit) : ""}</td>
+                <td className="num">{actual !== null ? formatValue(actual, target.unit, d) : ""}</td>
+                <td className="num">{predicted !== null ? formatValue(predicted, target.unit, d) : ""}</td>
+                <td className="num">{residual !== null ? formatSigned(residual, target.unit, d) : ""}</td>
                 <td>{tierLabel(flag)}</td>
               </tr>
             );

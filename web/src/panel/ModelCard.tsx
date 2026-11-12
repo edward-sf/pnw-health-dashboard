@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
 import { buildShapBars, type ShapBar } from "../model/buildShapBars";
-import { type CompleteModel, hasModelResult, tierFill, tierLabel } from "../model/modelView";
+import { type CompleteModel, hasModelResult, modelDigits, tierFill, tierLabel } from "../model/modelView";
 import { directionNote } from "../model/targetView";
 import type { County, CountyModel, Indicator, TargetModel } from "../types";
 import { ResidualRange } from "./ResidualRange";
@@ -45,17 +45,18 @@ function ModelResult({
 }) {
   const { unit } = target;
   const note = directionNote(target);
+  const d = modelDigits(unit);
   const { actual, predicted, residual, threshold_75, threshold_90, base_value } = entry;
   return (
     <>
       <div className="model-compare">
         <h4>How this county compares</h4>
         <p className="model-numbers">
-          <span>Actual {formatValue(actual, unit)}</span>
+          <span>Actual {formatValue(actual, unit, d)}</span>
           {" · "}
-          <span>Expected {formatValue(predicted, unit)}</span>
+          <span>Expected {formatValue(predicted, unit, d)}</span>
           {" · "}
-          <strong>Difference {formatSigned(residual, unit)}</strong>
+          <strong>Difference {formatSigned(residual, unit, d)}</strong>
         </p>
         {note && <p className="model-direction-note">{note}</p>}
         <p className="model-rounded-note">Figures are rounded.</p>
@@ -75,9 +76,10 @@ function ModelResult({
           threshold90={threshold_90}
           flag={entry.flag}
           unit={unit}
+          note={note}
         />
         <p className="model-range-note">
-          {`A difference beyond ±${formatValue(threshold_75, unit)} is flagged as somewhat better or worse, and beyond ±${formatValue(threshold_90, unit)} as notably. These ranges allow for the model's typical error and ${
+          {`A difference beyond ±${formatValue(threshold_75, unit, d)} is flagged as somewhat better or worse, and beyond ±${formatValue(threshold_90, unit, d)} as notably. These ranges allow for the model's typical error and ${
             entry.se === null
               ? "a typical county's measurement uncertainty, since this county's estimate has no confidence interval."
               : "this county's own measurement uncertainty."
@@ -88,7 +90,7 @@ function ModelResult({
       <div className="model-factors">
         <h4>Factors associated with the expected value</h4>
         <p>
-          {`These factors moved the model's expected value from a starting point of ${formatValue(base_value, unit, 2)} to ${formatValue(predicted, unit, 2)}. They describe what the model expects for a county with this profile; they don't explain the difference above.`}
+          {`These factors moved the model's expected value from a starting point of ${formatValue(base_value, unit, modelDigits(unit, 2))} to ${formatValue(predicted, unit, modelDigits(unit, 2))}. They describe what the model expects for a county with this profile; they don't explain the difference above.`}
         </p>
         <ShapBars bars={bars} />
         <p className="model-factors-note">

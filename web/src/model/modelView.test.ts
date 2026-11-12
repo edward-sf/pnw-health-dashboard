@@ -73,7 +73,7 @@ test("modelTooltip", () => {
 test("modelTooltip formats the difference in the target's unit", () => {
   expect(
     modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k"),
-  ).toBe("Aleutians West, AK: notably worse than expected (+1,800.0 per 100k)");
+  ).toBe("Aleutians West, AK: notably worse than expected (+1,800 per 100k)");
 });
 
 test("hasModelResult is false for insufficient data or any null field", () => {

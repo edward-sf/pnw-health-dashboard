@@ -73,6 +73,44 @@ test("screen-reader text uses the target's unit", () => {
     <ResidualRange residual={1800} threshold75={1200} threshold90={1700} flag="notably_worse" unit="rate_per_100k" />,
   );
   expect(container.querySelector(".visually-hidden")!.textContent).toBe(
-    "+1,800.0 per 100k is beyond ±1,700.0 per 100k, the range for notably better or worse.",
+    "+1,800 per 100k is beyond ±1,700 per 100k, the range for notably better or worse.",
   );
+});
+
+test("direction note is appended to the screen-reader text only when given", () => {
+  const text = (note?: string | null) => {
+    const { container, unmount } = render(
+      <ResidualRange residual={3.7} threshold75={2.36} threshold90={3.37} flag="none" unit="years" note={note} />,
+    );
+    const t = container.querySelector(".visually-hidden")!.textContent;
+    unmount();
+    return t;
+  };
+  expect(text(null)).toBe("+3.7 years is beyond ±3.4 years, the range for notably better or worse.");
+  expect(text("Higher is worse for this measure, so a positive difference means worse than expected.")).toBe(
+    "+3.7 years is beyond ±3.4 years, the range for notably better or worse. Higher is worse for this measure, so a positive difference means worse than expected.",
+  );
+});
+
+test("rate axis labels are compact and never overlap or clip at realistic premature-death thresholds", () => {
+  const CHAR = 6; // generous width of one character at fontSize 10
+  for (const residual of [1800, 5000, 9000, 25000]) {
+    const { container, unmount } = render(
+      <ResidualRange residual={residual} threshold75={2506} threshold90={10119} flag="none" unit="rate_per_100k" />,
+    );
+    const l = [...container.querySelectorAll("text.range-label")].map((t) => ({
+      text: t.textContent ?? "",
+      x: Number(t.getAttribute("x")),
+    }));
+    unmount();
+    expect(l.every((x) => x.text.length <= 6)).toBe(true);
+    let prevRight = -Infinity;
+    for (const { text, x } of l) {
+      const half = (text.length * CHAR) / 2;
+      expect(x - half).toBeGreaterThanOrEqual(0);
+      expect(x + half).toBeLessThanOrEqual(320);
+      expect(x - half).toBeGreaterThanOrEqual(prevRight);
+      prevRight = x + half;
+    }
+  }
 });
