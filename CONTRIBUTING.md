@@ -74,6 +74,8 @@ main ◄──(milestone PR, author reviews, merge commit)── milestone/m1 �
 ```bash
 # pipeline
 cd pipeline && uv sync && uv run pytest && uv run ruff check && uv run ruff format --check && uv run mypy src
+# after a contract change: regenerate the committed JSON Schema
+cd pipeline && uv run pnw-health schema --root ..
 # web (from M2)
 cd web && npm ci && npm test && npm run lint && npm run typecheck
 ```

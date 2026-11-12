@@ -11,7 +11,7 @@ from typer.testing import CliRunner, Result
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
 from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
-from pnw_health.contract import Manifest, ModelFile, ValuesFile
+from pnw_health.contract import Manifest, ModelFile, ValuesFile, write_schemas
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.model.config import TOP_N
@@ -393,3 +393,13 @@ def test_cli_empty_env_key_fails_fast(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert result.exit_code == 1
     assert "CENSUS_API_KEY not set" in result.output
     assert seen == []
+
+
+def test_schema_command_writes_files(tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli.app, ["schema", "--root", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    reference = write_schemas(tmp_path / "ref")
+    for ref in reference:
+        written = tmp_path / "schema" / ref.name
+        assert written.read_bytes() == ref.read_bytes()
+        assert str(written) in result.output
