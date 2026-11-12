@@ -2,6 +2,7 @@ import csv
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -349,7 +350,11 @@ def test_fetch_without_key_or_cache_fails_fast(tmp_path: Path) -> None:
     seen: list[str] = []
     with client_for(recording(seen)) as client, pytest.raises(StageInputError) as err:
         run_pipeline(
-            Paths.default(tmp_path), Stage.fetch, client=client, api_key=None, root=tmp_path
+            Paths.default(tmp_path),
+            Stage.fetch,
+            client=client,
+            api_key=None,
+            env_file=tmp_path / ".env",
         )
     assert str(err.value) == f"CENSUS_API_KEY not set (environment or {tmp_path / '.env'})"
     assert seen == []
@@ -409,19 +414,28 @@ def test_export_stages_outside_the_site(
     tmp_path: Path, full_zip: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A killed export must not leave files where Vite copies them (all of web/public)."""
-    from pnw_health import export
-
     staged: list[Path] = []
-    real = export.tempfile.mkdtemp
+    real = cli.write_exports
 
-    def spy(*args: object, **kwargs: object) -> str:
-        path = real(*args, **kwargs)  # type: ignore[arg-type]
-        staged.append(Path(path))
-        return path
+    def spy(*args: Any, staging: Path, **kwargs: Any) -> list[Path]:
+        staged.append(staging)
+        return real(*args, staging=staging, **kwargs)
 
-    monkeypatch.setattr(export.tempfile, "mkdtemp", spy)
+    monkeypatch.setattr(cli, "write_exports", spy)
     paths = Paths.default(tmp_path / "repo")
     with client_for(transport(full_zip)) as client:
         run_pipeline(paths, Stage.all, client=client, api_key="K")
-    assert [p.parent for p in staged] == [paths.interim]
+    assert staged == [paths.interim]
     assert not staged[0].is_relative_to(paths.out.parent)
+
+
+def test_cli_reports_export_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from pnw_health.export import ExportError
+
+    def boom(*args: object, **kwargs: object) -> None:
+        raise ExportError("export stopped after replacing manifest.json")
+
+    monkeypatch.setattr(cli, "run_pipeline", boom)
+    result = CliRunner().invoke(cli.app, ["run", "--root", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "export stopped after replacing manifest.json" in result.output

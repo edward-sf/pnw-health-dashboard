@@ -1,6 +1,8 @@
 import math
+from pathlib import Path
 
 import pandas as pd
+import pyarrow.parquet as pq
 import pytest
 
 from pnw_health.harmonize import LEGACY_COLUMNS, LEGACY_DTYPES, harmonize, pnw_only
@@ -112,6 +114,16 @@ def test_empty_legacy_has_populated_dtypes() -> None:
     populated = harmonize([long_rows([("02261", "x", 78.2), ("53033", "x", 80.0)])]).legacy
     assert empty.empty
     assert empty.dtypes.to_dict() == populated.dtypes.to_dict()
-    assert empty.dtypes.to_dict() == {
-        k: pd.api.types.pandas_dtype(v) for k, v in LEGACY_DTYPES.items()
+    assert list(empty.columns) == LEGACY_COLUMNS == list(LEGACY_DTYPES)
+
+
+def test_empty_legacy_round_trips_like_populated(tmp_path: Path) -> None:
+    empty = harmonize([long_rows([("53033", "x", 80.0)])]).legacy
+    populated = harmonize([long_rows([("02261", "x", 78.2), ("53033", "x", 80.0)])]).legacy
+    empty.to_parquet(tmp_path / "empty.parquet", index=False)
+    populated.to_parquet(tmp_path / "populated.parquet", index=False)
+    schema = {
+        name: pq.read_schema(tmp_path / f"{name}.parquet").remove_metadata()
+        for name in ("empty", "populated")
     }
+    assert schema["empty"] == schema["populated"]

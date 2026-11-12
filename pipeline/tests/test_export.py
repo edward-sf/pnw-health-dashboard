@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -204,10 +205,9 @@ def test_finalize_leaves_input_full_precision() -> None:
 def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
     vf = build_values_file(ranked([("53001", 1.0, None, None)]), no_legacy(), COUNTIES, CATALOG)
     model = make_model_file({"02063": make_null_county_model()})
-    write_exports(
-        tmp_path, make_manifest(), vf, TOPOLOGY, finalize_model(model), staging=tmp_path / "s"
-    )
-    text = (tmp_path / "model.json").read_text()
+    out = tmp_path / "out"
+    write_exports(out, make_manifest(), vf, TOPOLOGY, finalize_model(model), staging=tmp_path / "s")
+    text = (out / "model.json").read_text()
     assert "NaN" not in text
     assert json.loads(text)["counties"]["02063"]["predicted"] is None
 
@@ -255,21 +255,94 @@ def test_write_exports_leaves_only_the_four_files(tmp_path: Path) -> None:
     assert list((tmp_path / "s").iterdir()) == []
 
 
+def _cross_device_replace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """os.replace fails with EXDEV when source and target are in different folders."""
+    import errno
+
+    real = os.replace
+
+    def replace(src: str | Path, dst: str | Path) -> None:
+        if Path(src).parent != Path(dst).parent:
+            raise OSError(errno.EXDEV, "Invalid cross-device link")
+        real(src, dst)
+
+    monkeypatch.setattr(export.os, "replace", replace)
+
+
 def test_write_exports_moves_across_filesystems(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import errno
+    args = _export_args()
+    expected = {
+        p.name: p.read_bytes()
+        for p in write_exports(
+            tmp_path / "ref", args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "rs"
+        )
+    }
+    _cross_device_replace(monkeypatch)
+    out = tmp_path / "data"
+    write_exports(out, args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+    assert {p.name: p.read_bytes() for p in out.iterdir()} == expected
+    assert list((tmp_path / "s").iterdir()) == []
 
-    def cross_device(src: object, dst: object) -> None:
-        raise OSError(errno.EXDEV, "Invalid cross-device link")
 
-    monkeypatch.setattr(export.os, "replace", cross_device)
+def test_cross_device_copy_never_writes_the_final_name_directly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fallback copies beside the target, then renames, so no reader sees a partial file."""
+    _cross_device_replace(monkeypatch)
+    copied_to: list[Path] = []
+    real_copy = export.shutil.copyfile
+
+    def spy(src: Path, dst: Path) -> object:
+        copied_to.append(Path(dst))
+        return real_copy(src, dst)
+
+    monkeypatch.setattr(export.shutil, "copyfile", spy)
     out = tmp_path / "data"
     write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
-    assert sorted(p.name for p in out.iterdir()) == [
-        "counties.topojson",
-        "manifest.json",
-        "model.json",
-        "values.json",
-    ]
-    assert list((tmp_path / "s").iterdir()) == []
+    finals = {out / n for n in ("manifest.json", "values.json", "counties.topojson", "model.json")}
+    assert len(copied_to) == 4
+    assert all(p.parent == out and p not in finals for p in copied_to)
+    assert sorted(p.name for p in out.iterdir()) == sorted(p.name for p in finals)
+
+
+def test_partial_move_names_replaced_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    real = os.replace
+    calls = 0
+
+    def flaky(src: str | Path, dst: str | Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 3:
+            raise OSError("permission denied")
+        real(src, dst)
+
+    monkeypatch.setattr(export.os, "replace", flaky)
+    out = tmp_path / "data"
+    with pytest.raises(export.ExportError) as err:
+        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+    message = str(err.value)
+    assert "manifest.json, values.json" in message
+    assert "pnw-health run --stage export" in message
+    assert "permission denied" in message
+
+
+def test_staging_inside_out_dir_rejected(tmp_path: Path) -> None:
+    out = tmp_path / "data"
+    with pytest.raises(ValueError, match="staging"):
+        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=out / "s")
+
+
+def test_cleanup_failure_warns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def broken(path: Path, **kwargs: object) -> None:
+        raise OSError("busy")
+
+    monkeypatch.setattr(export.shutil, "rmtree", broken)
+    out = tmp_path / "data"
+    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+    err = capsys.readouterr().err
+    assert "could not remove" in err
+    assert "busy" in err

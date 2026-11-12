@@ -140,7 +140,12 @@ def test_short_county_fips_raises(tmp_path: Path) -> None:
         parse_places(write_rows(tmp_path, rows), [places_indicator()])
 
 
-def test_catalog_measure_with_no_rows_raises(tmp_path: Path) -> None:
-    catalog = [places_indicator(), places_indicator("obesity", "OBESITY")]
-    with pytest.raises(ValueError, match="obesity"):
+def test_catalog_measures_with_no_rows_raise(tmp_path: Path) -> None:
+    catalog = [
+        places_indicator(),
+        places_indicator("obesity", "OBESITY"),
+        places_indicator("smoking", "CSMOKING"),
+    ]
+    with pytest.raises(FetchError, match="obesity, smoking") as err:
         parse_places(write_rows(tmp_path, [ROW]), catalog)
+    assert "--refresh" in str(err.value)
