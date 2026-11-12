@@ -138,3 +138,9 @@ def test_short_county_fips_raises(tmp_path: Path) -> None:
     rows = [ROW, {**ROW, "locationid": "2013"}]
     with pytest.raises(FetchError, match="2013"):
         parse_places(write_rows(tmp_path, rows), [places_indicator()])
+
+
+def test_catalog_measure_with_no_rows_raises(tmp_path: Path) -> None:
+    catalog = [places_indicator(), places_indicator("obesity", "OBESITY")]
+    with pytest.raises(ValueError, match="obesity"):
+        parse_places(write_rows(tmp_path, [ROW]), catalog)

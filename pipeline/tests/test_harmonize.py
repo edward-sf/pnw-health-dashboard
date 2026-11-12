@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import pytest
 
-from pnw_health.harmonize import LEGACY_COLUMNS, harmonize, pnw_only
+from pnw_health.harmonize import LEGACY_COLUMNS, LEGACY_DTYPES, harmonize, pnw_only
 from pnw_health.long import LONG_COLUMNS
 
 
@@ -105,3 +105,13 @@ def test_legacy_with_null_successors() -> None:
     assert sorted(res.legacy.fips) == ["02063", "02066"]
     assert sorted(res.values.fips) == ["02063", "02066"]
     assert res.values.value.isna().all()
+
+
+def test_empty_legacy_has_populated_dtypes() -> None:
+    empty = harmonize([long_rows([("53033", "x", 80.0)])]).legacy
+    populated = harmonize([long_rows([("02261", "x", 78.2), ("53033", "x", 80.0)])]).legacy
+    assert empty.empty
+    assert empty.dtypes.to_dict() == populated.dtypes.to_dict()
+    assert empty.dtypes.to_dict() == {
+        k: pd.api.types.pandas_dtype(v) for k, v in LEGACY_DTYPES.items()
+    }

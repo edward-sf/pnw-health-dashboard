@@ -104,10 +104,14 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     if bad:
         raise _invalid(f"unexpected locationid(s) {', '.join(bad[:5])}")
     frames = []
+    empty: list[str] = []
     for ind in catalog:
         if ind.source != "places":
             continue
         rows = table[table["measureid"] == ind.source_field]
+        if rows.empty:
+            empty.append(ind.id)
+            continue
         years = rows["year"].astype(str) if "year" in rows else pd.Series(dtype=str)
         bad = sorted(set(years[years != str(ind.year)]))
         if bad:
@@ -126,4 +130,6 @@ def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
                 }
             )
         )
+    if empty:
+        raise ValueError(f"PLACES has no rows for: {', '.join(empty)}")
     return pd.concat(frames, ignore_index=True)[LONG_COLUMNS]
