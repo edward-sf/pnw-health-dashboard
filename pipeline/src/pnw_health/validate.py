@@ -10,7 +10,7 @@ from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
 from pnw_health.contract import CountyModel, ModelFile, Peers, TargetModel
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
-from pnw_health.model.config import ALLOWED_CATEGORIES
+from pnw_health.model.config import ALLOWED_CATEGORIES, TARGETS
 
 NON_NEGATIVE_UNITS = frozenset({"dollars", "count", "rate_per_100k"})
 ADDITIVITY_TOLERANCE = 1e-6
@@ -236,7 +236,13 @@ def validate_model(
     catalog: list[Indicator],
 ) -> None:
     """Check a full-precision model against PNW display data; collect every problem, then raise."""
-    problems = [
+    problems = []
+    if list(model.targets) != list(TARGETS):
+        problems.append(
+            f"model targets {list(model.targets)} do not match TARGETS {list(TARGETS)}; "
+            "rerun the model stage"
+        )
+    problems += [
         f"{target_id}: {problem}"
         for target_id, target in model.targets.items()
         for problem in _validate_target(target_id, target, values, county_fips, catalog)
