@@ -1,7 +1,7 @@
 import type { Manifest } from "../../types";
 
 export const manifest: Manifest = {
-  schema_version: "1.3.0",
+  schema_version: "2.0.0",
   built_at: "2026-01-01T00:00:00Z",
   sources: [
     { source: "acs", year: 2023, url: "https://example.test/acs" },

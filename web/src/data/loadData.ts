@@ -7,7 +7,8 @@ export type AppData = {
   model: ModelFile;
 };
 
-const SUPPORTED_SCHEMA_MAJOR = 1;
+/** Must match the major of the pipeline's `SCHEMA_VERSION`; a test checks it. */
+export const SUPPORTED_SCHEMA_MAJOR = 2;
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(url, { signal });
