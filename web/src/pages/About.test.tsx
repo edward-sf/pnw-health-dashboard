@@ -57,3 +57,12 @@ test("names all four states the data covers", () => {
     screen.getByText(/across Washington, Oregon, Idaho and Alaska/),
   ).toBeInTheDocument();
 });
+
+test("describes the three outcomes and the similar counties list", () => {
+  renderAbout();
+  const text = document.body.textContent ?? "";
+  expect(text).toContain("life expectancy by default, premature death and injury deaths");
+  expect(text).toContain("model mode compares one of the three outcomes with its expected value");
+  expect(text).toMatch(/similar counties, the nearest Pacific Northwest counties/);
+  expect(text).not.toMatch(/model of county life expectancy/);
+});

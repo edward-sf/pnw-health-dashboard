@@ -6,7 +6,7 @@ import { manifest } from "../test/fixtures";
 import { useExplorerParams } from "./useExplorerParams";
 
 const fipsSet = new Set(["53033", "02016"]);
-const targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
+let targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
 
 type Api = ReturnType<typeof useExplorerParams>;
 let api: Api;
@@ -111,4 +111,15 @@ test("setTarget to the default removes t", async () => {
 test("removes an invalid t", async () => {
   const router = setup("/?t=nope&c=53033");
   expect(router.state.location.search).toBe("?c=53033");
+});
+
+test("setTarget to the default removes t when the keys are ordered differently", async () => {
+  targetIds = ["premature_death", "life_expectancy", "injury_deaths"];
+  try {
+    const router = setup("/?t=injury_deaths&c=53033");
+    await act(async () => api.setTarget("life_expectancy"));
+    expect(router.state.location.search).toBe("?c=53033");
+  } finally {
+    targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
+  }
 });

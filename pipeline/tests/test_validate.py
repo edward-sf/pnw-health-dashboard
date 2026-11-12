@@ -6,8 +6,15 @@ from pnw_health.contract import ModelFile, PeerMethod, Peers, ShapEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
+from pnw_health.model.config import TARGETS as real_targets
 from pnw_health.validate import DataValidationError, validate_display, validate_model
 from tests.helpers import make_county_model, make_model_file, make_null_county_model, pnw_fips
+
+
+@pytest.fixture(autouse=True)
+def _single_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Most fixtures hold one target, so stand in for the three-target TARGETS."""
+    monkeypatch.setattr(validate, "TARGETS", ("life_expectancy",))
 
 
 def indicator(id_: str, unit: str) -> Indicator:
@@ -387,7 +394,34 @@ def test_stale_partial_state_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "PARTIAL_STATES exempts AK for pct, but it has values; remove the exemption" in found
 
 
-def test_validate_model_prefixes_problems_with_target() -> None:
+def test_model_targets_must_match_targets(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(validate, "TARGETS", real_targets)  # not the single-target stand-in
+    model = peer_model_of_one()
+    found = model_problems(model)
+    assert (
+        "model targets ['life_expectancy'] do not match TARGETS "
+        "['life_expectancy', 'premature_death', 'injury_deaths']; rerun the model stage"
+    ) in found
+
+
+def test_model_with_an_extra_target_is_flagged(monkeypatch: pytest.MonkeyPatch) -> None:
+    extra = peer_model_of_one()
+    model = ModelFile(
+        targets={**extra.targets, "diabetes": extra.targets["life_expectancy"]}, peers=extra.peers
+    )
+    found = model_problems(model)
+    assert (
+        "model targets ['life_expectancy', 'diabetes'] do not match TARGETS "
+        "['life_expectancy']; rerun the model stage"
+    ) in found
+
+
+def peer_model_of_one() -> ModelFile:
+    return make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
+
+
+def test_validate_model_prefixes_problems_with_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(validate, "TARGETS", ("life_expectancy", "injury_deaths"))
     good = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
     broken = make_model_file(
         {WITH_TARGET: make_county_model(predicted=77.00001), NO_TARGET: make_null_county_model()},

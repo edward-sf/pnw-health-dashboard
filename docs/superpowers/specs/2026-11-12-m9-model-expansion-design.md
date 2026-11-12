@@ -1,7 +1,7 @@
 # M9 Model Expansion — Design
 
 **Date:** 2026-11-12
-**Status:** Design approved in brainstorming; pending written-spec review
+**Status:** Approved; implemented in M9
 **Parent spec:** `2026-11-10-pnw-health-dashboard-design.md` (§4 Export contract, §5 Machine learning, §6 Website). M4 and M5 decisions this builds on are in `2026-11-10-m4-ml-pipeline-design.md` and `2026-11-11-m5-model-ui-design.md`. This document records only what M9 decides; where it is silent, those specs apply.
 
 ## 1. Outcome
@@ -64,7 +64,7 @@ TargetModel
 
 ### 2.5 Checkpoint
 
-As in M4, a `checkpoint` issue sits between the pipeline work and the UI work. The author reviews each new target's national and PNW metrics, flag distribution and SHAP samples from `model_report.py`. A target that models poorly is removed from `TARGETS` before the UI exposes it, and the decision is recorded in this spec under "Checkpoint outcome". Low birth weight is the most likely to be weak.
+As in M4, a `checkpoint` issue sits between the pipeline work and the UI work. The author reviews each new target's national and PNW metrics, flag distribution and SHAP samples from `model_report.py`. A target that models poorly is removed from `TARGETS` before the UI exposes it, and the decision is recorded in this spec under "Checkpoint outcome". Low birth weight was expected to be the weakest.
 
 **Checkpoint outcome (2026-11-12, #179).** The author dropped `low_birth_weight` from `TARGETS`. LightGBM scored a PNW R² of −1.135 (ridge −1.487) against a national R² of 0.339, and every PNW state's mean residual sat between −0.96 and −1.41 points, so 33 PNW counties were flagged better and 1 worse. That is a regional offset, not county signal. Low birth weight stays available as a values-mode indicator.
 

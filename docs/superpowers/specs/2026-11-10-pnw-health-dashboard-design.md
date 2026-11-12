@@ -59,7 +59,7 @@ pnw-health-dashboard/
 | Source | Use | Access |
 |---|---|---|
 | CDC PLACES (county) | Model-based prevalence of chronic conditions, behaviors, prevention | Socrata API on data.cdc.gov |
-| County Health Rankings (CHR) | Life expectancy (ML target), premature death, access measures, rurality | Annual national CSV download |
+| County Health Rankings (CHR) | Model outcomes (life expectancy, premature death, injury deaths), access measures, rurality | Annual national CSV download |
 | Census ACS 5-year | Social/economic features and display indicators | Census Data API (**key required**: `CENSUS_API_KEY` env var / repo secret; keyless requests are redirected to an HTML error page) |
 | Census cartographic boundary files | County geometry (`cb_2024_us_county_5m`; same county set as 2020-vintage FIPS for the four states) | Census TIGER/cartographic downloads |
 
@@ -105,7 +105,7 @@ All files are small enough to load up front.
 
 ## 5. Machine learning
 
-**Question answered:** given a county's social and economic profile, how does its life expectancy compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of life expectancy the features leave unexplained.
+**Question answered:** given a county's social and economic profile, how does its outcome (one of three, named under Targets below) compare to what we'd expect nationally, and which factors are associated with that expectation? The residual answers the first part; SHAP answers the second. SHAP does not explain the residual, which is the part of the outcome the features leave unexplained.
 
 - **Training population:** all US counties with a non-null target and at least one non-null feature (~3,100; Connecticut's former counties drop out because ACS reports planning regions instead). Explanation and display: the 149 PNW counties.
 - **Targets:** CHR life expectancy (the default), premature death and injury deaths (M9 spec §2.1). Each is modelled separately with the shared features, folds and parameters.
@@ -117,7 +117,7 @@ All files are small enough to load up front.
 - **Validation:** 5-fold CV grouped by state. Metrics: RMSE, MAE, R² — national and PNW subset.
 - **Residuals:** `residual = actual − predicted`, from out-of-fold predictions of the main LightGBM model only.
 - **Flags (two tiers):** each county gets its own threshold combining model error and its own measurement uncertainty.
-  - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's life-expectancy CI.
+  - `se_i = (ci_high − ci_low) / (2 × 1.96)` from the county's CI for the selected target.
   - `σ_resid²` = variance of national OOF residuals; `σ_model² = max(σ_resid² − mean(se_i²), 0)` (removes average measurement noise already present in residuals; mean over counties with a CI).
   - `threshold_p(i) = z_p × sqrt(σ_model² + se_i²)`, with `z_75 = 1.150` and `z_90 = 1.645` (two-sided 75% and 90% ranges). If a county lacks a CI, `se_i² = mean(se_i²)`.
   - `|residual| > threshold_90` → `notably_better`/`notably_worse`; `> threshold_75` → `somewhat_better`/`somewhat_worse`; otherwise `none`. Sign is direction-aware: for a `higher_is_better` target (life expectancy) a positive residual is better; for a `higher_is_worse` target (premature death, injury deaths) a negative residual is better.
@@ -150,7 +150,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
 - **County panel** (right drawer on desktop, bottom sheet on mobile; phone behavior is specified in `2026-11-11-m6-methodology-polish-design.md` §5), in this order in values mode. In model mode the model card comes first, then the indicator value with its strip plot, then "Who lives here" (amended in M7, #130):
   - Selected indicator value with CI; rank among 149 and within state. If `v` is null and `legacy` exists: "Reported only for the former Valdez-Cordova Census Area (combined area, CHR {year}): {v}" with a methodology link.
   - Strip plot of all 149 counties with the selected one highlighted.
-  - Model card (shown in both modes): actual vs expected life expectancy, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
+  - Model card (shown in both modes): actual vs expected value of the selected target, residual with its 75%/90% ranges, flag tier, top-5 SHAP bar chart plus an "All other factors" row so the bars reconcile to the expected value, labeled as factors associated with the expected value, kept visually and textually apart from the flag so it never reads as explaining the gap.
   - "Who lives here": Demographics shares, visually and textually separate from the model card, with no wording linking them to the flag.
   - "Similar counties" (last, in both modes; added in M9, #183): the selected county followed by its nearest PNW peers on the 9 social and economic features, with the peers' median. Values mode shows the indicator value; model mode shows actual, expected and flag tier. Each peer name is a button that selects that county like a map click. A county with too few features shows "Not enough data to find similar counties." The copy never relates peers to the flag and uses no causal wording.
 - **Table view:** sortable table of the current indicator across all counties (in model mode: actual, expected, difference and flag tier); together with a county search box, this is the keyboard and screen-reader path to every county.
@@ -198,4 +198,3 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 - **Race-stratified outcomes** ("which groups are impacted"): CHR county measures by race/ethnicity, displayed only where not suppressed; needs its own design for suppression-heavy AK/ID counties.
 - **State health-department datasets** (WA DOH, OHA, IDHW, AK DOH) as state-specific spotlight indicators.
 - **Forecasting** from time series (pending a credible approach for small counties).
-- **Additional model targets** (e.g., diabetes prevalence) — config change plus UI target picker.

@@ -29,3 +29,13 @@ test("an unknown source id is shown raw", () => {
   expect(screen.getByRole("link", { name: "mystery" })).toBeInTheDocument();
   expect(document.body.textContent).not.toContain("undefined");
 });
+
+test("the County Health Rankings row names all three outcomes", () => {
+  render(<SourcesSection sources={manifest.sources} />);
+  const row = within(screen.getByRole("table"))
+    .getAllByRole("row")
+    .find((r) => r.textContent?.includes("2025") && r.textContent.includes("County Health"))!;
+  expect(row).toHaveTextContent(
+    "The model's three outcomes (life expectancy, premature death and injury deaths)",
+  );
+});

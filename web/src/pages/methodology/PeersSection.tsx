@@ -21,7 +21,7 @@ export function PeersSection({ peers, indicators }: { peers: Peers; indicators: 
         z-scores. Ties are broken by FIPS code, so the result is the same every time.
       </p>
       <p>
-        A county needs at least {min_features} of the {features.length} features to have similar
+        A county needs at least {min_features} of the {features.length} factors to have similar
         counties, and a county with fewer is left out of the pool, so it is never anyone's similar
         county. For the others, a missing factor is filled with the median of the eligible Pacific
         Northwest counties before the z-scores are taken.

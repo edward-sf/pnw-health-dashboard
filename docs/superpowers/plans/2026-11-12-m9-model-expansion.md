@@ -81,7 +81,7 @@
 
 - [ ] **Step 0: Save the baseline.** Before changing anything, copy the current `web/public/data/model.json` (from a run on `main`) to the scratchpad as `model.before.json`.
 
-- [ ] **Step 1: Extend the synthetic data.** `make_long` emits each id in `targets` as a target, each linear in the features with its own intercept (`78.0, 7000.0, 80.0, 7.0` in `TARGETS` order) and `ci_low/ci_high = value ∓ 1.0`, source `chr`.
+- [ ] **Step 1: Extend the synthetic data.** `make_long` emits each id in `targets` as a target, each linear in the features with its own intercept (`78.0, 7000.0, 80.0` in `TARGETS` order) and `ci_low/ci_high = value ∓ 1.0`, source `chr`.
 
 - [ ] **Step 2: Write failing pipeline tests**
 
@@ -321,7 +321,7 @@ grep -rniE 'life expectancy|"years"' web/src --include='*.ts' --include='*.tsx' 
 - Produces: `Methodology` holds `const [targetId, setTargetId] = useState(DEFAULT_TARGET)`, local to the page and not in the URL. It feeds the global-importance and model-card details.
 
 - [ ] **Step 1: Write failing tests.**
-  - The metrics table has one row per target and model: one per target and model; use the fixture's count. Use the fixture's count.
+  - The metrics table has one row group per target and model; assert against the fixture's target count.
   - The behaviors comparison has one row per target.
   - Changing the page's target select changes the importance list heading.
   - The text includes the PLACES-circularity sentence and the direction sentence.

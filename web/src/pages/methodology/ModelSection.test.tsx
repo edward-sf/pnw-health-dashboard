@@ -1,7 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
-import { manifest, model as modelFile, lifeExpectancy as model } from "../../test/fixtures";
+import {
+  manifest,
+  model as modelFile,
+  lifeExpectancy as model,
+  prematureDeath,
+} from "../../test/fixtures";
 import { formatCount } from "./format";
 import { ModelSection } from "./ModelSection";
 
@@ -123,9 +128,9 @@ const wording = (id: string) => {
 test("the closing sections read correctly for every outcome", () => {
   const le = wording("life_expectancy").section;
   const pd = wording("premature_death").section;
-  expect(le).toContain("actual life expectancy differs");
+  expect(le).toContain("why a county's actual value differs");
   expect(le).toContain("change life expectancy");
-  expect(pd).toContain("actual premature death differs");
+  expect(pd).toContain("why a county's actual value differs");
   expect(pd).toContain("change premature death");
   for (const section of [le, pd]) expect(section).not.toMatch(/lives tend to be longer/);
   expect(pd).not.toMatch(/life expectancy/i);
@@ -158,3 +163,24 @@ test("the accuracy table puts each outcome's unit in the Outcome cell", () => {
   expect(within(table).getAllByText("Life expectancy, years")).toHaveLength(4);
   expect(within(table).getAllByText("Premature death (years lost), per 100k")).toHaveLength(4);
 });
+
+test.each(["life_expectancy", "premature_death", "injury_deaths"])(
+  "the associations paragraph reads for %s",
+  (targetId) => {
+    const injury = { ...prematureDeath, label: "Injury deaths" };
+    const file = { ...modelFile, targets: { ...modelFile.targets, injury_deaths: injury } };
+    render(
+      <ModelSection
+        model={file}
+        targetId={targetId}
+        onTargetChange={() => {}}
+        indicators={manifest.indicators}
+      />,
+    );
+    const heading = screen.getByRole("heading", { level: 4, name: "Associations, not effects" });
+    const text = heading.nextElementSibling!.textContent!;
+    expect(text).toContain("why a county's actual value differs from its expected value");
+    expect(text).not.toContain("(");
+    expect(text).not.toMatch(/deaths differs/);
+  },
+);

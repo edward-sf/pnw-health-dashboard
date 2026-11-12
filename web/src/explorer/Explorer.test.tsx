@@ -3,18 +3,18 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
-import { manifest, model, topology, values } from "../test/fixtures";
+import { manifest, model, prematureDeath, topology, values } from "../test/fixtures";
 import { tierFill } from "../model/modelView";
 import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
 
-function setup(url = "/") {
+function setup(url = "/", data = { manifest, values, topology, model }) {
   const router = createMemoryRouter(
     [
       {
         path: "/",
         element: (
-          <Explorer data={{ manifest, values, topology, model }} />
+          <Explorer data={data} />
         ),
       },
     ],
@@ -407,7 +407,7 @@ test("titles the map and subtitle from the target", () => {
     screen.getByRole("heading", { level: 2, name: "Premature death (years lost): compared with expected" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/^How each county's premature death \(years lost\) compares with what the model expects/),
+    screen.getByText(/^How each county compares on premature death with what the model expects/),
   ).toBeInTheDocument();
 });
 
@@ -419,4 +419,17 @@ test("the table, tooltip and card follow the selected target", async () => {
   ).toBeInTheDocument();
   expect(screen.getAllByText(/Higher is worse for this measure/).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/\+1,800 per 100k/).length).toBeGreaterThan(0);
+});
+
+test.each([
+  ["life_expectancy", "life expectancy"],
+  ["premature_death", "premature death"],
+  ["injury_deaths", "injury deaths"],
+])("the model subtitle for %s reads without parentheses", (id, name) => {
+  const injury = { ...prematureDeath, label: "Injury deaths" };
+  const withInjury = { ...model, targets: { ...model.targets, injury_deaths: injury } };
+  setup(`/?mode=model&t=${id}`, { manifest, values, topology, model: withInjury });
+  const text = document.querySelector(".indicator-description")!.textContent!;
+  expect(text).toContain(`How each county compares on ${name} with what the model expects`);
+  expect(text).not.toContain("(");
 });
