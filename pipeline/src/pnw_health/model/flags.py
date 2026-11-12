@@ -1,13 +1,15 @@
 """Tiered flags: how far a county sits from its expected value, given noise.
 
 A county is flagged only when its residual exceeds what sampling error in its
-own estimate plus model error would produce. A positive residual means the
-county is doing better than expected from the factors associated with it.
+own estimate plus model error would produce. Which sign is "better" depends on
+the target: a positive residual is better when higher is better (life
+expectancy) and worse when higher is worse (premature death).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -39,14 +41,20 @@ def sigma_model_sq(residuals: pd.Series, se: pd.Series) -> float:
     return max(value, 0.0)
 
 
-def classify(residuals: pd.Series, se: pd.Series, sigma_sq: float, mean_se_sq: float) -> Flags:
+def classify(
+    residuals: pd.Series,
+    se: pd.Series,
+    sigma_sq: float,
+    mean_se_sq: float,
+    direction: Literal["higher_is_better", "higher_is_worse"],
+) -> Flags:
     """Assign tiers; `mean_se_sq` stands in for counties with no CI."""
     se_sq = (se**2).fillna(mean_se_sq)
     scale = np.sqrt(sigma_sq + se_sq)
     t75 = Z_75 * scale
     t90 = Z_90 * scale
     magnitude = residuals.abs()
-    better = residuals > 0
+    better = residuals > 0 if direction == "higher_is_better" else residuals < 0
 
     tier = np.select(
         [residuals.isna(), magnitude > t90, magnitude > t75],

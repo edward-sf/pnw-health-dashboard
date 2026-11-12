@@ -90,7 +90,7 @@ def run_target(long: pd.DataFrame, target: Indicator) -> TargetModel:
         residuals = frame["target"] - lgbm.predicted
         se = se_from_ci(frame["ci_low"], frame["ci_high"])
         sigma_sq = sigma_model_sq(residuals, se)
-        flags = classify(residuals, se, sigma_sq, float((se**2).mean()))
+        flags = classify(residuals, se, sigma_sq, float((se**2).mean()), target.direction)
         behaviors_comparison = compare_behaviors(frame, FEATURES, BEHAVIORS, folds)
     except ModelDataError as err:
         raise ModelDataError(f"{target.id}: {err}") from err
