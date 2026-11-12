@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
-import { lifeExpectancy as model } from "../test/fixtures";
+import { lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import { ModelTable } from "./ModelTable";
 import type { ModelRow } from "./sortModelRows";
 
@@ -20,7 +20,7 @@ const rows: ModelRow[] = counties.map((c) => ({
 
 function setup(selected: string | null = null) {
   const onSelect = vi.fn();
-  render(<ModelTable rows={rows} selected={selected} onSelect={onSelect} />);
+  render(<ModelTable rows={rows} selected={selected} onSelect={onSelect} target={model} />);
   return onSelect;
 }
 const rowOf = (name: string) => screen.getByRole("button", { name }).closest("tr")!;
@@ -97,8 +97,31 @@ test("a negative difference uses the true minus, and a near-zero one has no sign
       ]}
       selected={null}
       onSelect={() => {}}
+      target={model}
     />,
   );
   expect(within(rowOf("Below, WA")).getByText("\u22121.2 years")).toBeInTheDocument();
   expect(within(rowOf("Level, WA")).getByText("0.0 years")).toBeInTheDocument();
+});
+
+test("labels columns and formats cells from the target", () => {
+  render(
+    <ModelTable
+      rows={counties.map((c) => ({ ...c, model: countyModel(prematureDeath, c.fips) }))}
+      selected={null}
+      onSelect={() => {}}
+      target={prematureDeath}
+    />,
+  );
+  expect(
+    screen.getByRole("columnheader", { name: "Premature death (years lost)" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("columnheader", { name: "Life expectancy" })).not.toBeInTheDocument();
+  expect(document.querySelector("caption")).toHaveTextContent(
+    "Premature death (years lost) compared with expected, by county",
+  );
+  const r = rowOf("Aleutians West, AK");
+  expect(r).toHaveTextContent("8,800.0 per 100k");
+  expect(r).toHaveTextContent("+1,800.0 per 100k");
+  expect(document.querySelector("tbody")!.textContent).not.toContain("years");
 });

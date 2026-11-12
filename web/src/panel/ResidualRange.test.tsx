@@ -5,7 +5,7 @@ import { ResidualRange } from "./ResidualRange";
 
 function dot(residual: number, flag: Parameters<typeof tierFill>[0], t90 = 3.37) {
   const { container } = render(
-    <ResidualRange residual={residual} threshold75={2.36} threshold90={t90} flag={flag} />,
+    <ResidualRange residual={residual} threshold75={2.36} threshold90={t90} flag={flag} unit="years" />,
   );
   const circle = container.querySelector("circle")!;
   const zero = Number(container.querySelector("line")!.getAttribute("x1"));
@@ -30,20 +30,20 @@ test("a residual far beyond t90 stays inside the viewBox", () => {
 test("screen-reader text gives the meaning for each of the three cases", () => {
   const text = (r: number) => {
     const { container, unmount } = render(
-      <ResidualRange residual={r} threshold75={2.36} threshold90={3.37} flag="none" />,
+      <ResidualRange residual={r} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
     );
     const t = container.querySelector(".visually-hidden")!.textContent;
     unmount();
     return t;
   };
-  expect(text(3.7)).toBe("+3.7 years is beyond the ±3.4-year range for notably better or worse.");
-  expect(text(2.6)).toBe("+2.6 years is beyond ±2.4 but within ±3.4 years, somewhat better or worse than expected.");
+  expect(text(3.7)).toBe("+3.7 years is beyond ±3.4 years, the range for notably better or worse.");
+  expect(text(2.6)).toBe("+2.6 years is beyond ±2.4 years but within ±3.4 years, somewhat better or worse than expected.");
   expect(text(-0.5)).toBe("−0.5 years is within ±2.4 years, about as expected.");
 });
 
 function labels(residual: number, t75 = 2.36, t90 = 3.37) {
   const { container, unmount } = render(
-    <ResidualRange residual={residual} threshold75={t75} threshold90={t90} flag="none" />,
+    <ResidualRange residual={residual} threshold75={t75} threshold90={t90} flag="none" unit="years" />,
   );
   const out = [...container.querySelectorAll("text.range-label")].map((t) => ({
     text: t.textContent,
@@ -66,4 +66,13 @@ test("the axis labels zero and both ranges, left to right", () => {
 
 test("when the ranges would crowd together, only the outer range is labelled", () => {
   expect(labels(11.8).map((x) => x.text)).toEqual(["−3.4", "0", "+3.4"]);
+});
+
+test("screen-reader text uses the target's unit", () => {
+  const { container } = render(
+    <ResidualRange residual={1800} threshold75={1200} threshold90={1700} flag="notably_worse" unit="rate_per_100k" />,
+  );
+  expect(container.querySelector(".visually-hidden")!.textContent).toBe(
+    "+1,800.0 per 100k is beyond ±1,700.0 per 100k, the range for notably better or worse.",
+  );
 });

@@ -1,6 +1,6 @@
-import { formatBound, formatSigned } from "../color/formatValue";
+import { formatBound, formatSigned, formatValue } from "../color/formatValue";
 import { tierFill } from "../model/modelView";
-import type { Flag } from "../types";
+import type { Flag, Unit } from "../types";
 
 const W = 320;
 const H = 54;
@@ -8,28 +8,28 @@ const LABEL_Y = 48;
 /** Closest two neighbouring labels may sit, in viewBox units, before the inner pair is dropped. */
 const MIN_LABEL_GAP = 28;
 
-const signedBound = (v: number) =>
-  v === 0 ? "0" : `${v > 0 ? "+" : "−"}${formatBound(Math.abs(v), "years")}`;
+const signedBound = (v: number, unit: Unit) =>
+  v === 0 ? "0" : `${v > 0 ? "+" : "−"}${formatBound(Math.abs(v), unit)}`;
 
 export function rangeDomain(residual: number, threshold90: number): number {
   return Math.max(threshold90, Math.abs(residual)) * 1.15;
 }
 
-export function rangeMeaning(residual: number, t75: number, t90: number): string {
-  const r = formatSigned(residual, "years");
-  const a = formatBound(t75, "years");
-  const b = formatBound(t90, "years");
+export function rangeMeaning(residual: number, t75: number, t90: number, unit: Unit): string {
+  const r = formatSigned(residual, unit);
+  const a = formatValue(t75, unit);
+  const b = formatValue(t90, unit);
   const abs = Math.abs(residual);
-  if (abs > t90) return `${r} is beyond the ±${b}-year range for notably better or worse.`;
+  if (abs > t90) return `${r} is beyond ±${b}, the range for notably better or worse.`;
   if (abs > t75) {
-    return `${r} is beyond ±${a} but within ±${b} years, somewhat better or worse than expected.`;
+    return `${r} is beyond ±${a} but within ±${b}, somewhat better or worse than expected.`;
   }
-  return `${r} is within ±${a} years, about as expected.`;
+  return `${r} is within ±${a}, about as expected.`;
 }
 
-type Props = { residual: number; threshold75: number; threshold90: number; flag: Flag };
+type Props = { residual: number; threshold75: number; threshold90: number; flag: Flag; unit: Unit };
 
-export function ResidualRange({ residual, threshold75, threshold90, flag }: Props) {
+export function ResidualRange({ residual, threshold75, threshold90, flag, unit }: Props) {
   const half = rangeDomain(residual, threshold90);
   const x = (v: number) => ((v + half) / (2 * half)) * W;
   const band = (t: number) => ({ x: x(-t), width: x(t) - x(-t) });
@@ -62,12 +62,12 @@ export function ResidualRange({ residual, threshold75, threshold90, flag }: Prop
             fill="#4b5563"
             textAnchor="middle"
           >
-            {signedBound(t)}
+            {signedBound(t, unit)}
           </text>
         ))}
       </svg>
       <p className="visually-hidden">
-        {rangeMeaning(residual, threshold75, threshold90)}
+        {rangeMeaning(residual, threshold75, threshold90, unit)}
       </p>
     </div>
   );

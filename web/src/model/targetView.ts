@@ -8,3 +8,10 @@ export function targetModel(model: ModelFile, id: string): TargetModel {
   if (!target) throw new Error(`unknown target ${id}`);
   return target;
 }
+
+/** The sentence that says which way is worse, for targets where a positive difference is bad. */
+export function directionNote(target: TargetModel): string | null {
+  return target.direction === "higher_is_worse"
+    ? "Higher is worse for this measure, so a positive difference means worse than expected."
+    : null;
+}

@@ -2,7 +2,15 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router";
 import { formatBound, formatValue } from "../color/formatValue";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
-import type { County, CountyModel, Indicator, Manifest, ValueEntry, ValuesFile } from "../types";
+import type {
+  County,
+  CountyModel,
+  Indicator,
+  Manifest,
+  TargetModel,
+  ValueEntry,
+  ValuesFile,
+} from "../types";
 import { ModelCard } from "./ModelCard";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
@@ -14,6 +22,7 @@ type Props = {
   entries: Record<string, ValueEntry>;
   counties: County[];
   modelEntry: CountyModel;
+  target: TargetModel;
   manifest: Manifest;
   values: ValuesFile;
   /** In model mode the model card comes first (parent spec §6). */
@@ -29,6 +38,7 @@ export function CountyPanel({
   entries,
   counties,
   modelEntry,
+  target,
   manifest,
   values,
   modelMode,
@@ -100,7 +110,12 @@ export function CountyPanel({
     </>
   );
   const modelCard = (
-    <ModelCard county={county} entry={modelEntry} indicators={manifest.indicators} />
+    <ModelCard
+      county={county}
+      entry={modelEntry}
+      indicators={manifest.indicators}
+      target={target}
+    />
   );
 
   return (

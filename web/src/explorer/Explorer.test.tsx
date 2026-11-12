@@ -392,3 +392,23 @@ test("switching to model mode with a county open puts the card first and keeps f
   const measure = panel.querySelector(".panel-measure")!;
   expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
+
+test("titles the map and subtitle from the target", () => {
+  setup("/?mode=model&t=premature_death");
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Premature death (years lost): compared with expected" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/^How each county's premature death \(years lost\) compares with what the model expects/),
+  ).toBeInTheDocument();
+});
+
+test("the table, tooltip and card follow the selected target", async () => {
+  setup("/?mode=model&view=table&t=premature_death&c=02016");
+  expect(screen.getByRole("columnheader", { name: "Premature death (years lost)" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Higher is worse for this measure/)).toBeInTheDocument();
+  expect(screen.getAllByText(/\+1,800\.0 per 100k/).length).toBeGreaterThan(0);
+});

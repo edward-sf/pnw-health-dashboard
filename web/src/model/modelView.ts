@@ -1,6 +1,6 @@
 import { formatSigned } from "../color/formatValue";
 import { HATCH_FILL } from "../color/makeColorScale";
-import type { CountyModel, Flag, TargetModel } from "../types";
+import type { CountyModel, Flag, TargetModel, Unit } from "../types";
 
 export const TIERS: readonly Flag[] = [
   "notably_worse",
@@ -86,9 +86,9 @@ export function hasModelResult(entry: CountyModel): entry is CompleteModel {
   );
 }
 
-export function modelTooltip(name: string, state: string, entry: CountyModel): string {
+export function modelTooltip(name: string, state: string, entry: CountyModel, unit: Unit): string {
   if (!hasModelResult(entry) || entry.residual === null) {
     return `${name}, ${state}: not enough data for the model`;
   }
-  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, "years")})`;
+  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, unit)})`;
 }

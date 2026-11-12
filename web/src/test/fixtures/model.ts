@@ -121,9 +121,56 @@ export const lifeExpectancy: TargetModel = {
   },
 };
 
+export const prematureDeath: TargetModel = {
+  ...lifeExpectancy,
+  label: "Premature death (years lost)",
+  unit: "rate_per_100k",
+  direction: "higher_is_worse",
+  thresholds: { sigma_model: 600, z_75: 1.15, z_90: 1.64 },
+  counties: {
+    "53033": {
+      actual: 5200,
+      predicted: 6900,
+      residual: -1700,
+      se: 150,
+      threshold_75: 1200,
+      threshold_90: 1700,
+      base_value: 7000,
+      flag: "notably_better",
+      shap: [{ feature: "bachelors_or_higher", value: 43.0, contribution: -300 }],
+    },
+    "41051": {
+      actual: 7600,
+      predicted: 6800,
+      residual: 800,
+      se: 120,
+      threshold_75: 1200,
+      threshold_90: 1700,
+      base_value: 7000,
+      flag: "none",
+      shap: [{ feature: "poverty_rate", value: 12.0, contribution: -200 }],
+    },
+    // Reported for life expectancy but not here.
+    "16001": insufficient,
+    "02016": {
+      actual: 8800,
+      predicted: 7000,
+      residual: 1800,
+      se: 200,
+      threshold_75: 1200,
+      threshold_90: 1700,
+      base_value: 7000,
+      flag: "notably_worse",
+      shap: [{ feature: "poverty_rate", value: 14.2, contribution: 0 }],
+    },
+    "02063": insufficient,
+  },
+  model_card: { ...lifeExpectancy.model_card, target: "premature_death" },
+};
+
 // Five counties, so k is 2 here; the web does not read k.
 export const model: ModelFile = {
-  targets: { life_expectancy: lifeExpectancy },
+  targets: { life_expectancy: lifeExpectancy, premature_death: prematureDeath },
   peers: {
     method: {
       features: ["median_household_income", "poverty_rate", "bachelors_or_higher"],

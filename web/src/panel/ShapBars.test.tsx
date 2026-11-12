@@ -4,7 +4,7 @@ import { buildShapBars } from "../model/buildShapBars";
 import { manifest, lifeExpectancy as model } from "../test/fixtures";
 import { ShapBars } from "./ShapBars";
 
-const bars = buildShapBars(model.counties["53033"]!, manifest.indicators);
+const bars = buildShapBars(model.counties["53033"]!, manifest.indicators, "years");
 
 test("bars follow buildShapBars order with All other factors last, in one neutral fill", () => {
   const { container } = render(<ShapBars bars={bars} />);
