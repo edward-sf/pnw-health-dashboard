@@ -335,3 +335,61 @@ def test_export_rejects_model_built_from_other_national_data(
         with pytest.raises(StageInputError, match="--stage model"):
             run_pipeline(paths, Stage.export, client=client)
     assert not paths.out.exists() or not any(paths.out.iterdir())
+
+
+def recording(seen: list[str]) -> Callable[[httpx.Request], httpx.Response]:
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(500, text="network should not be used")
+
+    return handler
+
+
+def test_fetch_without_key_or_cache_fails_fast(tmp_path: Path) -> None:
+    seen: list[str] = []
+    with client_for(recording(seen)) as client, pytest.raises(StageInputError) as err:
+        run_pipeline(
+            Paths.default(tmp_path), Stage.fetch, client=client, api_key=None, root=tmp_path
+        )
+    assert str(err.value) == f"CENSUS_API_KEY not set (environment or {tmp_path / '.env'})"
+    assert seen == []
+
+
+def _cache_acs(paths: Paths) -> None:
+    dest = acs_cache_path(paths.raw, load_catalog())
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(ACS_SAMPLE.read_bytes())
+
+
+def test_fetch_without_key_uses_acs_cache(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    _cache_acs(paths)
+    seen: list[str] = []
+    serve = transport(full_zip)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.host)
+        return serve(request)
+
+    with client_for(handler) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key=None)
+    assert "api.census.gov" not in seen
+
+
+def test_refresh_without_key_fails_fast(tmp_path: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    _cache_acs(paths)
+    seen: list[str] = []
+    with client_for(recording(seen)) as client, pytest.raises(StageInputError, match="not set"):
+        run_pipeline(paths, Stage.fetch, client=client, api_key=None, refresh=True)
+    assert seen == []
+
+
+def test_cli_empty_env_key_fails_fast(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("CENSUS_API_KEY", "")
+    seen: list[str] = []
+    monkeypatch.setattr(cli, "make_client", lambda: client_for(recording(seen)))
+    result = CliRunner().invoke(cli.app, ["run", "--stage", "fetch", "--root", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "CENSUS_API_KEY not set" in result.output
+    assert seen == []

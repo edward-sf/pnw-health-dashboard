@@ -71,8 +71,13 @@ class Stage(StrEnum):
     all = "all"
 
 
-def _fetch(paths: Paths, client: httpx.Client, api_key: str | None, refresh: bool) -> None:
+def _fetch(
+    paths: Paths, client: httpx.Client, api_key: str | None, refresh: bool, root: Path | None
+) -> None:
     catalog = load_catalog()
+    if not api_key and (refresh or not acs_cache_path(paths.raw, catalog).exists()):
+        env_file = root / ".env" if root is not None else Path(".env")
+        raise StageInputError(f"CENSUS_API_KEY not set (environment or {env_file})")
     fetch_acs(client, paths.raw, catalog, api_key=api_key, refresh=refresh)
     fetch_places(client, paths.raw, catalog, refresh=refresh)
     fetch_chr(client, paths.raw, catalog, CHR_YEAR, refresh=refresh)
@@ -154,15 +159,17 @@ def run_pipeline(
     client: httpx.Client,
     api_key: str | None = None,
     refresh: bool = False,
+    root: Path | None = None,
 ) -> None:
     """Run one stage, or all of them in order.
 
     Only ``fetch`` uses the network; the later stages read what earlier stages wrote and
-    raise StageInputError if it is missing. Also raises FetchError and
-    DataValidationError.
+    raise StageInputError if it is missing. ``fetch`` also raises StageInputError when ACS
+    must be downloaded and there is no API key; ``root`` only names the ``.env`` path in
+    that message. Also raises FetchError and DataValidationError.
     """
     if stage in (Stage.fetch, Stage.all):
-        _fetch(paths, client, api_key, refresh)
+        _fetch(paths, client, api_key, refresh, root)
     if stage in (Stage.harmonize, Stage.all):
         _harmonize(paths)
     if stage in (Stage.model, Stage.all):
@@ -192,6 +199,7 @@ def run(
                 client=client,
                 api_key=census_api_key(root),
                 refresh=refresh,
+                root=root,
             )
     # ValueError covers the data and config checks raised outside validation, such as
     # duplicate counties after a rename and an invalid indicator catalog.
