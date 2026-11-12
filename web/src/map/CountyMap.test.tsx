@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import { topology } from "../test/fixtures";
 import { buildMapPaths } from "./buildMapPaths";
+import { outlineFor } from "../color/outline";
 import { CountyMap } from "./CountyMap";
 
 const paths = buildMapPaths(topology);
@@ -106,4 +107,18 @@ describe("CountyMap", () => {
       expect(tip.style.left).toBe("112px");
     });
   });
+});
+
+test("each county path carries the outline chosen for its fill", () => {
+  const { container } = render(
+    <CountyMap
+      paths={paths}
+      fillFor={() => "#e34a33"}
+      tooltipFor={() => ""}
+      selected={null}
+      onSelect={() => {}}
+    />,
+  );
+  const path = container.querySelector<SVGPathElement>("path[data-fips]")!;
+  expect(path.style.getPropertyValue("--county-stroke")).toBe(outlineFor("#e34a33"));
 });
