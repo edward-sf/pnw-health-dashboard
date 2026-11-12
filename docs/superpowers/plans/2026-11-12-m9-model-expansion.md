@@ -144,7 +144,7 @@ diff <(jq -S . model.before.json) <(jq -S '.targets.life_expectancy | del(.label
 
 ---
 
-### Task 2: Direction-aware flags
+### Task 2: Direction-aware flags (#178)
 
 **Files:** Modify `pipeline/src/pnw_health/model/flags.py`, `model/run.py`, `tests/model/test_flags.py`, `tests/model/test_run.py`; parent spec §5.
 
@@ -232,9 +232,9 @@ def test_peers_missing_a_county_rejected(...)
 
 ---
 
-### Task 4: Checkpoint — per-target model review
+### Task 4: Checkpoint — per-target model review (#179)
 
-Not code. Create the issue with the `checkpoint` label.
+Not code. The issue is #179 (`checkpoint` label).
 
 - [ ] **Step 1: Run the pipeline and the report.** `cd pipeline && uv run pnw-health run --stage model && uv run python scripts/model_report.py > ../review-m9-checkpoint.md`. Don't commit the output.
 - [ ] **Step 2:** Post a summary on the issue: national and PNW R² and RMSE per target, flag counts per target, two SHAP samples per target, and five sample peer lists with county names.
@@ -242,7 +242,7 @@ Not code. Create the issue with the `checkpoint` label.
 
 ---
 
-### Task 5: `t` param and Outcome picker
+### Task 5: `t` param and Outcome picker (#180)
 
 **Files:**
 - Modify: `web/src/explorer/parseParams.ts`, `parseParams.test.ts`, `useExplorerParams.ts`, `useExplorerParams.test.tsx`, `Explorer.tsx`, `Explorer.test.tsx`
@@ -279,7 +279,7 @@ it("hides the Outcome select in values mode", ...)
 
 ---
 
-### Task 6: Target-aware model UI
+### Task 6: Target-aware model UI (#181)
 
 **Files:** Modify `web/src/model/targetView.ts` (+test), `modelView.ts`, `buildShapBars.ts`, `panel/ModelCard.tsx`, `panel/ResidualRange.tsx`, `table/ModelTable.tsx`, `explorer/Explorer.tsx`, and each component's test. Add a second target to `test/fixtures/model.ts`: `premature_death`, `rate_per_100k`, `higher_is_worse`, with one county `insufficient_data` there but not under `life_expectancy`.
 
@@ -312,7 +312,7 @@ grep -rniE 'life expectancy|"years"' web/src --include='*.ts' --include='*.tsx' 
 
 ---
 
-### Task 7: Methodology updates
+### Task 7: Methodology updates (#182)
 
 **Files:** Modify `web/src/pages/methodology/ModelSection.tsx`, `MetricsTable.tsx`, `ExclusionsSection.tsx`, `AtAGlance.tsx`, `ReproducibilitySection.tsx`, `pages/Methodology.tsx`, and their tests. Create `pages/methodology/PeersSection.tsx` (+test).
 
@@ -333,7 +333,7 @@ grep -rniE 'life expectancy|"years"' web/src --include='*.ts' --include='*.tsx' 
 
 ---
 
-### Task 8: Similar counties panel section
+### Task 8: Similar counties panel section (#183)
 
 **Files:** Create `web/src/panel/buildPeerRows.ts` (+test) and `web/src/panel/SimilarCounties.tsx` (+test). Modify `panel/CountyPanel.tsx` (+test) and `explorer/Explorer.tsx`. Docs: parent spec §6 Explorer.
 
@@ -369,7 +369,7 @@ it("shows 'Not enough data to find similar counties.' when there are no peers", 
 
 ---
 
-### Task 9: Playwright smoke test
+### Task 9: Playwright smoke test (#184)
 
 **Files:** Modify `web/e2e/smoke.spec.ts`.
 
