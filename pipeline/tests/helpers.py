@@ -9,17 +9,24 @@ from typing import Any
 
 import geopandas as gpd
 from shapely.geometry import box
+from shapely.geometry.base import BaseGeometry
 
 
-def make_boundary_zip(path: Path, fips: list[str]) -> Path:
-    """Write a Census-style county shapefile zip with one 0.5° square per FIPS (EPSG:4269)."""
+def make_boundary_zip(
+    path: Path, fips: list[str], geometries: dict[str, BaseGeometry] | None = None
+) -> Path:
+    """Write a Census-style county shapefile zip with one 0.5° square per FIPS (EPSG:4269).
+
+    A FIPS in ``geometries`` gets that shape instead of its square.
+    """
+    shapes = geometries or {}
     gdf = gpd.GeoDataFrame(
         {
             "GEOID": fips,
             "STATEFP": [f[:2] for f in fips],
             "NAMELSAD": [f"County {f}" for f in fips],
         },
-        geometry=[box(-120 + i, 45, -119.5 + i, 45.5) for i in range(len(fips))],
+        geometry=[shapes.get(f, box(-120 + i, 45, -119.5 + i, 45.5)) for i, f in enumerate(fips)],
         crs="EPSG:4269",
     )
     with tempfile.TemporaryDirectory() as tmp:

@@ -50,6 +50,22 @@ def test_antimeridian_parts_preserved() -> None:
     assert len(geom.geoms) == 2
 
 
+def test_antimeridian_survives_load_and_quantize(tmp_path: Path) -> None:
+    aleutians = MultiPolygon([box(172, 52, 173, 53), box(-176, 51, -175, 52)])
+    zp = make_boundary_zip(tmp_path / "b.zip", ["02016", "53033"], {"02016": aleutians})
+    counties = load_pnw_counties(zp)
+    back = topojson.Topology(to_topojson(counties), object_name="counties").to_gdf()
+    by_fips = dict(zip(back.fips, back.geometry, strict=True))
+    geom = by_fips["02016"]
+    minx, _, maxx, _ = geom.bounds
+    assert len(geom.geoms) == 2
+    assert minx < -170
+    assert maxx > 170
+    mainland = by_fips["53033"].bounds
+    for got, want in zip(mainland, (-119, 45, -118.5, 45.5), strict=True):
+        assert abs(got - want) < 0.01
+
+
 def test_fetch_boundaries_url(tmp_path: Path) -> None:
     seen: list[str] = []
     body = make_boundary_zip(tmp_path / "src" / "b.zip", ["53033"]).read_bytes()
