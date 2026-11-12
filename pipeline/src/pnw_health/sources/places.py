@@ -95,6 +95,14 @@ def _numeric(rows: pd.DataFrame, column: str) -> pd.Series:
 def parse_places(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
     """One long-format row per county x PLACES indicator present in the file."""
     table = pd.DataFrame(_load_rows(path))
+    location = table["locationid"].astype(str)
+    # Two-digit ids are national and state aggregates (e.g. "59"); drop them. Anything else
+    # that is not a 5-digit FIPS (a county that lost its leading zero) must not vanish.
+    kept = location[~location.str.fullmatch(r"\d{2}")]
+    table = table.loc[kept.index]
+    bad = sorted(set(kept[~kept.str.fullmatch(r"\d{5}")]))
+    if bad:
+        raise _invalid(f"unexpected locationid(s) {', '.join(bad[:5])}")
     frames = []
     for ind in catalog:
         if ind.source != "places":
