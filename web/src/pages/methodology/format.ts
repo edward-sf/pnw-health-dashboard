@@ -17,3 +17,7 @@ const list = new Intl.ListFormat("en-US", { style: "long", type: "conjunction" }
 export function joinList(items: string[]): string {
   return list.format(items).replace(/, and /, " and ");
 }
+
+/** An outcome's label as running text: lower case, without a trailing "(years lost)" and the like. */
+export const outcomeName = (label: string): string =>
+  label.replace(/\s*\([^)]*\)\s*$/, "").toLowerCase();

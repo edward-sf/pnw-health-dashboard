@@ -6,7 +6,10 @@ import type { DataState } from "../data/useData";
 import { manifest, model, topology, values } from "../test/fixtures";
 import { Methodology } from "./Methodology";
 
-const ready: DataState = { status: "ready", data: { manifest, model, topology, values } };
+const ready: DataState = {
+  status: "ready",
+  data: { manifest, model, topology, values },
+};
 
 const ANCHORS = [
   "sources",
@@ -18,6 +21,7 @@ const ANCHORS = [
   "unreliable",
   "model",
   "exclusions",
+  "similar-counties",
   "model-card",
 ];
 
@@ -81,10 +85,42 @@ test("the outline nests: one page h2, sections at h3, sub-anchors at h4", () => 
   const h2s = screen.getAllByRole("heading", { level: 2 });
   expect(h2s.map((h) => h.textContent)).toEqual(["Methodology"]);
   expect(h2s[0]).toHaveAttribute("data-page-heading");
-  for (const id of ["at-a-glance", "sources", "indicators", "harmonization", "missing-data", "model", "exclusions", "model-card"]) {
+  for (const id of [
+    "at-a-glance",
+    "sources",
+    "indicators",
+    "harmonization",
+    "missing-data",
+    "model",
+    "exclusions",
+    "model-card",
+  ]) {
     expect(document.getElementById(id)?.tagName, id).toBe("H3");
   }
   for (const id of ["legacy", "suppression", "unreliable"]) {
     expect(document.getElementById(id)?.tagName, id).toBe("H4");
   }
+});
+
+test("the outcome select lives on the page, defaults to life expectancy and drives importance and the model card", async () => {
+  at(ready);
+  const select = screen.getByRole("combobox", { name: "Outcome" });
+  expect(select).toHaveValue("life_expectancy");
+  expect(
+    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+  ).toHaveTextContent("Life expectancy");
+  await userEvent.setup().selectOptions(select, "premature_death");
+  expect(
+    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+  ).toHaveTextContent("Premature death");
+  expect(document.body.textContent).toContain("OutcomePremature death");
+});
+
+test("has a Similar counties section in the table of contents", () => {
+  at(ready);
+  expect(screen.getByRole("link", { name: "Similar counties" })).toHaveAttribute(
+    "href",
+    "/methodology#similar-counties",
+  );
+  expect(document.getElementById("similar-counties")?.tagName).toBe("H3");
 });

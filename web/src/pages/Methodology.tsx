@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import ErrorPage from "../data/ErrorPage";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -9,6 +10,7 @@ import { HarmonizationSection } from "./methodology/HarmonizationSection";
 import { IndicatorCatalog } from "./methodology/IndicatorCatalog";
 import { MissingDataSection } from "./methodology/MissingDataSection";
 import { ModelSection } from "./methodology/ModelSection";
+import { PeersSection } from "./methodology/PeersSection";
 import { ReproducibilitySection } from "./methodology/ReproducibilitySection";
 import { SourcesSection } from "./methodology/SourcesSection";
 import { useHashFocus } from "./methodology/useHashFocus";
@@ -18,14 +20,16 @@ const CONTENTS = [
   ["indicators", "Indicators"],
   ["harmonization", "Geography"],
   ["missing-data", "Missing and uncertain values"],
-  ["model", "The life expectancy model"],
+  ["model", "The model"],
   ["exclusions", "What the model leaves out"],
+  ["similar-counties", "Similar counties"],
   ["model-card", "Reproducibility"],
 ] as const;
 
 export function Methodology({ state }: { state: DataState }) {
   usePageTitle("Methodology · PNW Health Dashboard");
   useHashFocus(state.status === "ready");
+  const [targetId, setTargetId] = useState(DEFAULT_TARGET);
   return (
     <section className="methodology">
       <h2 tabIndex={-1} data-page-heading>
@@ -49,10 +53,19 @@ export function Methodology({ state }: { state: DataState }) {
           <IndicatorCatalog indicators={state.data.manifest.indicators} />
           <HarmonizationSection sources={state.data.manifest.sources} />
           <MissingDataSection indicators={state.data.manifest.indicators} />
-          <ModelSection model={targetModel(state.data.model, DEFAULT_TARGET)} indicators={state.data.manifest.indicators} />
-          <ExclusionsSection model={targetModel(state.data.model, DEFAULT_TARGET)} />
+          <ModelSection
+            model={state.data.model}
+            targetId={targetId}
+            onTargetChange={setTargetId}
+            indicators={state.data.manifest.indicators}
+          />
+          <ExclusionsSection model={state.data.model} targetId={targetId} />
+          <PeersSection
+            peers={state.data.model.peers}
+            indicators={state.data.manifest.indicators}
+          />
           <ReproducibilitySection
-            model={targetModel(state.data.model, DEFAULT_TARGET)}
+            model={targetModel(state.data.model, targetId)}
             builtAt={state.data.manifest.built_at}
           />
         </>
