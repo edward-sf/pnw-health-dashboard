@@ -65,6 +65,17 @@ describe("loadData", () => {
     await expect(loadData("/")).rejects.toThrow(/values\.json/);
   });
 
+  it.each([
+    ["an empty model", {}],
+    ["no targets", { ...model, targets: {} }],
+    ["missing peers", { targets: model.targets }],
+    ["peers without counties", { ...model, peers: { method: model.peers.method } }],
+    ["peers without a method", { ...model, peers: { counties: model.peers.counties } }],
+  ])("rejects a v2 manifest with %s in model.json", async (_name, body) => {
+    stubFetch({ "model.json": body });
+    await expect(loadData("/")).rejects.toThrow(/model\.json.*reload/i);
+  });
+
   it("rejects an older schema major", async () => {
     stubFetch({ "manifest.json": { ...manifest, schema_version: "1.3.0" } });
     await expect(loadData("/")).rejects.toThrow(/schema/i);

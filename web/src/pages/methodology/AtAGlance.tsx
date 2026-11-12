@@ -1,11 +1,11 @@
 import type { AppData } from "../../data/loadData";
-import { DEFAULT_TARGET, targetModel } from "../../model/targetView";
+import { defaultTargetId, targetModel } from "../../model/targetView";
 import { featureLabel, formatCount, formatMetric, joinList, outcomeName } from "./format";
 import { stateNameForFips } from "./stateFipsNames";
 
 export function AtAGlance({ data }: { data: AppData }) {
   const { manifest, topology } = data;
-  const model = targetModel(data.model, DEFAULT_TARGET);
+  const model = targetModel(data.model, defaultTargetId(Object.keys(data.model.targets)));
   const fips = topology.objects.counties.geometries.flatMap((g) =>
     g.properties && "fips" in g.properties ? [g.properties.fips] : [],
   );

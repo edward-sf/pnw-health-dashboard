@@ -9,12 +9,12 @@ import pytest
 from pnw_health.config import state_abbr
 from pnw_health.contract import ExcludedCounty, ExcludedFeatureGroup, ModelFile, TargetModel
 from pnw_health.indicators import load_catalog
-from pnw_health.model.config import FEATURES, TARGETS
+from pnw_health.model.config import FEATURES, PEER_K, PEER_MIN_FEATURES, TARGETS
 from pnw_health.model.cv import assign_folds, fit_lightgbm_oof
 from pnw_health.model.explain import global_importance
 from pnw_health.model.features import ModelDataError, build_table
 from pnw_health.model.flags import se_from_ci, sigma_model_sq
-from pnw_health.model.run import run_model
+from pnw_health.model.run import build_peers, run_model
 from tests.model.synthetic import make_long
 
 CATALOG = load_catalog()
@@ -177,19 +177,26 @@ def test_target_carries_catalog_label_unit_direction(full_model: ModelFile) -> N
     )
 
 
-def test_run_flags_follow_direction(full_model: ModelFile) -> None:
-    counties = full_model.targets["premature_death"].counties.values()
-    scored = [c for c in counties if c.residual is not None and c.threshold_90 is not None]
+@pytest.mark.parametrize("target_id", TARGETS)
+def test_run_flags_follow_direction(full_model: ModelFile, target_id: str) -> None:
+    target = full_model.targets[target_id]
+    # Worse means a positive residual when higher is worse, a negative one when higher is better.
+    worse_sign = 1 if target.direction == "higher_is_worse" else -1
+    scored = [c for c in target.counties.values() if c.residual is not None]
     assert scored
     for c in scored:
-        assert c.residual is not None and c.threshold_90 is not None
-        if c.residual < -c.threshold_90:
-            assert c.flag == "notably_better"
-        elif c.residual > c.threshold_90:
+        assert c.residual is not None and c.threshold_75 is not None
+        assert c.threshold_90 is not None
+        worse_by = worse_sign * c.residual
+        if c.flag in ("notably_worse", "somewhat_worse"):
+            assert worse_by > c.threshold_75
+        elif c.flag in ("notably_better", "somewhat_better"):
+            assert -worse_by > c.threshold_75
+        if worse_by > c.threshold_90:
             assert c.flag == "notably_worse"
-    assert any(c.flag == "notably_better" for c in scored) or any(
-        c.flag == "notably_worse" for c in scored
-    )
+        elif -worse_by > c.threshold_90:
+            assert c.flag == "notably_better"
+    assert any(c.flag != "none" for c in scored)
 
 
 def test_card_target_matches_key(full_model: ModelFile) -> None:
@@ -215,3 +222,28 @@ def test_target_without_cis_names_the_target(long: pd.DataFrame) -> None:
     long.loc[rows, ["ci_low", "ci_high"]] = np.nan
     with pytest.raises(ModelDataError, match="premature_death"):
         run_model(long, CATALOG)
+
+
+INELIGIBLE = "53005"
+
+
+def test_build_peers_covers_exactly_the_pnw() -> None:
+    long = make_long(states=("53", "41", "16", "02"), per_state=10)
+    long = pd.concat([long, make_long(states=("06",), per_state=1)], ignore_index=True)
+    # Too few features to place, so this county gets no peers.
+    sparse = long["indicator_id"].isin(FEATURES[: len(FEATURES) - PEER_MIN_FEATURES + 1])
+    long.loc[sparse & (long["fips"] == INELIGIBLE), "value"] = np.nan
+    pnw = {f for f in long["fips"].unique() if state_abbr(f) is not None}
+    assert "06001" in set(long["fips"]) and "06001" not in pnw
+
+    peers = build_peers(long)
+
+    assert set(peers.counties) == pnw
+    assert peers.method.features == list(FEATURES)
+    assert peers.method.k == PEER_K
+    assert peers.method.min_features == PEER_MIN_FEATURES
+    assert all(len(found) in (0, PEER_K) for found in peers.counties.values())
+    assert all(set(found) <= pnw for found in peers.counties.values())
+    assert peers.counties[INELIGIBLE] == []
+    assert all(INELIGIBLE not in found for found in peers.counties.values())
+    assert sum(len(found) == PEER_K for found in peers.counties.values()) == len(pnw) - 1

@@ -6,6 +6,7 @@ from pnw_health.contract import ModelFile, PeerMethod, Peers, ShapEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
+from pnw_health.model.config import FEATURES, PEER_K, PEER_MIN_FEATURES
 from pnw_health.model.config import TARGETS as real_targets
 from pnw_health.validate import DataValidationError, validate_display, validate_model
 from tests.helpers import make_county_model, make_model_file, make_null_county_model, pnw_fips
@@ -15,6 +16,12 @@ from tests.helpers import make_county_model, make_model_file, make_null_county_m
 def _single_target(monkeypatch: pytest.MonkeyPatch) -> None:
     """Most fixtures hold one target, so stand in for the three-target TARGETS."""
     monkeypatch.setattr(validate, "TARGETS", ("life_expectancy",))
+
+
+@pytest.fixture
+def one_peer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Peer fixtures hold two counties, so one peer each stands in for PEER_K."""
+    monkeypatch.setattr(validate, "PEER_K", 1)
 
 
 def indicator(id_: str, unit: str) -> Indicator:
@@ -180,7 +187,20 @@ def test_legacy_in_range_passes() -> None:
     validate_display(valid_values(fips), set(fips), CATALOG, legacy_row("pct", 4.5))
 
 
+def target_indicator(id_: str, label: str, unit: str, direction: str) -> Indicator:
+    return Indicator.model_validate(
+        {
+            **indicator(id_, unit).model_dump(),
+            "label": label,
+            "category": "Outcomes",
+            "direction": direction,
+        }
+    )
+
+
 MODEL_CATALOG = [
+    target_indicator("life_expectancy", "Life expectancy", "years", "higher_is_better"),
+    target_indicator("injury_deaths", "Injury deaths", "rate_per_100k", "higher_is_worse"),
     indicator("poverty_rate", "percent"),
     Indicator.model_validate(
         {**indicator("obesity", "percent").model_dump(), "category": "Behaviors"}
@@ -427,8 +447,11 @@ def test_validate_model_prefixes_problems_with_target(monkeypatch: pytest.Monkey
         {WITH_TARGET: make_county_model(predicted=77.00001), NO_TARGET: make_null_county_model()},
         target_id="injury_deaths",
     )
+    injury = broken.targets["injury_deaths"].model_copy(
+        update={"label": "Injury deaths", "unit": "rate_per_100k", "direction": "higher_is_worse"}
+    )
     model = ModelFile(
-        targets={"life_expectancy": good.targets["life_expectancy"], **broken.targets},
+        targets={"life_expectancy": good.targets["life_expectancy"], "injury_deaths": injury},
         peers=good.peers,
     )
     problems = model_problems(model)
@@ -436,10 +459,13 @@ def test_validate_model_prefixes_problems_with_target(monkeypatch: pytest.Monkey
     assert problems[0].startswith("injury_deaths: model contributions do not sum")
 
 
-def peers_of(counties: dict[str, list[str]], k: int = 1) -> Peers:
-    return Peers(
-        method=PeerMethod(features=["poverty_rate"], k=k, min_features=6), counties=counties
+def peers_of(counties: dict[str, list[str]], k: int | None = None) -> Peers:
+    method = PeerMethod(
+        features=list(FEATURES),
+        k=validate.PEER_K if k is None else k,
+        min_features=PEER_MIN_FEATURES,
     )
+    return Peers(method=method, counties=counties)
 
 
 def peer_model(peers: Peers) -> ModelFile:
@@ -447,47 +473,117 @@ def peer_model(peers: Peers) -> ModelFile:
     return ModelFile(targets=model.targets, peers=peers)
 
 
-def test_valid_peers_pass() -> None:
+def test_valid_peers_pass(one_peer: None) -> None:
     model = peer_model(peers_of({WITH_TARGET: [NO_TARGET], NO_TARGET: [WITH_TARGET]}))
     validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
 
 
 def test_county_with_no_peers_passes() -> None:
-    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET], NO_TARGET: []}))
+    model = peer_model(peers_of({WITH_TARGET: [], NO_TARGET: []}))
     validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
 
 
-def test_peer_outside_pnw_rejected() -> None:
+def test_county_with_no_peers_listed_as_a_peer_rejected(one_peer: None) -> None:
+    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET], NO_TARGET: []}))
+    assert model_problems(model) == [
+        f"counties with no peers are listed as another county's peer: {NO_TARGET}; {RERUN}"
+    ]
+
+
+def test_peer_outside_pnw_rejected(one_peer: None) -> None:
     model = peer_model(peers_of({WITH_TARGET: ["06037"], NO_TARGET: []}))
     found = model_problems(model)
     assert len(found) == 1 and "peer" in found[0] and "06037" in found[0]
 
 
-def test_peer_lists_itself_rejected() -> None:
+def test_peer_lists_itself_rejected(one_peer: None) -> None:
     model = peer_model(peers_of({WITH_TARGET: [WITH_TARGET], NO_TARGET: []}))
     found = model_problems(model)
     assert len(found) == 1 and "itself" in found[0] and WITH_TARGET in found[0]
 
 
-def test_peer_list_duplicate_rejected() -> None:
-    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET, NO_TARGET], NO_TARGET: []}, k=2))
-    found = model_problems(model)
+def test_peer_list_duplicate_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(validate, "PEER_K", 2)
+    model = peer_model(peers_of({WITH_TARGET: [], NO_TARGET: [WITH_TARGET, WITH_TARGET]}))
+    found = [p for p in model_problems(model) if "listed as another county's peer" not in p]
     assert len(found) == 1 and "duplicate" in found[0]
 
 
-def test_peer_list_wrong_length_rejected() -> None:
+def test_peer_list_wrong_length_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(validate, "PEER_K", 5)
     model = peer_model(peers_of({WITH_TARGET: [NO_TARGET, "53003", "53005"], NO_TARGET: []}, k=5))
     found = model_problems(model)
     assert any("5 entries or none" in p and WITH_TARGET in p for p in found)
 
 
-def test_peers_missing_a_county_rejected() -> None:
+def test_peers_missing_a_county_rejected(one_peer: None) -> None:
     model = peer_model(peers_of({WITH_TARGET: []}))
     found = model_problems(model)
     assert len(found) == 1 and "peers" in found[0] and NO_TARGET in found[0]
 
 
-def test_peers_for_county_outside_pnw_rejected() -> None:
+def test_peers_for_county_outside_pnw_rejected(one_peer: None) -> None:
     model = peer_model(peers_of({WITH_TARGET: [], NO_TARGET: [], "06037": []}))
     found = model_problems(model)
     assert len(found) == 1 and "peers" in found[0] and "06037" in found[0]
+
+
+def with_target(model: ModelFile, **update: object) -> ModelFile:
+    target = model.targets["life_expectancy"]
+    return ModelFile(
+        targets={"life_expectancy": target.model_copy(update=update)}, peers=model.peers
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "stale", "current"),
+    [
+        ("direction", "higher_is_worse", "higher_is_better"),
+        ("label", "Life expectancy at birth", "Life expectancy"),
+        ("unit", "percent", "years"),
+    ],
+)
+def test_model_target_metadata_must_match_catalog(field: str, stale: str, current: str) -> None:
+    model = with_target(valid_model(), **{field: stale})
+    assert model_problems(model) == [
+        f"life_expectancy: model {field} {stale!r} does not match the catalog {current!r}; {RERUN}"
+    ]
+
+
+def test_model_target_must_be_in_catalog() -> None:
+    catalog = [ind for ind in MODEL_CATALOG if ind.id != "life_expectancy"]
+    with pytest.raises(DataValidationError) as err:
+        validate_model(valid_model(), target_rows(), MODEL_COUNTIES, catalog)
+    assert err.value.problems == [f"life_expectancy: target is not in the catalog; {RERUN}"]
+
+
+def test_model_card_target_must_match_target_id() -> None:
+    model = valid_model()
+    card = model.targets["life_expectancy"].model_card.model_copy(update={"target": "obesity"})
+    assert model_problems(with_target(model, model_card=card)) == [
+        f"life_expectancy: model card target 'obesity' does not match 'life_expectancy'; {RERUN}"
+    ]
+
+
+def test_peer_method_stale_k_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [], NO_TARGET: []}, k=PEER_K + 1))
+    assert model_problems(model) == [
+        f"peer method k {PEER_K + 1} does not match PEER_K {PEER_K}; {RERUN}"
+    ]
+
+
+def test_peer_method_stale_features_rejected() -> None:
+    peers = peers_of({WITH_TARGET: [], NO_TARGET: []})
+    peers.method.features = ["poverty_rate"]
+    assert model_problems(peer_model(peers)) == [
+        f"peer method features ['poverty_rate'] do not match FEATURES {list(FEATURES)}; {RERUN}"
+    ]
+
+
+def test_peer_method_stale_min_features_rejected() -> None:
+    peers = peers_of({WITH_TARGET: [], NO_TARGET: []})
+    peers.method.min_features = PEER_MIN_FEATURES + 1
+    assert model_problems(peer_model(peers)) == [
+        f"peer method min_features {PEER_MIN_FEATURES + 1} does not match "
+        f"PEER_MIN_FEATURES {PEER_MIN_FEATURES}; {RERUN}"
+    ]

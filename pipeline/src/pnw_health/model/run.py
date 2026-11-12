@@ -1,7 +1,8 @@
 """Run the whole model and assemble the contents of ``model.json``.
 
-Models, flags and importance use every training county in the country; only the Pacific
-Northwest counties are written out, each with the factors associated with its prediction.
+One model is fitted per target. Models, flags and importance use every training county in the
+country; only the Pacific Northwest counties are written out, each with the factors associated
+with its prediction. The file also holds each PNW county's similar PNW counties (peers).
 """
 
 from __future__ import annotations

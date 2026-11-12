@@ -150,12 +150,13 @@ def make_model_file(
     """
     from pnw_health.config import state_abbr
     from pnw_health.contract import ModelFile, PeerMethod, Peers
+    from pnw_health.model.config import FEATURES, PEER_K, PEER_MIN_FEATURES
 
     target = make_target_model(counties, features)
     target.model_card.target = target_id
     if peers is None:
         peers = Peers(
-            method=PeerMethod(features=["poverty_rate"], k=5, min_features=6),
+            method=PeerMethod(features=list(FEATURES), k=PEER_K, min_features=PEER_MIN_FEATURES),
             counties={f: [] for f in counties if state_abbr(f) is not None},
         )
     return ModelFile(targets={target_id: target}, peers=peers)

@@ -356,10 +356,12 @@
           "type": "array"
         },
         "k": {
+          "exclusiveMinimum": 0,
           "title": "K",
           "type": "integer"
         },
         "min_features": {
+          "exclusiveMinimum": 0,
           "title": "Min Features",
           "type": "integer"
         }

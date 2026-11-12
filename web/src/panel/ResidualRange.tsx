@@ -5,10 +5,10 @@ import type { Flag, Unit } from "../types";
 const W = 320;
 const H = 54;
 const LABEL_Y = 48;
-/** Closest two neighbouring labels may sit, in viewBox units, before the inner pair is dropped. */
+/** Smallest gap between neighbouring labels, in viewBox units, before the inner pair is dropped. */
 const MIN_LABEL_GAP = 28;
 
-/** Axis labels: rates are compact ("10.1K") so neighbouring labels fit in the 320-unit viewBox. */
+/** Axis labels: rates are compact ("10.1K") so neighbouring labels fit in the W-unit-wide viewBox. */
 const signedBound = (v: number, unit: Unit) => {
   if (v === 0) return "0";
   const body = unit === "rate_per_100k" ? formatTick(Math.abs(v), unit) : formatBound(Math.abs(v), unit);

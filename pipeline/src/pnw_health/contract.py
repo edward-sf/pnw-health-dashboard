@@ -15,12 +15,16 @@ from typing import Any, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
+    PositiveInt,
     RootModel,
     SerializerFunctionWrapHandler,
     model_serializer,
 )
 
 from pnw_health.indicators import Indicator, Unit
+
+# Which way is better for a model target. Unlike the catalog's direction, never "neutral".
+Direction = Literal["higher_is_better", "higher_is_worse"]
 
 
 class SourceVintage(BaseModel):
@@ -201,7 +205,7 @@ class TargetModel(BaseModel):
 
     label: str
     unit: Unit
-    direction: Literal["higher_is_better", "higher_is_worse"]
+    direction: Direction
     metrics: ModelMetricsBlock
     behaviors_comparison: BehaviorsComparison
     global_importance: list[ImportanceEntry]
@@ -214,8 +218,8 @@ class PeerMethod(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     features: list[str]
-    k: int
-    min_features: int
+    k: PositiveInt
+    min_features: PositiveInt
 
 
 class Peers(BaseModel):

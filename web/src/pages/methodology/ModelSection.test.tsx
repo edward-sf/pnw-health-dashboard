@@ -26,7 +26,7 @@ test("training, validation, metrics, importance and tiers", () => {
   expect(text).toContain("OutcomeLife expectancy");
   const table = screen.getByRole("table");
   const targets = Object.keys(modelFile.targets).length;
-  // One row per target and model, each with a national and a PNW line.
+  // Per target, two models (Ridge, LightGBM) with a national and a PNW row each; plus the header.
   expect(within(table).getAllByText("Ridge baseline")).toHaveLength(2 * targets);
   expect(within(table).getAllByText("LightGBM")).toHaveLength(2 * targets);
   expect(within(table).getAllByRole("row")).toHaveLength(1 + 4 * targets);

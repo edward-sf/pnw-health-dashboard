@@ -20,7 +20,10 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
     dir: "asc",
   });
   const d = modelDigits(target.unit);
-  const sorted = useMemo(() => sortModelRows(rows, sort.key, sort.dir), [rows, sort]);
+  const sorted = useMemo(
+    () => sortModelRows(rows, sort.key, sort.dir, target.direction),
+    [rows, sort, target.direction],
+  );
 
   return (
     <div className="county-table-wrap">

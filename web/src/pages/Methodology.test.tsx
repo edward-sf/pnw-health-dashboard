@@ -129,3 +129,16 @@ test("a deep link to similar counties focuses its heading", () => {
   at(ready, "/methodology#similar-counties");
   expect(document.getElementById("similar-counties")).toHaveFocus();
 });
+
+test("falls back to the first target when life_expectancy is absent", () => {
+  const rest = Object.fromEntries(
+    Object.entries(model.targets).filter(([id]) => id !== "life_expectancy"),
+  );
+  const without: DataState = {
+    status: "ready",
+    data: { manifest, topology, values, model: { ...model, targets: rest } },
+  };
+  at(without);
+  expect(screen.getByRole("heading", { name: "Methodology" })).toBeInTheDocument();
+  expect(screen.getByText(/The default is premature death\./)).toBeInTheDocument();
+});

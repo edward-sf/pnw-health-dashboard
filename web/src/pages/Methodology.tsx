@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import ErrorPage from "../data/ErrorPage";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { DataState } from "../data/useData";
-import { DEFAULT_TARGET, targetModel } from "../model/targetView";
+import { defaultTargetId, targetModel } from "../model/targetView";
 import { AtAGlance } from "./methodology/AtAGlance";
 import { ExclusionsSection } from "./methodology/ExclusionsSection";
 import { HarmonizationSection } from "./methodology/HarmonizationSection";
@@ -29,7 +29,10 @@ const CONTENTS = [
 export function Methodology({ state }: { state: DataState }) {
   usePageTitle("Methodology · PNW Health Dashboard");
   useHashFocus(state.status === "ready");
-  const [targetId, setTargetId] = useState(DEFAULT_TARGET);
+  // Null until the reader picks an outcome; the default needs the loaded model's targets.
+  const [picked, setTargetId] = useState<string | null>(null);
+  const targetIds = state.status === "ready" ? Object.keys(state.data.model.targets) : [];
+  const targetId = picked ?? defaultTargetId(targetIds);
   return (
     <section className="methodology">
       <h2 tabIndex={-1} data-page-heading>

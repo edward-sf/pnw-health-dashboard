@@ -13,7 +13,8 @@ def find_peers(
 ) -> dict[str, list[str]]:
     """The ``k`` nearest counties for every county in ``table``, nearest first.
 
-    ``table`` has one row per county (indexed by FIPS) and one column per feature. A county
+    ``table`` has one row per county (indexed by FIPS) and one column per feature, and should
+    hold only PNW counties, since every row is a candidate peer. A county
     with fewer than ``min_features`` non-null features gets no peers and is nobody's peer;
     it is also left out of the medians and z-scores. Other counties have missing features
     filled with the column median, then every column is standardized, so a constant column
