@@ -28,7 +28,7 @@ test("names k, the minimum features, imputation, scaling, distance and the race 
   render(<PeersSection peers={real} indicators={manifest.indicators} />);
   const text = document.body.textContent ?? "";
   expect(text).toContain("5 nearest");
-  expect(text).toContain("at least 6 of the 9 features");
+  expect(text).toContain("at least 6 of the 9 factors");
   expect(text).toMatch(/median/);
   expect(text).toMatch(/z-scores/);
   expect(text).toMatch(/Euclidean/);
@@ -43,7 +43,7 @@ test("reads k, the minimum and the feature list from the method, not from consta
   const text = document.body.textContent ?? "";
   expect(text).toContain(`${peers.method.k} nearest`);
   expect(text).toContain(
-    `at least ${peers.method.min_features} of the ${peers.method.features.length} features`,
+    `at least ${peers.method.min_features} of the ${peers.method.features.length} factors`,
   );
   expect(text).toContain("Poverty rate");
 });

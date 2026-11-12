@@ -13,7 +13,7 @@ export const SOURCE_NAMES: Record<string, string> = {
 const USES: Record<string, string> = {
   acs: "Social and economic indicators, population shares and most model factors",
   places: "Model-based estimates of chronic conditions, health behaviors and prevention",
-  chr: "Life expectancy (the model's target), premature death, access to care, rurality and severe housing cost burden",
+  chr: "The model's three outcomes (life expectancy, premature death and injury deaths), access to care, rurality and severe housing cost burden",
   boundaries: "County shapes for the map",
 };
 

@@ -143,10 +143,11 @@ test("methodology and about pages render", async ({ page }) => {
 });
 
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
-  // King County (53033) shows no panel Methodology link, so use Chugach, which has no model result.
+  // King County (53033) has a model result, so its model card has no Methodology link. Chugach
+  // doesn't, so its card links to #no-result (the panel's Similar counties link is a different one).
   await page.goto("./?i=poverty_rate&c=02063&mode=model");
   const panel = page.getByRole("complementary", { name: "County details" });
-  await panel.getByRole("link", { name: "Methodology", exact: true }).first().click();
+  await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
   const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
   await expect(heading).toBeFocused();
