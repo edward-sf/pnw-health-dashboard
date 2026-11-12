@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from pnw_health.model.config import Z_75, Z_90
+from pnw_health.model.features import ModelDataError
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
 
 NAN = float("nan")
@@ -94,3 +95,8 @@ def test_shuffled_index_same_flags() -> None:
 def test_zero_residuals_are_none() -> None:
     flags = classify(pd.Series([0.0] * 4), pd.Series([0.0, 1.0, NAN, 2.0]), 0.0, 1.0)
     assert set(flags.flag) == {"none"}
+
+
+def test_all_nan_se_raises() -> None:
+    with pytest.raises(ModelDataError, match="^no standard errors: cannot compute sigma$"):
+        sigma_model_sq(pd.Series([1.0, -1.0]), pd.Series([NAN, NAN]))

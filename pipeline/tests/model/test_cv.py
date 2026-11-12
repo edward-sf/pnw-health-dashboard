@@ -223,3 +223,20 @@ def test_contribution_belongs_to_its_feature() -> None:
     contributions = fit_lightgbm_oof(frame, FEATURES, assign_folds(frame["state"])).contributions
     assert contributions.abs().mean().idxmax() == "poverty_rate"
     assert (contributions.abs().idxmax(axis=1) == "poverty_rate").mean() >= 0.9
+
+
+def test_score_aligns_on_index() -> None:
+    actual = pd.Series([1.0, 2.0, 4.0, 8.0], index=["a", "b", "c", "d"])
+    predicted = pd.Series([1.5, 2.0, 3.0, 9.0], index=["a", "b", "c", "d"])
+    assert score(actual, predicted.sample(frac=1, random_state=0)) == score(actual, predicted)
+
+
+def test_score_needs_two_rows() -> None:
+    with pytest.raises(ModelDataError, match="at least 2"):
+        score(pd.Series([1.0], index=["a"]), pd.Series([1.0], index=["a"]))
+
+
+def test_score_missing_prediction_raises() -> None:
+    actual = pd.Series([1.0, 2.0, 3.0], index=["a", "b", "c"])
+    with pytest.raises(ModelDataError, match="c"):
+        score(actual, pd.Series([1.0, 2.0], index=["a", "b"]))

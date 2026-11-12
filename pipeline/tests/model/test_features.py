@@ -130,3 +130,15 @@ def test_asymmetric_target_ci() -> None:
     frame = build_table(long).frame
     assert frame.loc["53001", "ci_low"] == value - 1.0
     assert frame.loc["53001", "ci_high"] == value + 3.0
+
+
+def test_duplicate_rows_raise() -> None:
+    long = make_long()
+    long = pd.concat([long, long.iloc[[0]]], ignore_index=True)
+    first = long.iloc[0]
+    with pytest.raises(ModelDataError, match=f"{first.fips}/{first.indicator_id}"):
+        build_table(long)
+
+
+def test_dropped_is_tuple() -> None:
+    assert isinstance(build_table(make_long()).dropped, tuple)
