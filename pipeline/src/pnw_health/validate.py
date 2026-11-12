@@ -8,6 +8,7 @@ import pandas as pd
 
 from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
 from pnw_health.contract import CountyModel, ModelFile
+from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import ALLOWED_CATEGORIES, TARGET
 
@@ -21,7 +22,7 @@ RERUN_MODEL = "re-run `pnw-health run --stage model`"
 PARTIAL_STATES: dict[str, frozenset[str]] = {}
 
 
-class DataValidationError(Exception):
+class DataValidationError(PipelineError):
     def __init__(self, problems: list[str]) -> None:
         self.problems = problems
         super().__init__("\n".join(problems))

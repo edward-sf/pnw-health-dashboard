@@ -14,6 +14,7 @@ from typing import Any
 import pandas as pd
 
 from pnw_health.contract import Legacy, Manifest, ModelFile, ValueEntry, ValuesFile
+from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import TOP_N
 from pnw_health.numeric import nan_to_none
@@ -101,7 +102,7 @@ def write_model(path: Path, model: ModelFile) -> Path:
     return _write_json(path, model.model_dump(mode="json"))
 
 
-class ExportError(Exception):
+class ExportError(PipelineError):
     """Moving the staged export into place failed partway."""
 
 

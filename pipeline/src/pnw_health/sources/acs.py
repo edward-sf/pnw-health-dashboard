@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from pnw_health.config import ACS_YEAR
+from pnw_health.errors import InputError
 from pnw_health.fetch import FetchError, cached_get
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
@@ -57,7 +58,7 @@ def fetch_acs(
     """Fetch every catalog ACS field for all US counties in a single request."""
     fields = _fields(catalog)
     if len(fields) > MAX_FIELDS:
-        raise ValueError(
+        raise InputError(
             f"{len(fields)} ACS fields + NAME exceeds the Census limit of 50 variables per request"
         )
     params = {"get": ",".join(["NAME", *fields]), "for": "county:*"}

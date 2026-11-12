@@ -7,11 +7,12 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import ALLOWED_CATEGORIES, BEHAVIORS, FEATURES, TARGET
 
 
-class ModelDataError(ValueError):
+class ModelDataError(PipelineError, ValueError):
     """The inputs cannot support the model."""
 
 

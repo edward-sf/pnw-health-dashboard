@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from pnw_health.config import VALDEZ_CORDOVA_FIPS, state_abbr
+from pnw_health.errors import InputError
 from pnw_health.long import LONG_COLUMNS
 
 FIPS_RENAMES: dict[str, str] = {"02270": "02158"}  # Wade Hampton -> Kusilvak
@@ -43,7 +44,7 @@ def harmonize(frames: list[pd.DataFrame]) -> HarmonizeResult:
     dupes = values[values.duplicated(["fips", "indicator_id"], keep=False)]
     if not dupes.empty:
         keys = sorted({f"{r.fips}/{r.indicator_id}" for r in dupes.itertuples()})
-        raise ValueError(f"duplicate (fips, indicator_id) after renames: {', '.join(keys)}")
+        raise InputError(f"duplicate (fips, indicator_id) after renames: {', '.join(keys)}")
 
     legacy_rows: list[dict[str, object]] = []
     warnings: list[str] = []

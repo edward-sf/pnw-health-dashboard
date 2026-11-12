@@ -5,6 +5,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from pnw_health.errors import InputError
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.long import LONG_COLUMNS
@@ -125,7 +126,7 @@ def test_too_many_fields_rejected(tmp_path: Path) -> None:
         for n in range(25)
     ]
     with make_client(httpx.MockTransport(lambda r: httpx.Response(200))) as client:
-        with pytest.raises(ValueError, match="50"):
+        with pytest.raises(InputError, match="50"):
             fetch_acs(client, tmp_path, cat)
 
 

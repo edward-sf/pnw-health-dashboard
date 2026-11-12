@@ -9,6 +9,7 @@ from pnw_health.config import (
     census_api_key,
     state_abbr,
 )
+from pnw_health.errors import InputError
 
 
 def test_expected_total_is_149() -> None:
@@ -112,14 +113,14 @@ def test_dotenv_unclosed_quote_raises(
 ) -> None:
     monkeypatch.delenv("CENSUS_API_KEY", raising=False)
     (tmp_path / ".env").write_text(f"OTHER=1\n{line}\n")
-    with pytest.raises(ValueError, match=r"\.env line 2: unclosed quote"):
+    with pytest.raises(InputError, match=r"\.env line 2: unclosed quote"):
         census_api_key(tmp_path)
 
 
 def test_dotenv_not_utf8_names_the_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CENSUS_API_KEY", raising=False)
     (tmp_path / ".env").write_bytes(b"CENSUS_API_KEY=\xff\xfe\n")
-    with pytest.raises(ValueError, match=r"cannot read .*\.env"):
+    with pytest.raises(InputError, match=r"cannot read .*\.env"):
         census_api_key(tmp_path)
 
 
@@ -132,5 +133,5 @@ def test_dotenv_with_bom(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 def test_unreadable_dotenv_names_the_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CENSUS_API_KEY", raising=False)
     (tmp_path / ".env").mkdir()
-    with pytest.raises(ValueError, match=r"cannot read .*\.env"):
+    with pytest.raises(InputError, match=r"cannot read .*\.env"):
         census_api_key(tmp_path)

@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pydantic.json_schema import SkipJsonSchema
+
+from pnw_health.errors import InputError
 
 Unit = Literal["percent", "dollars", "years", "rate_per_100k", "count"]
 Category = Literal["Outcomes", "Behaviors", "Access", "Social & Economic", "Demographics"]
@@ -36,10 +38,14 @@ class Indicator(BaseModel):
 
 
 def load_catalog(path: Path | None = None) -> list[Indicator]:
-    """Load and validate the indicator catalog; raise ValueError on duplicate ids."""
-    raw = yaml.safe_load((path or DEFAULT_CATALOG).read_text())
-    catalog = [Indicator.model_validate(entry) for entry in raw]
+    """Load and validate the indicator catalog; raise InputError if it is invalid."""
+    source = path or DEFAULT_CATALOG
+    raw = yaml.safe_load(source.read_text())
+    try:
+        catalog = [Indicator.model_validate(entry) for entry in raw]
+    except ValidationError as err:
+        raise InputError(f"invalid indicator catalog {source}:\n{err}") from err
     dupes = sorted(i for i, n in Counter(ind.id for ind in catalog).items() if n > 1)
     if dupes:
-        raise ValueError(f"duplicate indicator ids: {', '.join(dupes)}")
+        raise InputError(f"duplicate indicator ids in {source}: {', '.join(dupes)}")
     return catalog
