@@ -99,7 +99,8 @@ def _flags_section(model: TargetModel, pop: pd.Series) -> list[str]:
         "",
     ]
 
-    out += ["## Mean residual by state (positive means better than expected)", ""]
+    better_sign = "positive" if model.direction == "higher_is_better" else "negative"
+    out += [f"## Mean residual by state ({better_sign} means better than expected)", ""]
     rows = []
     for fips, abbr in STATES.items():
         res = [c.residual for k, c in counties.items() if k[:2] == fips and c.residual is not None]

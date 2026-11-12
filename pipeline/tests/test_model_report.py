@@ -132,3 +132,19 @@ def test_report_has_a_section_per_target(
         "## Injury deaths",
     ]
     assert out.count("### Metrics") == 2
+
+
+@pytest.mark.parametrize(
+    ("direction", "heading"),
+    [
+        ("higher_is_better", "## Mean residual by state (positive means better than expected)"),
+        ("higher_is_worse", "## Mean residual by state (negative means better than expected)"),
+    ],
+)
+def test_residual_heading_follows_target_direction(direction: str, heading: str) -> None:
+    mr = load_script()
+    counties = {f"53{i:03d}": make_county_model() for i in range(1, 10)}
+    model = make_target_model(counties).model_copy(update={"direction": direction})
+    pop = pd.Series({fips: float(i) for i, fips in enumerate(counties, start=1)})
+    lines = mr._flags_section(model, pop)
+    assert [line for line in lines if line.startswith("## Mean residual")] == [heading]
