@@ -36,9 +36,15 @@ def test_sigma_mean_ignores_missing_ci() -> None:
 
 
 def test_tiers() -> None:
-    residuals = pd.Series([5.0, -5.0, 4.0, -4.0, 3.0])
+    scale = 3.0  # sqrt(sigma_sq + se**2) with se = 0
+    above_90, above_75, below_75 = (
+        scale * (Z_90 + 0.01),
+        scale * (Z_75 + 0.01),
+        scale * (Z_75 - 0.01),
+    )
+    residuals = pd.Series([above_90, -above_90, above_75, -above_75, below_75])
     se = pd.Series([0.0] * 5)
-    flags = classify(residuals, se, sigma_sq=9.0, mean_se_sq=0.0)
+    flags = classify(residuals, se, sigma_sq=scale**2, mean_se_sq=0.0)
     assert list(flags.flag) == [
         "notably_better",
         "notably_worse",
@@ -73,3 +79,18 @@ def test_null_residual_is_insufficient_data() -> None:
     assert flags.flag["a"] == "insufficient_data"
     assert flags.flag["b"] == "notably_better"
     assert not math.isnan(flags.threshold_90["a"])
+
+
+def test_shuffled_index_same_flags() -> None:
+    index = pd.Index([f"c{i}" for i in range(6)])
+    residuals = pd.Series([5.0, -5.0, 4.0, -4.0, 3.0, NAN], index=index)
+    se = pd.Series([0.0, 1.0, NAN, 0.5, 0.0, 0.0], index=index)
+    base = classify(residuals, se, sigma_sq=9.0, mean_se_sq=0.25).flag
+    order = index[[3, 0, 5, 1, 4, 2]]
+    shuffled = classify(residuals[order], se[order], sigma_sq=9.0, mean_se_sq=0.25).flag
+    pd.testing.assert_series_equal(shuffled.loc[index], base)
+
+
+def test_zero_residuals_are_none() -> None:
+    flags = classify(pd.Series([0.0] * 4), pd.Series([0.0, 1.0, NAN, 2.0]), 0.0, 1.0)
+    assert set(flags.flag) == {"none"}

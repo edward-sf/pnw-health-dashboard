@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from pnw_health.contract import BehaviorsComparison
+from pnw_health.model import compare
 from pnw_health.model.compare import compare_behaviors
 from pnw_health.model.config import BEHAVIORS, FEATURES
 from pnw_health.model.cv import assign_folds
@@ -49,3 +51,16 @@ def test_nothing_excluded_when_complete() -> None:
 
 def test_output_has_no_predictions() -> None:
     assert set(BehaviorsComparison.model_fields) == {"main", "behaviors", "excluded_states"}
+
+
+def test_behaviors_model_receives_behavior_columns(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[list[str]] = []
+    real = compare.fit_lightgbm_oof
+
+    def spy(frame: pd.DataFrame, features: list[str], folds: dict[str, int]) -> object:
+        seen.append(list(features))
+        return real(frame, features, folds)
+
+    monkeypatch.setattr(compare, "fit_lightgbm_oof", spy)
+    _compare(_frame())
+    assert seen == [list(FEATURES), [*FEATURES, *BEHAVIORS]]
