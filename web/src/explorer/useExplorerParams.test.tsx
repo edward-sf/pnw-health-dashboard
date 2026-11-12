@@ -6,12 +6,13 @@ import { manifest } from "../test/fixtures";
 import { useExplorerParams } from "./useExplorerParams";
 
 const fipsSet = new Set(["53033", "02016"]);
+const targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
 
 type Api = ReturnType<typeof useExplorerParams>;
 let api: Api;
 
 function Probe() {
-  const result = useExplorerParams(manifest, fipsSet);
+  const result = useExplorerParams(manifest, fipsSet, targetIds);
   useEffect(() => {
     api = result;
   });
@@ -83,4 +84,31 @@ test("setMode pushes, keeps i, c and view, and values deletes mode", async () =>
   expect(router.state.historyAction).toBe("PUSH");
   await act(async () => api.setMode("values"));
   expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&view=table");
+});
+
+test("setTarget keeps c and i and pushes", async () => {
+  const router = setup("/?i=pct_asian&c=53033&mode=model");
+  await act(async () => api.setTarget("injury_deaths"));
+  expect(router.state.location.search).toBe("?i=pct_asian&c=53033&mode=model&t=injury_deaths");
+  expect(router.state.historyAction).toBe("PUSH");
+});
+
+test("t survives a switch to values mode and back", async () => {
+  const router = setup("/?mode=model&t=premature_death");
+  await act(async () => api.setMode("values"));
+  expect(router.state.location.search).toBe("?t=premature_death");
+  expect(api.params.target).toBe("premature_death");
+  await act(async () => api.setMode("model"));
+  expect(router.state.location.search).toBe("?t=premature_death&mode=model");
+});
+
+test("setTarget to the default removes t", async () => {
+  const router = setup("/?t=injury_deaths&c=53033");
+  await act(async () => api.setTarget("life_expectancy"));
+  expect(router.state.location.search).toBe("?c=53033");
+});
+
+test("removes an invalid t", async () => {
+  const router = setup("/?t=nope&c=53033");
+  expect(router.state.location.search).toBe("?c=53033");
 });

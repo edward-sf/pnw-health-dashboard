@@ -537,17 +537,6 @@ main {
   content: " \25BC";
 }
 
-/* A lighter text colour, not opacity: opacity took the selected item below 4.5:1. */
-.indicator-picker--dimmed button {
-  color: #595959;
-}
-
-.picker-note {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: #555;
-}
-
 .legend-note {
   flex-basis: 100%;
   margin: 0;

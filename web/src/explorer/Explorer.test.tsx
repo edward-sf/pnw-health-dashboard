@@ -217,16 +217,48 @@ test("Model toggle sets mode, fills the map by tier, and shows the model title a
     screen.getByRole("heading", { level: 2, name: "Life expectancy: compared with expected" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Source: County Health Rankings, 2025 release.")).toBeInTheDocument();
-  expect(
-    screen.getByText(/Model mode shows life expectancy compared with what the model expects\./),
-  ).toBeInTheDocument();
   expect(document.querySelectorAll(".legend li")).toHaveLength(6);
 });
 
-test("picking an indicator in model mode keeps mode=model", async () => {
-  const router = setup("/?mode=model");
-  await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
-  expect(router.state.location.search).toBe("?mode=model&i=median_household_income");
+const twoTargets = {
+  ...model,
+  targets: {
+    ...model.targets,
+    premature_death: {
+      ...model.targets.life_expectancy!,
+      label: "Premature death (years lost)",
+      unit: "rate_per_100k" as const,
+      direction: "higher_is_worse" as const,
+    },
+  },
+};
+
+function setupTwo(url: string) {
+  const router = createMemoryRouter(
+    [{ path: "/", element: <Explorer data={{ manifest, values, topology, model: twoTargets }} /> }],
+    { initialEntries: [url] },
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+test("shows the Outcome select in model mode instead of the indicator picker", async () => {
+  const router = setupTwo("/?mode=model&i=pct_asian");
+  const select = screen.getByRole("combobox", { name: "Outcome" });
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
+    "Life expectancy",
+    "Premature death (years lost)",
+  ]);
+  expect(screen.queryByRole("button", { name: "Median household income" })).not.toBeInTheDocument();
+  await userEvent.selectOptions(select, "premature_death");
+  expect(router.state.location.search).toBe("?mode=model&i=pct_asian&t=premature_death");
+  expect(screen.getByRole("combobox", { name: "Outcome" })).toHaveValue("premature_death");
+});
+
+test("hides the Outcome select in values mode", () => {
+  setupTwo("/?t=premature_death");
+  expect(screen.queryByRole("combobox", { name: "Outcome" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Median household income" })).toBeInTheDocument();
 });
 
 test("a pending focus request doesn't fire for a different county", async () => {
