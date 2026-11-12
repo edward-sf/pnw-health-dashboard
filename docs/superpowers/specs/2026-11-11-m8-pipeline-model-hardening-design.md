@@ -14,7 +14,7 @@ The pipeline and model package carry no open review debt from M1–M4. Failures 
 - `pnw-health run` from the existing raw cache succeeds, and its four export files are identical to the pre-M8 output apart from `manifest.json`'s `built_at`. M8 changes no exported data.
 - `ci` and `build-deploy` are green on `milestone/m8`.
 
-**Scope.** The eleven roadmap issues: #61, #66, #60, #113, #65, #100, #64, #63, #119, #120, #121. Pipeline, model and `pipeline/scripts/` only: no `web/` changes, no export-contract or `schema/` changes, and `SCHEMA_VERSION` stays `1.3.0`. New problems found along the way get their own issue in Backlog unless they block M8.
+**Scope.** The eleven roadmap issues #61, #66, #60, #113, #65, #100, #64, #63, #119, #120, #121, plus #175 (T12), which the PR review of the milestone found and was added to M8. Pipeline, model and `pipeline/scripts/` only: no `web/` changes, no export-contract or `schema/` changes, and `SCHEMA_VERSION` stays `1.3.0`. New problems found along the way get their own issue in Backlog unless they block M8.
 
 ## 2. Spec changes
 
@@ -117,6 +117,20 @@ In `pipeline/scripts/model_report.py`:
 - A missing input file prints `<path> not found; run \`pnw-health run --stage <stage>\` first` (the CLI's wording) to stderr and exits 1.
 
 **Tests:** in a new `tests/test_model_report.py`, the tercile shares on a small synthetic model file, and the missing-input exit code and message.
+
+### 3.12 #175 CLI error types: keep tracebacks for code bugs
+
+Added after the milestone PR review. `run` caught `ValueError` to report the pipeline's own data and config errors, but that also swallowed programming errors from pandas, pyarrow and json (for example a reindex on duplicate labels), printing them as `pipeline failed:` with no traceback or stage.
+
+**Change:** a new `pnw_health/errors.py` defines:
+- `PipelineError(Exception)`: base for every error the CLI reports as a message, without a traceback. It has a `stage: str | None` attribute, `None` until `run_pipeline` sets it.
+- `InputError(PipelineError, ValueError)`: configuration or input the pipeline cannot use. It keeps `ValueError` as a base so existing callers and tests are unaffected.
+
+`DataValidationError`, `FetchError`, `StageInputError` and `ExportError` subclass `PipelineError`; `ModelDataError` subclasses `PipelineError` and `ValueError`. These raise `InputError` instead of a bare `ValueError`: the `.env` parser, `load_catalog` (duplicate ids, and a catalog entry that fails validation, wrapped with the catalog path), the ACS field limit, and duplicate counties after a rename. The `staging` guard in `write_exports` stays a plain `ValueError`: it catches a caller bug, which should keep its traceback. `export` also wraps the contract check on `data/interim/model.json`: a file from an older contract raises `StageInputError` saying to re-run `--stage model`, instead of a bare pydantic `ValidationError`.
+
+`run_pipeline` sets `err.stage` on any `PipelineError` that escapes a stage, without changing its type or message. `run` catches only `PipelineError` and prints `pipeline failed at the <stage> stage:` (or `pipeline failed:` before any stage, e.g. a `.env` error) followed by the message, then exits 1. Any other exception propagates with its traceback.
+
+**Tests:** every error class above is a `PipelineError`, and `InputError`/`ModelDataError` are still `ValueError`s; a broken catalog entry raises `InputError` naming the catalog; `run_pipeline` sets `stage` on a stage's error; the CLI prints the stage and exits 1 for a `PipelineError`; a plain `ValueError` raised inside a stage is not caught (the runner's result carries that exception, not a `pipeline failed` message). A stale interim `model.json` gives that `StageInputError`, tagged with the `export` stage.
 
 ## 4. Testing and verification
 

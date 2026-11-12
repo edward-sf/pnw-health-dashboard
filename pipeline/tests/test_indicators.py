@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 
+from pnw_health.errors import InputError
 from pnw_health.indicators import load_catalog
 
 EXPECTED_LABEL_FRAGMENTS = {
@@ -63,7 +64,7 @@ def test_duplicate_ids_rejected(tmp_path: Path) -> None:
 """
     path = tmp_path / "cat.yaml"
     path.write_text(entry + entry)
-    with pytest.raises(ValueError, match="dup"):
+    with pytest.raises(InputError, match="dup"):
         load_catalog(path)
 
 
@@ -92,3 +93,24 @@ def test_demographics_are_neutral() -> None:
     demo = [i for i in load_catalog() if i.category == "Demographics"]
     assert demo
     assert all(i.direction == "neutral" for i in demo)
+
+
+def test_invalid_catalog_entry_names_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "cat.yaml"
+    path.write_text(
+        """
+- id: bad
+  label: Bad
+  unit: furlongs
+  source: acs
+  source_field: DP03_0009PE
+  moe_field: DP03_0009PM
+  ci_level: 0.9
+  year: 2024
+  category: Social & Economic
+  direction: higher_is_worse
+  description: d
+"""
+    )
+    with pytest.raises(InputError, match="cat.yaml"):
+        load_catalog(path)

@@ -354,6 +354,30 @@
 - [ ] **Step 4:** Run the pipeline checks, then run `uv run python scripts/model_report.py --root ..`. It prints the report, with the new column.
 - [ ] **Step 5:** Commit and open the PR `chore(ml): checkpoint report cleanups`, `Part of #121`.
 
+### Task M8.T12: CLI error types (#175)
+
+Added after the milestone PR review (spec §3.12).
+
+**Files:**
+- Create: `pipeline/src/pnw_health/errors.py`, `pipeline/tests/test_errors.py`
+- Modify: `cli.py`, `config.py`, `indicators.py`, `harmonize.py`, `sources/acs.py`, `fetch.py`, `validate.py`, `export.py`, `model/features.py`
+- Test: `pipeline/tests/test_cli_e2e.py`, `pipeline/tests/test_indicators.py`
+
+**Interfaces:**
+- Produces: `PipelineError(Exception)` with `stage: str | None = None`; `InputError(PipelineError, ValueError)`. Every error the CLI reports is a `PipelineError`.
+
+- [ ] **Step 1: Write failing tests:**
+  - `test_errors.py::test_reported_errors_are_pipeline_errors`: `DataValidationError`, `FetchError`, `StageInputError`, `ExportError`, `ModelDataError` and `InputError` are subclasses of `PipelineError`; `InputError` and `ModelDataError` are subclasses of `ValueError`.
+  - `test_errors.py::test_input_errors_raised`: a `.env` unclosed quote, a duplicate catalog id, the ACS field limit and a duplicate county after a rename each raise `InputError`.
+  - `test_indicators.py::test_invalid_catalog_entry_names_the_file`: an entry with an unknown `unit` raises `InputError` whose message contains the catalog path.
+  - `test_cli_e2e.py::test_stage_recorded_on_pipeline_error`: `run_pipeline(..., Stage.harmonize)` with no fetch raises `StageInputError` with `err.stage == "harmonize"`.
+  - `test_cli_e2e.py::test_cli_names_failed_stage`: CLI `run --stage harmonize` on an empty root prints `pipeline failed at the harmonize stage:` and exits 1.
+  - `test_cli_e2e.py::test_cli_keeps_traceback_for_code_bugs`: patch `cli._harmonize` to raise `ValueError("boom")`; `CliRunner().invoke(...)` has `isinstance(result.exception, ValueError)`, and "pipeline failed" is not in the output.
+- [ ] **Step 2:** Run them; they fail.
+- [ ] **Step 3: Implement** per spec §3.12. `run_pipeline` wraps each stage call: `except PipelineError as err: err.stage = stage_name; raise`.
+- [ ] **Step 4:** Run the pipeline checks, plus a real from-cache run.
+- [ ] **Step 5:** Commit and open the PR `fix(pipeline): keep tracebacks for code bugs in the CLI`, `Part of #175`.
+
 ### Milestone review (no issue)
 
 - [ ] **Step 1:** On up-to-date `milestone/m8`, run the pipeline checks.
@@ -364,7 +388,7 @@
 - [ ] **Step 3:** Confirm that `ci` is green on the milestone PR and that `build-deploy` is green on `milestone/m8` (trigger it with `workflow_dispatch` on the branch if needed).
 - [ ] **Step 4:** Fill in the milestone PR template:
   - every issue PR
-  - `Closes #61, #66, #60, #113, #65, #100, #64, #63, #119, #120, #121`
+  - `Closes #61, #66, #60, #113, #65, #100, #64, #63, #119, #120, #121, #175`
   - the export diff output
   - the run links
 - [ ] **Step 5:** Mark the PR ready for review. The author merges it with a merge commit.

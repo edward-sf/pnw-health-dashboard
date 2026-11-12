@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Annotated
 import httpx
 import pandas as pd
 import typer
+from pydantic import ValidationError
 
 from pnw_health.config import (
     ACS_YEAR,
@@ -24,14 +26,14 @@ from pnw_health.config import (
     env_file_path,
 )
 from pnw_health.contract import Manifest, ModelFile, SourceVintage, write_schemas
+from pnw_health.errors import PipelineError
 from pnw_health.export import (
-    ExportError,
     build_values_file,
     finalize_model,
     write_exports,
     write_model,
 )
-from pnw_health.fetch import FetchError, make_client
+from pnw_health.fetch import make_client
 from pnw_health.harmonize import harmonize, pnw_only
 from pnw_health.indicators import load_catalog
 from pnw_health.model.run import run_model
@@ -52,7 +54,7 @@ from pnw_health.sources.geo import (
     to_topojson,
 )
 from pnw_health.sources.places import fetch_places, parse_places, places_cache_path, places_url
-from pnw_health.validate import DataValidationError, validate_display, validate_model
+from pnw_health.validate import validate_display, validate_model
 
 app = typer.Typer(add_completion=False, help=__doc__)
 
@@ -60,7 +62,7 @@ app = typer.Typer(add_completion=False, help=__doc__)
 MODEL_INPUT_DIGEST = "model.input.sha256"
 
 
-class StageInputError(Exception):
+class StageInputError(PipelineError):
     """A stage's input is missing because an earlier stage has not run."""
 
 
@@ -142,7 +144,13 @@ def _export(paths: Paths) -> None:
             f"{model_path} was trained on a different long.parquet; "
             "run `pnw-health run --stage model` first"
         )
-    model = ModelFile.model_validate_json(model_path.read_text())
+    try:
+        model = ModelFile.model_validate_json(model_path.read_text())
+    except ValidationError as err:
+        raise StageInputError(
+            f"{model_path} does not match the current contract ({err.error_count()} "
+            "error(s)); run `pnw-health run --stage model` first"
+        ) from err
     validate_model(model, values, county_fips, catalog)
 
     manifest = Manifest(
@@ -179,16 +187,23 @@ def run_pipeline(
     Only ``fetch`` uses the network; the later stages read what earlier stages wrote and
     raise StageInputError if it is missing. ``fetch`` also raises StageInputError when ACS
     must be downloaded and there is no API key; ``env_file`` is the ``.env`` path that
-    message names. Also raises FetchError and DataValidationError.
+    message names. Every error it reports is a PipelineError with ``stage`` set to the
+    stage that raised it; any other exception is a bug and propagates unchanged.
     """
-    if stage in (Stage.fetch, Stage.all):
-        _fetch(paths, client, api_key, refresh, env_file)
-    if stage in (Stage.harmonize, Stage.all):
-        _harmonize(paths)
-    if stage in (Stage.model, Stage.all):
-        _model(paths)
-    if stage in (Stage.export, Stage.all):
-        _export(paths)
+    steps: list[tuple[Stage, Callable[[], None]]] = [
+        (Stage.fetch, lambda: _fetch(paths, client, api_key, refresh, env_file)),
+        (Stage.harmonize, lambda: _harmonize(paths)),
+        (Stage.model, lambda: _model(paths)),
+        (Stage.export, lambda: _export(paths)),
+    ]
+    for step, action in steps:
+        if stage not in (step, Stage.all):
+            continue
+        try:
+            action()
+        except PipelineError as err:
+            err.stage = step.value
+            raise
 
 
 @app.callback()
@@ -216,10 +231,10 @@ def run(
                 refresh=refresh,
                 env_file=env_file_path(root),
             )
-    # ValueError covers the data and config checks raised outside validation, such as
-    # duplicate counties after a rename and an invalid indicator catalog.
-    except (DataValidationError, ExportError, FetchError, StageInputError, ValueError) as err:
-        typer.echo(f"pipeline failed:\n{err}", err=True)
+    # Only the pipeline's own errors become a message; a bug keeps its traceback.
+    except PipelineError as err:
+        where = f" at the {err.stage} stage" if err.stage else ""
+        typer.echo(f"pipeline failed{where}:\n{err}", err=True)
         raise typer.Exit(1) from err
 
 

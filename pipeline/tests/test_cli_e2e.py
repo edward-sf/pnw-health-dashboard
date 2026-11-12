@@ -462,3 +462,38 @@ def test_bad_dotenv_still_reported_for_fetch(tmp_path: Path) -> None:
     )
     assert result.exit_code == 1
     assert "unclosed quote" in result.output
+
+
+def test_stage_recorded_on_pipeline_error(tmp_path: Path) -> None:
+    with client_for(failing) as client, pytest.raises(StageInputError) as err:
+        run_pipeline(Paths.default(tmp_path), Stage.harmonize, client=client)
+    assert err.value.stage == "harmonize"
+
+
+def test_cli_names_failed_stage(tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli.app, ["run", "--stage", "harmonize", "--root", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "pipeline failed at the harmonize stage:" in result.output
+
+
+def test_cli_keeps_traceback_for_code_bugs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def bug(paths: Paths) -> None:
+        raise ValueError("boom")
+
+    monkeypatch.setattr(cli, "_harmonize", bug)
+    result = CliRunner().invoke(cli.app, ["run", "--stage", "harmonize", "--root", str(tmp_path)])
+    assert isinstance(result.exception, ValueError)
+    assert "pipeline failed" not in result.output
+
+
+def test_stale_model_json_says_rerun_model(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        (paths.interim / "model.json").write_text("{}")
+        with pytest.raises(StageInputError, match="--stage model") as err:
+            run_pipeline(paths, Stage.export, client=client)
+    assert err.value.stage == "export"

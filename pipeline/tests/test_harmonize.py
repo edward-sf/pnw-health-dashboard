@@ -5,6 +5,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
+from pnw_health.errors import InputError
 from pnw_health.harmonize import LEGACY_COLUMNS, LEGACY_DTYPES, harmonize, pnw_only
 from pnw_health.long import LONG_COLUMNS
 
@@ -77,7 +78,7 @@ def test_null_value_survives() -> None:
 
 
 def test_duplicate_after_rename_raises() -> None:
-    with pytest.raises(ValueError, match="02158"):
+    with pytest.raises(InputError, match="02158"):
         harmonize([long_rows([("02270", "x", 1.0), ("02158", "x", 2.0)])])
 
 
