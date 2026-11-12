@@ -84,7 +84,7 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 - Exactly 149 display FIPS; per-state counts match (39/36/44/30).
 - Percent-unit values within [0, 100]; non-negative counts/rates.
 - No duplicate `(fips, indicator_id)` keys in display data.
-- Every catalog indicator has data for at least one county.
+- Every catalog indicator has data for at least one county, and for at least one county in every PNW state unless that state is listed for it in `PARTIAL_STATES` (pipeline-only, empty in M8; M8 spec §3.5).
 
 ## 4. Export contract (`web/public/data/`)
 

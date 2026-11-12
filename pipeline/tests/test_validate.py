@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+from pnw_health import validate
 from pnw_health.contract import ModelFile, ShapEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
@@ -326,3 +327,36 @@ def test_model_has_county_outside_the_pnw() -> None:
         }
     )
     assert model_problems(model) == [f"model has counties outside the PNW: 06037; {RERUN}"]
+
+
+def test_state_with_no_rows_fails() -> None:
+    fips = pnw_fips()
+    values = valid_values(fips)
+    values = values[~((values.indicator_id == "pct") & values.fips.str.startswith("02"))]
+    assert "pct: no values for AK" in problems(values, set(fips))
+
+
+def test_state_with_all_null_values_fails() -> None:
+    fips = pnw_fips()
+    values = valid_values(fips)
+    values.loc[(values.indicator_id == "pct") & values.fips.str.startswith("02"), "value"] = None
+    assert "pct: no values for AK" in problems(values, set(fips))
+
+
+def test_partial_state_exempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(validate.PARTIAL_STATES, "pct", frozenset({"AK"}))
+    fips = pnw_fips()
+    values = valid_values(fips)
+    values = values[~((values.indicator_id == "pct") & values.fips.str.startswith("02"))]
+    validate_display(values, set(fips), CATALOG)
+
+
+def test_unknown_partial_state_id_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(validate.PARTIAL_STATES, "nope", frozenset({"AK"}))
+    fips = pnw_fips()
+    found = problems(valid_values(fips), set(fips))
+    assert "PARTIAL_STATES lists nope which is not in the catalog" in found
+
+
+def test_partial_states_empty() -> None:
+    assert validate.PARTIAL_STATES == {}
