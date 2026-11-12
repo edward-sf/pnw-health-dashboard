@@ -21,6 +21,8 @@ from pnw_health.contract import (
     ModelCard,
     ModelFile,
     ModelMetricsBlock,
+    PeerMethod,
+    Peers,
     ShapEntry,
     TargetModel,
     Thresholds,
@@ -32,6 +34,8 @@ from pnw_health.model.config import (
     FEATURES,
     LGBM_PARAMS,
     N_FOLDS,
+    PEER_K,
+    PEER_MIN_FEATURES,
     SEED,
     TARGETS,
     Z_75,
@@ -41,6 +45,7 @@ from pnw_health.model.cv import assign_folds, fit_lightgbm_oof, fit_ridge_oof, s
 from pnw_health.model.explain import global_importance, ranked_contributions
 from pnw_health.model.features import ModelDataError, build_table, check_features, check_targets
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
+from pnw_health.model.peers import find_peers
 from pnw_health.numeric import nan_to_none
 
 DROPPED_REASON = (
@@ -73,7 +78,22 @@ def run_model(long: pd.DataFrame, catalog: list[Indicator]) -> ModelFile:
     check_features(FEATURES, catalog)
     check_targets(TARGETS, catalog)
     by_id = {ind.id: ind for ind in catalog}
-    return ModelFile(targets={name: run_target(long, by_id[name]) for name in TARGETS})
+    return ModelFile(
+        targets={name: run_target(long, by_id[name]) for name in TARGETS},
+        peers=build_peers(long),
+    )
+
+
+def build_peers(long: pd.DataFrame) -> Peers:
+    """Nearest-neighbour peers among the PNW counties, on the model's features."""
+    pnw = sorted({str(f) for f in long["fips"] if state_abbr(str(f)) is not None})
+    rows = long[long["indicator_id"].isin(FEATURES) & long["fips"].isin(pnw)]
+    table = rows.pivot(index="fips", columns="indicator_id", values="value")
+    table = table.reindex(index=pnw, columns=list(FEATURES))
+    return Peers(
+        method=PeerMethod(features=list(FEATURES), k=PEER_K, min_features=PEER_MIN_FEATURES),
+        counties=find_peers(table, PEER_K, PEER_MIN_FEATURES),
+    )
 
 
 def run_target(long: pd.DataFrame, target: Indicator) -> TargetModel:

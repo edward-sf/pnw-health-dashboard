@@ -142,10 +142,20 @@ def make_model_file(
     counties: dict[str, Any],
     features: list[str] | None = None,
     target_id: str = "life_expectancy",
+    peers: Any = None,
 ) -> Any:
-    """A model file with one target, `life_expectancy` unless `target_id` says otherwise."""
-    from pnw_health.contract import ModelFile
+    """A model file with one target, `life_expectancy` unless `target_id` says otherwise.
+
+    Without `peers`, every PNW county among `counties` has an empty peer list.
+    """
+    from pnw_health.config import state_abbr
+    from pnw_health.contract import ModelFile, PeerMethod, Peers
 
     target = make_target_model(counties, features)
     target.model_card.target = target_id
-    return ModelFile(targets={target_id: target})
+    if peers is None:
+        peers = Peers(
+            method=PeerMethod(features=["poverty_rate"], k=5, min_features=6),
+            counties={f: [] for f in counties if state_abbr(f) is not None},
+        )
+    return ModelFile(targets={target_id: target}, peers=peers)

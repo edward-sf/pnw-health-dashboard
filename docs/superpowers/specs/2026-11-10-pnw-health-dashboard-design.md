@@ -97,7 +97,7 @@ The four files are written as a set: into a temporary directory under `data/inte
 | `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
-| `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value` |
+| `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value`. A top-level `peers` block (M9 spec §3.2) holds `method` `{features, k, min_features}` and `counties`: for each PNW county, its `k` nearest PNW counties on the model features, nearest first, or `[]` when it has too few features |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
@@ -196,6 +196,5 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 - **Race-stratified outcomes** ("which groups are impacted"): CHR county measures by race/ethnicity, displayed only where not suppressed; needs its own design for suppression-heavy AK/ID counties.
 - **State health-department datasets** (WA DOH, OHA, IDHW, AK DOH) as state-specific spotlight indicators.
-- **County peer-group clustering** and "compare to similar counties."
 - **Forecasting** from time series (pending a credible approach for small counties).
 - **Additional model targets** (e.g., diabetes prevalence) — config change plus UI target picker.

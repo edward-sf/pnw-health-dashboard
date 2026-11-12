@@ -345,6 +345,57 @@
       "title": "ModelMetricsBlock",
       "type": "object"
     },
+    "PeerMethod": {
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Features",
+          "type": "array"
+        },
+        "k": {
+          "title": "K",
+          "type": "integer"
+        },
+        "min_features": {
+          "title": "Min Features",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "features",
+        "k",
+        "min_features"
+      ],
+      "title": "PeerMethod",
+      "type": "object"
+    },
+    "Peers": {
+      "additionalProperties": false,
+      "properties": {
+        "counties": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Counties",
+          "type": "object"
+        },
+        "method": {
+          "$ref": "#/$defs/PeerMethod"
+        }
+      },
+      "required": [
+        "method",
+        "counties"
+      ],
+      "title": "Peers",
+      "type": "object"
+    },
     "RegionMetrics": {
       "additionalProperties": false,
       "properties": {
@@ -489,6 +540,9 @@
   },
   "additionalProperties": false,
   "properties": {
+    "peers": {
+      "$ref": "#/$defs/Peers"
+    },
     "targets": {
       "additionalProperties": {
         "$ref": "#/$defs/TargetModel"
@@ -498,7 +552,8 @@
     }
   },
   "required": [
-    "targets"
+    "targets",
+    "peers"
   ],
   "title": "ModelFile",
   "type": "object"

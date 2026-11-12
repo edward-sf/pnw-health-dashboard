@@ -210,10 +210,26 @@ class TargetModel(BaseModel):
     model_card: ModelCard
 
 
+class PeerMethod(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    features: list[str]
+    k: int
+    min_features: int
+
+
+class Peers(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: PeerMethod
+    counties: dict[str, list[str]]
+
+
 class ModelFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     targets: dict[str, TargetModel]
+    peers: Peers
 
 
 SCHEMAS: dict[str, type[BaseModel]] = {

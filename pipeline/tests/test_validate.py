@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from pnw_health import validate
-from pnw_health.contract import ModelFile, ShapEntry
+from pnw_health.contract import ModelFile, PeerMethod, Peers, ShapEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.indicators import Indicator
 from pnw_health.long import LONG_COLUMNS
@@ -219,7 +219,8 @@ def test_valid_model_passes() -> None:
 
 
 def test_model_missing_county() -> None:
-    model = make_model_file({WITH_TARGET: make_county_model()})
+    peers = peers_of({WITH_TARGET: [], NO_TARGET: []})
+    model = make_model_file({WITH_TARGET: make_county_model()}, peers=peers)
     assert model_problems(model) == [f"life_expectancy: model is missing counties: {NO_TARGET}"]
 
 
@@ -393,8 +394,66 @@ def test_validate_model_prefixes_problems_with_target() -> None:
         target_id="injury_deaths",
     )
     model = ModelFile(
-        targets={"life_expectancy": good.targets["life_expectancy"], **broken.targets}
+        targets={"life_expectancy": good.targets["life_expectancy"], **broken.targets},
+        peers=good.peers,
     )
     problems = model_problems(model)
     assert len(problems) == 1
     assert problems[0].startswith("injury_deaths: model contributions do not sum")
+
+
+def peers_of(counties: dict[str, list[str]], k: int = 1) -> Peers:
+    return Peers(
+        method=PeerMethod(features=["poverty_rate"], k=k, min_features=6), counties=counties
+    )
+
+
+def peer_model(peers: Peers) -> ModelFile:
+    model = make_model_file({WITH_TARGET: make_county_model(), NO_TARGET: make_null_county_model()})
+    return ModelFile(targets=model.targets, peers=peers)
+
+
+def test_valid_peers_pass() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET], NO_TARGET: [WITH_TARGET]}))
+    validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
+
+
+def test_county_with_no_peers_passes() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET], NO_TARGET: []}))
+    validate_model(model, target_rows(), MODEL_COUNTIES, MODEL_CATALOG)
+
+
+def test_peer_outside_pnw_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: ["06037"], NO_TARGET: []}))
+    found = model_problems(model)
+    assert len(found) == 1 and "peer" in found[0] and "06037" in found[0]
+
+
+def test_peer_lists_itself_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [WITH_TARGET], NO_TARGET: []}))
+    found = model_problems(model)
+    assert len(found) == 1 and "itself" in found[0] and WITH_TARGET in found[0]
+
+
+def test_peer_list_duplicate_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET, NO_TARGET], NO_TARGET: []}, k=2))
+    found = model_problems(model)
+    assert len(found) == 1 and "duplicate" in found[0]
+
+
+def test_peer_list_wrong_length_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [NO_TARGET, "53003", "53005"], NO_TARGET: []}, k=5))
+    found = model_problems(model)
+    assert any("5 entries or none" in p and WITH_TARGET in p for p in found)
+
+
+def test_peers_missing_a_county_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: []}))
+    found = model_problems(model)
+    assert len(found) == 1 and "peers" in found[0] and NO_TARGET in found[0]
+
+
+def test_peers_for_county_outside_pnw_rejected() -> None:
+    model = peer_model(peers_of({WITH_TARGET: [], NO_TARGET: [], "06037": []}))
+    found = model_problems(model)
+    assert len(found) == 1 and "peers" in found[0] and "06037" in found[0]
