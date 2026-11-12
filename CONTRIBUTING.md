@@ -77,3 +77,11 @@ cd pipeline && uv sync && uv run pytest && uv run ruff check && uv run ruff form
 # web (from M2)
 cd web && npm ci && npm test && npm run lint && npm run typecheck
 ```
+
+## Dependency overrides
+
+`web/package.json` has `"overrides"` entries that pin a transitive dependency outside its parents' ranges. Each one has a removal condition. When it's met, delete the override, run `npm install`, and check that `npm audit` and `npm run lint` still pass.
+
+| Override | Why | Remove when |
+|---|---|---|
+| `minimatch: 11.0.3` | Clears GHSA-g3hv-75wg-m249 (dev-only, via eslint and typescript-eslint); see #83 | `eslint`, `@eslint/config-array` and `@typescript-eslint/typescript-estree` all depend on `minimatch` ≥ 11.0.1 |

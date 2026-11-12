@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Navigate, Route, Routes } from "react-router";
@@ -23,6 +23,7 @@ function Shell() {
   useRouteFocus();
   return (
     <>
+      <button type="button">Elsewhere</button>
       <Link to="/late">Late</Link>
       <Link to="/">Home</Link>
       <Link to="/b">B</Link>
@@ -116,4 +117,40 @@ test("a cold redirect while loading focuses the heading once it renders", async 
   at("/nowhere");
   await user.click(screen.getByRole("button", { name: "Load" }));
   expect(await screen.findByRole("heading", { name: "Late page" })).toHaveFocus();
+});
+
+test("a late heading takes focus from the link that navigated", async () => {
+  const user = userEvent.setup();
+  at("/");
+  await user.click(screen.getByRole("link", { name: "Late" }));
+  // fireEvent, unlike userEvent, doesn't move focus, so the link still has it.
+  fireEvent.click(screen.getByRole("button", { name: "Load" }));
+  expect(await screen.findByRole("heading", { name: "Late page" })).toHaveFocus();
+});
+
+test("a late heading doesn't take focus the user has moved elsewhere", async () => {
+  const user = userEvent.setup();
+  at("/");
+  await user.click(screen.getByRole("link", { name: "Late" }));
+  const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+  await user.click(elsewhere);
+  fireEvent.click(screen.getByRole("button", { name: "Load" }));
+  await screen.findByRole("heading", { name: "Late page" });
+  expect(elsewhere).toHaveFocus();
+});
+
+test("unmounting while waiting cancels the wait", async () => {
+  const user = userEvent.setup();
+  const { unmount } = at("/");
+  await user.click(screen.getByRole("link", { name: "Late" }));
+  unmount();
+  const stray = document.createElement("h2");
+  stray.setAttribute("data-page-heading", "");
+  stray.tabIndex = -1;
+  await act(async () => {
+    document.body.append(stray);
+    await Promise.resolve();
+  });
+  expect(stray).not.toHaveFocus();
+  stray.remove();
 });

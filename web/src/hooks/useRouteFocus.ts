@@ -23,11 +23,16 @@ export function useRouteFocus(): void {
       heading.focus();
       return;
     }
+    // Focus at navigation time. If the user moves focus elsewhere while the page loads, the
+    // late heading leaves it there; focus that fell back to <body> (its element was removed)
+    // still moves.
+    const before = document.activeElement;
     const observer = new MutationObserver(() => {
       const late = find();
       if (!late) return;
       observer.disconnect();
-      late.focus();
+      const now = document.activeElement;
+      if (now === null || now === document.body || now === before) late.focus();
     });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
