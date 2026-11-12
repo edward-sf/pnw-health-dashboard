@@ -42,26 +42,48 @@ def test_too_few_features_gets_no_peers_and_is_not_a_peer() -> None:
     assert len(peers["A"]) == 3
 
 
-def test_missing_feature_filled_with_pnw_median_before_scaling() -> None:
-    base = pd.DataFrame(
-        {"x": [0.0, 1.0, 2.0, 3.0, 4.0, 2.0], "y": [5.0, 1.0, 4.0, 2.0, 3.0, np.nan]},
+def test_missing_feature_filled_with_median_not_mean() -> None:
+    # y over A-E is {0, 0, 1, 1, 10}: median 1, mean 2.4. F is missing y.
+    # Filled with the median F sits nearest B then D; a mean fill would give D then B.
+    table = pd.DataFrame(
+        {"x": [1.0, 5.0, 3.0, 4.0, 0.0, 5.0], "y": [0.0, 0.0, 1.0, 1.0, 10.0, np.nan]},
         index=list("ABCDEF"),
     )
-    median_y = base["y"].iloc[:5].median()
-    filled = base.copy()
-    filled.loc["F", "y"] = median_y
-    assert find_peers(base, k=3, min_features=1) == find_peers(filled, k=3, min_features=1)
+    assert find_peers(table, k=2, min_features=1)["F"] == ["B", "D"]
 
 
-def test_ineligible_county_does_not_shift_the_median() -> None:
+def test_median_ignores_ineligible_counties() -> None:
+    # G has one of three features, so it is not eligible, and its y of 40 must not enter
+    # the median that fills A's missing y. Over B-F the median is 2; with G it would be 4,
+    # which changes A's nearest two from C, D to E, C.
     table = pd.DataFrame(
-        {"x": [0.0, 1.0, 2.0, 100.0], "y": [1.0, 2.0, 3.0, np.nan]},
-        index=list("ABCD"),
+        {
+            "x": [3.0, 4.0, 5.0, 2.0, 4.0, 1.0, np.nan],
+            "y": [np.nan, 5.0, 2.0, 0.0, 4.0, 1.0, 40.0],
+            "z": [2.0, 5.0, 2.0, 1.0, 1.0, 5.0, np.nan],
+        },
+        index=list("ABCDEFG"),
     )
-    # D has 1 of 2 features: ineligible, so excluded from the pool and the statistics.
     peers = find_peers(table, k=2, min_features=2)
-    assert peers["D"] == []
-    assert peers["A"] == ["B", "C"]
+    assert peers["G"] == []
+    assert peers["A"] == ["C", "D"]
+
+
+def test_scaling_ignores_ineligible_counties() -> None:
+    # F has one of three features and y of 100. Over A-E alone the order of E's and B's
+    # peers differs from the order with F's y in the mean and standard deviation.
+    table = pd.DataFrame(
+        {
+            "x": [0.0, 1.0, 2.0, 3.0, 4.0, np.nan],
+            "y": [3.0, 1.0, 4.0, 1.0, 5.0, 100.0],
+            "z": [1.0, 2.0, 3.0, 4.0, 5.0, np.nan],
+        },
+        index=list("ABCDEF"),
+    )
+    peers = find_peers(table, k=2, min_features=2)
+    assert peers["B"] == ["A", "D"]
+    assert peers["C"] == ["A", "E"]
+    assert peers["E"] == ["C", "D"]
 
 
 def test_constant_feature_contributes_nothing() -> None:
