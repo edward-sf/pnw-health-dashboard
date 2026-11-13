@@ -57,7 +57,9 @@ def build_strata_file(
                     else None
                 )
             counties[fips] = groups
-        indicators[ind.id] = StrataIndicator(groups=list(ind.race_groups), counties=counties)
+        indicators[ind.id] = StrataIndicator(
+            groups=list(ind.race_groups), labels=dict(ind.race_labels or {}), counties=counties
+        )
     return StrataFile(
         dimension="race",
         source="chr",

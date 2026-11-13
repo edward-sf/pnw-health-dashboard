@@ -30,7 +30,7 @@
     },
     "StrataIndicator": {
       "additionalProperties": false,
-      "description": "``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``.",
+      "description": "``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``.\n\n``labels`` holds only this measure's overrides of the file-level group labels.",
       "properties": {
         "counties": {
           "additionalProperties": {
@@ -75,6 +75,25 @@
           },
           "title": "Groups",
           "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "propertyNames": {
+            "enum": [
+              "aian",
+              "asian",
+              "black",
+              "hispanic",
+              "nhopi",
+              "white",
+              "tom"
+            ]
+          },
+          "title": "Labels",
+          "type": "object"
         }
       },
       "required": [

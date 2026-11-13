@@ -147,3 +147,25 @@ it("renders nothing for an indicator without strata", () => {
   const { container } = setup("53033", overall, poverty);
   expect(container).toBeEmptyDOMElement();
 });
+
+it("a measure's label override replaces the group label in rows and the not-reported line", () => {
+  const base = strata.indicators.life_expectancy!;
+  const overridden = {
+    ...strata,
+    indicators: {
+      ...strata.indicators,
+      life_expectancy: {
+        ...base,
+        labels: { black: "Black (override)", hispanic: "Hispanic (override)" },
+      },
+    },
+  };
+  render(
+    <MemoryRouter>
+      <RaceBreakdown indicator={lifeExpectancy} fips="41051" overall={overall} strata={overridden} />
+    </MemoryRouter>,
+  );
+  expect(rows()[2]).toHaveTextContent("Black (override)");
+  expect(rows()[1]).toHaveTextContent("White");
+  expect(within(section()).getByText("Not reported: Hispanic (override).")).toBeInTheDocument();
+});

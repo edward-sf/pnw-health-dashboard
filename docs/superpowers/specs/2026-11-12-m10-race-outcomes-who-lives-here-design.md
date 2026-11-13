@@ -49,6 +49,8 @@ Column shape: `{stem}_race_{group}` with `_cilow` / `_cihigh` beside it, group �
 
 `v005` race columns have no CI columns in the 2025 file (the builder confirms this against the CSV; if they exist, carry them).
 
+`v005` comes from CMS Medicare data, where CHR's "Asian" group is Asian and Pacific Islander combined. That measure labels the group "Asian and Pacific Islander" through a per-measure override (§4.1, §4.3).
+
 ## 3. Approaches considered
 
 | | Approach | Trade-off |
@@ -72,6 +74,8 @@ The catalog marks which indicators have a race breakdown, so the pipeline doesn'
 ```
 
 `race_groups` is optional (default absent = no breakdown), allowed only on `source: chr` entries, and lists exactly the groups CHR publishes for that measure (§2 table). It is pipeline-only: excluded from the manifest's indicator JSON the same way `source_scale` is, so `manifest.schema.json` does not change because of it. (Builder's call whether it's `SkipJsonSchema` + `exclude=True` like `source_scale`, or a separate map in `config.py`; the catalog field is preferred so a measure's breakdown lives next to its definition.)
+
+`race_labels` is an optional, pipeline-only map from some of the indicator's `race_groups` to a label that replaces the file-level group label for that measure only; its keys must be in `race_groups`. `preventable_hospital_stays` sets `race_labels: {asian: Asian and Pacific Islander}`. It reaches the site as the strata indicator's `labels` (§4.3).
 
 ### 4.2 CHR source
 
@@ -104,6 +108,7 @@ New Pydantic models in `contract.py`; JSON Schema written to `schema/strata.sche
   "indicators": {
     "life_expectancy": {
       "groups": ["aian", "asian", "black", "hispanic", "nhopi", "white"],
+      "labels": {},                             // per-measure overrides only
       "counties": {
         "53077": {
           "aian":     {"v": 66.1, "lo": 64.0, "hi": 68.2, "unreliable": false},
@@ -112,10 +117,17 @@ New Pydantic models in `contract.py`; JSON Schema written to `schema/strata.sche
         },
         ...
       }
+    },
+    "preventable_hospital_stays": {
+      "groups": ["aian", "asian", "black", "hispanic", "white"],
+      "labels": {"asian": "Asian and Pacific Islander"},
+      "counties": {...}
     }
   }
 }
 ```
+
+- `labels` holds only this measure's overrides of the file-level `groups` labels, filled from the catalog's `race_labels`; it is `{}` when there are none. The site shows `labels[g]` in place of the group label, in the rows and in the "Not reported:" line. Adding it is additive within 2.1.0.
 
 - `counties` has all 149 display FIPS for every indicator. Every listed group is present for every county: an entry, or `null` when CHR reports no value (suppressed or not computed).
 - `unreliable` is `true` only where CHR's flag says `1` (premature death only); omitted or `false` otherwise, matching `ValueEntry`.
@@ -133,7 +145,7 @@ New Pydantic models in `contract.py`; JSON Schema written to `schema/strata.sche
 
 New checks in `validate.py`, run before export with the others (any failure aborts):
 
-- Every indicator in `strata.json` is a catalog indicator with `race_groups`, and vice versa; its `groups` equals the catalog's `race_groups`.
+- Every indicator in `strata.json` is a catalog indicator with `race_groups`, and vice versa; its `groups` equals the catalog's `race_groups` and its `labels` the catalog's `race_labels` (or `{}`).
 - Exactly the 149 display FIPS per indicator; every listed group present per county.
 - Each non-null entry: `lo ≤ v ≤ hi` where all three are present; percent units within [0, 100]; counts and rates non-negative.
 - Every strata indicator has at least one non-null value in the PNW (catches a silent column rename that slipped past the fetch check).

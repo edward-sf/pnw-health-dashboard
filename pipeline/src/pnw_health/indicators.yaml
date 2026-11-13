@@ -327,6 +327,7 @@
   direction: higher_is_worse
   description: Hospital stays for ambulatory-care sensitive conditions per 100,000 Medicare enrollees.
   race_groups: [aian, asian, black, hispanic, white]
+  race_labels: {asian: Asian and Pacific Islander}
 
 - id: food_insecurity
   label: Food insecurity

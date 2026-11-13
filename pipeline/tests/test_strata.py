@@ -85,6 +85,17 @@ def test_groups_and_labels_in_display_order(
     assert [(g.id, g.label) for g in strata.groups] == list(RACE_GROUP_LABELS.items())
 
 
+def test_label_overrides_from_catalog(
+    rows: pd.DataFrame, county_fips: set[str], catalog: list[Indicator]
+) -> None:
+    strata = build_strata_file(rows, county_fips, catalog)
+    labels = {i: entry.labels for i, entry in strata.indicators.items()}
+    assert labels.pop("preventable_hospital_stays") == {"asian": "Asian and Pacific Islander"}
+    assert all(value == {} for value in labels.values())
+    dumped = strata.model_dump(mode="json")["indicators"]["life_expectancy"]
+    assert dumped["labels"] == {}
+
+
 def test_unknown_pnw_fips_raises(
     rows: pd.DataFrame, county_fips: set[str], catalog: list[Indicator]
 ) -> None:

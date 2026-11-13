@@ -362,6 +362,11 @@ def validate_strata(strata: StrataFile, county_fips: set[str], catalog: list[Ind
                 f"{name}: groups {list(entry.groups)} do not match the catalog's race_groups "
                 f"{list(ind.race_groups or ())}"
             )
+        if ind is not None and entry.labels != dict(ind.race_labels or {}):
+            problems.append(
+                f"{name}: labels {dict(entry.labels)} do not match the catalog's race_labels "
+                f"{dict(ind.race_labels or {})}"
+            )
         missing = sorted(county_fips - set(entry.counties))
         if missing:
             problems.append(f"{name}: missing counties: {', '.join(missing)}")

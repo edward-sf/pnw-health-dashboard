@@ -33,17 +33,18 @@ export function RaceBreakdown({ indicator, fips, overall, strata }: Props) {
   const notReported: string[] = [];
   for (const g of listed) {
     const e = byGroup[g.id];
+    const label = stratum.labels?.[g.id] ?? g.label;
     if (e) {
       groupRows.push({
         key: g.id,
-        label: g.label,
+        label,
         v: e.v,
         lo: e.lo,
         hi: e.hi,
         unreliable: !!e.unreliable,
       });
     } else {
-      notReported.push(g.label);
+      notReported.push(label);
     }
   }
   // With no group reported, the section shows only the not-reported note (spec §5.2), so the
