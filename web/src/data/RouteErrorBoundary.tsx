@@ -39,12 +39,14 @@ export class RouteErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.failed) return this.props.children;
     const reload = this.props.onReload ?? (() => window.location.reload());
+    // Only the message is a live region: the heading takes focus, which announces it, so inside
+    // `role="alert"` too it could be read twice (as in ErrorPage).
     return (
-      <div role="alert">
+      <div>
         <h2 ref={this.heading} data-page-heading="" tabIndex={-1}>
           Something went wrong
         </h2>
-        <p>This page couldn't be shown. Reloading the page usually fixes it.</p>
+        <p role="alert">This page couldn't be shown. Reloading the page usually fixes it.</p>
         <button type="button" onClick={reload}>
           Reload the page
         </button>

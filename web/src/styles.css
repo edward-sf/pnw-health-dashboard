@@ -119,7 +119,7 @@ main {
 }
 
 /* Shared by the Explorer's Outcome select and the methodology page's outcome select, so both
-   match the text inputs (`.picker input`, `.county-search input`): same font and padding, and
+   match the indicator filter (`.picker input`): same font and padding, and
    the browser's native control border. The global :focus-visible ring applies. */
 .picker select,
 .methodology-select select {

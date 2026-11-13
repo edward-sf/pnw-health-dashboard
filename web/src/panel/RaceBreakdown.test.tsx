@@ -61,7 +61,7 @@ it("names unreported groups in one 'Not reported: …' line plus the explanation
   expect(within(section()).getByText("Not reported: Hispanic.")).toBeInTheDocument();
   expect(
     within(section()).getByText(
-      "CHR does not report a group when there are too few births or deaths to give a stable figure.",
+      "CHR does not report a group when there are too few cases to give a stable figure.",
     ),
   ).toBeInTheDocument();
 });
@@ -80,7 +80,7 @@ it("all groups null: only the not-reported note, every group listed", () => {
   expect(within(section()).getByText("Not reported: White, Black, Hispanic.")).toBeInTheDocument();
   expect(
     within(section()).getByText(
-      "CHR does not report a group when there are too few births or deaths to give a stable figure.",
+      "CHR does not report a group when there are too few cases to give a stable figure.",
     ),
   ).toBeInTheDocument();
 });
@@ -146,4 +146,40 @@ it("renders nothing for an indicator without strata", () => {
   const poverty = manifest.indicators.find((i) => i.id === "poverty_rate") as Indicator;
   const { container } = setup("53033", overall, poverty);
   expect(container).toBeEmptyDOMElement();
+});
+
+it("a measure's label override replaces the group label in rows and the not-reported line", () => {
+  const base = strata.indicators.life_expectancy!;
+  const overridden = {
+    ...strata,
+    indicators: {
+      ...strata.indicators,
+      life_expectancy: {
+        ...base,
+        labels: { black: "Black (override)", hispanic: "Hispanic (override)" },
+      },
+    },
+  };
+  render(
+    <MemoryRouter>
+      <RaceBreakdown indicator={lifeExpectancy} fips="41051" overall={overall} strata={overridden} />
+    </MemoryRouter>,
+  );
+  expect(rows()[2]).toHaveTextContent("Black (override)");
+  expect(rows()[1]).toHaveTextContent("White");
+  expect(within(section()).getByText("Not reported: Hispanic (override).")).toBeInTheDocument();
+});
+
+it("legacy-area county: says CHR reports no figures here, not the too-few-cases sentence", () => {
+  setup("16001", {
+    v: null,
+    lo: null,
+    hi: null,
+    rank: null,
+    state_rank: null,
+    legacy: { fips: "02261", name: "Valdez-Cordova", year: 2023, v: 75, lo: 74, hi: 76 },
+  });
+  expect(within(section()).getByText("Not reported: White, Black, Hispanic.")).toBeInTheDocument();
+  expect(within(section()).getByText("CHR 2025 reports no figures for this area.")).toBeInTheDocument();
+  expect(within(section()).queryByText(/too few cases/)).toBeNull();
 });

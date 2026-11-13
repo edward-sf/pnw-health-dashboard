@@ -225,6 +225,26 @@ def test_race_groups_not_in_manifest_schema() -> None:
     assert "race_groups" not in life.model_dump()
 
 
+def test_race_label_override_on_preventable_stays_only() -> None:
+    found = {i.id: i.race_labels for i in load_catalog() if i.race_labels}
+    assert found == {"preventable_hospital_stays": {"asian": "Asian and Pacific Islander"}}
+
+
+def test_race_labels_keys_must_be_listed_groups() -> None:
+    stays = next(i for i in load_catalog() if i.id == "preventable_hospital_stays")
+    with pytest.raises(ValidationError, match="race_labels"):
+        Indicator.model_validate({**stays.model_dump(), "race_labels": {"nhopi": "NHPI"}})
+    acs = next(i for i in load_catalog() if i.source == "acs")
+    with pytest.raises(ValidationError, match="race_labels"):
+        Indicator.model_validate({**acs.model_dump(), "race_labels": {"asian": "Asian"}})
+
+
+def test_race_labels_not_in_manifest_schema() -> None:
+    assert "race_labels" not in Indicator.model_json_schema()["properties"]
+    stays = next(i for i in load_catalog() if i.id == "preventable_hospital_stays")
+    assert "race_labels" not in stays.model_dump()
+
+
 def test_race_group_labels_in_display_order() -> None:
     assert list(RACE_GROUP_LABELS.items()) == [
         ("aian", "American Indian and Alaska Native"),

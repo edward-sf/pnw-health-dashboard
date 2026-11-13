@@ -478,7 +478,7 @@ describe("race breakdown", () => {
       expect(within(section).queryAllByRole("listitem")).toHaveLength(0);
       expect(section).not.toHaveTextContent("County overall");
       expect(section).toHaveTextContent("Not reported: White, Black, Hispanic.");
-      expect(section).toHaveTextContent(/too few births or deaths/);
+      expect(section).toHaveTextContent(/too few cases to give a stable figure/);
     },
   );
 });

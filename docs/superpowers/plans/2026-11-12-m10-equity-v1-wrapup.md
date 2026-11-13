@@ -17,7 +17,7 @@
 - `race_groups` per indicator: `life_expectancy`, `premature_death`, `injury_deaths` → `[aian, asian, black, hispanic, nhopi, white]`; `low_birth_weight` → all seven; `preventable_hospital_stays` → `[aian, asian, black, hispanic, white]`.
 - Race-group values are never ranked, never mapped, never model features, and never written to `values.json`.
 - `profile` ∈ `population | age_sex | race | other`. Group headings: "Age and sex", "Race and ethnicity", "Other". The `population` row has no heading and no bar.
-- Exact copy: "By race and ethnicity (CHR {year})" / "County overall" / "Not reported: {labels}." / "CHR does not report a group when there are too few births or deaths to give a stable figure."
+- Exact copy: "By race and ethnicity (CHR {year})" / "County overall" / "Not reported: {labels}." / "CHR does not report a group when there are too few cases to give a stable figure." (legacy-area counties, overall entry with `legacy`: "CHR {year} reports no figures for this area.")
 - Issue branches are cut from `milestone/m10`. PRs target `milestone/m10`, titles are Conventional Commits, and bodies say `Part of #<n>` (CONTRIBUTING).
 - After any contract or catalog change: `cd pipeline && uv run pnw-health schema --root ..`, then commit `schema/`.
 - PR `ci` skips Playwright; run it locally with `CI=1` (`cd web && npm run build && CI=1 npx playwright test`).

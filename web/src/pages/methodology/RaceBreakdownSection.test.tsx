@@ -48,6 +48,14 @@ test("names the measures that have a breakdown, from the manifest labels", () =>
   expect(text).not.toContain("Premature death");
 });
 
+test("explains unreported groups in terms of too few cases", () => {
+  const text = renderSection();
+  expect(text).toContain(
+    "CHR does not report a group when there are too few cases to give a stable figure",
+  );
+  expect(text).not.toMatch(/births or deaths/);
+});
+
 test("says the breakdown is not mapped or ranked, and why", () => {
   const text = renderSection();
   expect(text).toMatch(/not mapped or ranked/);

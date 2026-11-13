@@ -28,7 +28,7 @@ flowchart LR
     raw[("data/raw/ cache")]
     harmonize["harmonize"]
     model["model"]
-    export["export: 4 files in web/public/data/"]
+    export["export: 5 files in web/public/data/"]
     build["Vite build"]
     pages["GitHub Pages"]
     src --> fetch --> raw --> harmonize --> model --> export --> build --> pages
@@ -46,7 +46,7 @@ flowchart LR
 |---|---|
 | `pipeline/` | Python 3.12 package (managed with uv): sources, harmonization, model, export, tests |
 | `web/` | React and Vite site, unit tests (Vitest) and end-to-end tests (Playwright) |
-| `schema/` | JSON Schemas for the three exported JSON files |
+| `schema/` | JSON Schemas for the four exported JSON files (manifest, values, model, strata) |
 | `docs/` | Design specs, plans and review templates |
 | `data/raw/` | Cached source downloads (git-ignored) |
 | `.github/workflows/` | `ci.yml` (CI) and `build-deploy.yml` (Build and deploy) |

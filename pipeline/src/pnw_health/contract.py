@@ -262,11 +262,15 @@ class StrataGroup(BaseModel):
 
 
 class StrataIndicator(BaseModel):
-    """``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``."""
+    """``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``.
+
+    ``labels`` holds only this measure's overrides of the file-level group labels.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     groups: list[RaceGroup]
+    labels: dict[RaceGroup, str] = {}
     counties: dict[str, dict[RaceGroup, StratumEntry | None]]
 
 

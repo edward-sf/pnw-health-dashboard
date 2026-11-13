@@ -42,6 +42,9 @@ class Indicator(BaseModel):
     universe: str | None = None
     # The groups CHR breaks this measure down by; pipeline-only, exported in strata.json.
     race_groups: SkipJsonSchema[tuple[RaceGroup, ...] | None] = Field(default=None, exclude=True)
+    # Per-measure label overrides for some of those groups (CMS's "Asian" is Asian and
+    # Pacific Islander); pipeline-only, exported as the strata indicator's ``labels``.
+    race_labels: SkipJsonSchema[dict[RaceGroup, str] | None] = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def _race_groups_only_on_chr(self) -> Self:
@@ -50,6 +53,12 @@ class Indicator(BaseModel):
                 raise ValueError(f"{self.id}: race_groups is only allowed on source chr")
             if len(set(self.race_groups)) != len(self.race_groups):
                 raise ValueError(f"{self.id}: race_groups has duplicates")
+        if self.race_labels:
+            unlisted = sorted(set(self.race_labels) - set(self.race_groups or ()))
+            if unlisted:
+                raise ValueError(
+                    f"{self.id}: race_labels for groups not in race_groups: {', '.join(unlisted)}"
+                )
         return self
 
 

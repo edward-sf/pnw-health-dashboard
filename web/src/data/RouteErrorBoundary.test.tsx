@@ -26,10 +26,17 @@ test("renders the fallback when a child throws, and reloads on request", async (
       <Broken />
     </RouteErrorBoundary>,
   );
-  expect(screen.getByRole("alert")).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "Something went wrong" }),
-  ).toBeInTheDocument();
+  // Only the message is a live alert; the focused heading announces itself, so it sits
+  // outside the alert and isn't read twice.
+  const alert = screen.getByRole("alert");
+  expect(alert).toHaveTextContent(
+    "This page couldn't be shown. Reloading the page usually fixes it.",
+  );
+  const heading = screen.getByRole("heading", { name: "Something went wrong" });
+  expect(alert).not.toContainElement(heading);
+  expect(alert).not.toContainElement(
+    screen.getByRole("button", { name: "Reload the page" }),
+  );
   await userEvent
     .setup()
     .click(screen.getByRole("button", { name: "Reload the page" }));

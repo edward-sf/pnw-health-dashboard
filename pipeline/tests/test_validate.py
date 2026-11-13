@@ -679,6 +679,15 @@ def test_validate_strata_groups_mismatch_catalog() -> None:
     ]
 
 
+def test_validate_strata_labels_mismatch_catalog() -> None:
+    strata = valid_strata()
+    strata.indicators["preventable_hospital_stays"].labels = {}
+    assert strata_problems(strata) == [
+        "strata preventable_hospital_stays: labels {} do not match the catalog's race_labels "
+        "{'asian': 'Asian and Pacific Islander'}"
+    ]
+
+
 def test_validate_strata_county_missing_a_group() -> None:
     strata = valid_strata()
     del strata.indicators["injury_deaths"].counties["53001"]["asian"]

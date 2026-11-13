@@ -157,7 +157,7 @@ GitHub Pages SPA routing handled via a `404.html` redirect fallback.
 - **Table view:** sortable table of the current indicator across all counties (in model mode: actual, expected, difference and flag tier); together with a county search box, this is the keyboard and screen-reader path to every county.
 
 ### State and data loading
-URL params plus a single `useData()` hook that fetches the four files once. No global store, no query library.
+URL params plus a single `useData()` hook that fetches the five files once. No global store, no query library.
 
 ### Error states
 - Data files fail to load → full-page error with retry.
