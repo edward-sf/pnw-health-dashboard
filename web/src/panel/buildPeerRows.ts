@@ -2,9 +2,9 @@ import type { County, Flag, Peers, TargetModel, ValueEntry } from "../types";
 
 type RowBase = { fips: string; name: string; state: string; isSelected: boolean };
 
-/** A row in values mode: the indicator value. */
+/** A row in Observed: the indicator value. */
 export type ValuesPeerRow = RowBase & { kind: "values"; value: number | null };
-/** A row in model mode: the actual value, the expected value and the result. */
+/** A row in Compared with expected: the actual value, the expected value and the result. */
 export type ModelPeerRow = RowBase & {
   kind: "model";
   value: number | null;

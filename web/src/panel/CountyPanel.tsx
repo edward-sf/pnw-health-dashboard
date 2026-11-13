@@ -35,7 +35,7 @@ type Props = {
   strata: StrataFile;
   /** The manifest indicator for the model target; its race breakdown follows the model card. */
   targetIndicator: Indicator | undefined;
-  /** In model mode the model card comes first (parent spec §6). */
+  /** With Compared with expected the model card comes first (parent spec §6). */
   modelMode: boolean;
   peers: Peers;
   /** Selects another county, exactly as a map click does. */
@@ -109,7 +109,7 @@ export function CountyPanel({
           <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
         </p>
       )}
-      {/* In model mode the breakdown is the target's, after the model card, so it is not repeated here. */}
+      {/* With Compared with expected the breakdown is the target's, after the model card, so it is not repeated here. */}
       {!modelMode && (
         <RaceBreakdown indicator={indicator} fips={county.fips} overall={entry} strata={strata} />
       )}

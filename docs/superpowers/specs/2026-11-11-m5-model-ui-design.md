@@ -33,6 +33,8 @@ From the current export (`web/public/data/model.json`, 76 KB):
 
 ## 3. URL state and data flow
 
+> **Note (2026-11-13):** The mode toggle, the dimmed picker and the "Outcome" select in model mode are superseded by M11 (`2026-11-13-m11-explorer-redesign-design.md` §5 and §6). A modelled outcome is chosen in the measure dropdown, and an Observed / Compared with expected switch sets `show`. The county panel's model card carries its own Outcome select when the selected measure is not an outcome.
+
 - **Loading.** `loadData` fetches `model.json` in the same `Promise.all` as the other three files, and `AppData` gains `model: ModelFile`. The card shows in both modes, so nearly every panel needs the file. A load failure uses the existing full-page error with retry. The schema major-version check stays on the manifest.
 - **`mode` param.** `parseParams` accepts `values` and `model`; any other value is invalid and cleared as today. `ExplorerParams.mode` becomes `"values" | "model"`.
 - **`setMode`.** `useExplorerParams` gains `setMode`. Like `setView`, a mode change pushes a history entry and keeps `i`, `c` and `view`.

@@ -8,12 +8,14 @@ Explore public health data for the 149 counties of Washington, Oregon, Idaho and
 
 **Live site: <https://edward-sf.github.io/pnw-health-dashboard/>**
 
-![The explorer in model mode, with King County, Washington selected](docs/images/explorer.png)
+![The explorer comparing life expectancy with expected, with King County, Washington selected](docs/images/explorer.png)
 
 ## What it does
 
-- **Explorer.** A county map and sortable table of health, access and social indicators, with confidence intervals and state and regional ranks. Selecting a county opens a panel with its values and a comparison against the other counties.
-- **Model mode.** A model trained on all US counties estimates each county's value for one of three County Health Rankings outcomes (life expectancy by default, premature death, injury deaths) from social and economic factors. The map shows how far the actual value sits above or below the estimate, and the county panel lists the factors associated with the estimate.
+- **Explorer.** A county map and sortable table of health, access and social indicators, with confidence intervals and state and regional ranks. A toolbar picks the measure: a category switch (Indicators, Demographics, Outcomes) and a searchable dropdown of that category's measures.
+- **Observed and Compared with expected.** For life expectancy, premature death and injury deaths, a switch changes the map between observed values and a comparison with the value a model expects. The model is trained on all US counties and uses social and economic factors. The map shows how far the actual value sits above or below the estimate.
+- **County panel.** Selecting a county opens a panel that floats over the map (a bottom drawer on phones) with its values and a comparison against the other counties. It lists the factors associated with the model's estimate.
+- **Dark mode.** A theme menu in the header offers Light, Dark and System. Data colors keep the same meaning in both themes.
 - **Similar counties.** The county panel lists the nearest Pacific Northwest counties on social and economic factors, with their values side by side.
 - **Race breakdown.** For five County Health Rankings outcomes (life expectancy, premature death, injury deaths, low birth weight, preventable hospital stays), the county panel shows the value for each race and ethnicity group CHR reports, with its confidence interval, and names the groups it does not. The breakdown is never mapped or ranked.
 - **Who lives here.** The county panel also profiles who lives in the county from Census ACS estimates: total population, age and sex, race and ethnicity, disability, veterans, birthplace and English ability. These Demographics indicators describe the population and are never model features.

@@ -26,9 +26,21 @@ export function About() {
 
       <h3>How to use it</h3>
       <ul>
-        <li>Values mode colors the map by one indicator; model mode compares one of the three outcomes with its expected value.</li>
+        <li>
+          Pick a category (Indicators, Demographics or Outcomes), then a measure from the
+          dropdown. Type in the dropdown to filter the list.
+        </li>
+        <li>
+          For life expectancy, premature death and injury deaths, switch between Observed and
+          Compared with expected. Compared with expected colors each county by how far its actual
+          value sits from the model's expected value.
+        </li>
         <li>Switch between the map and a sortable table of the same counties.</li>
-        <li>Search for a county by name, or select one on the map or in the table, to see its details.</li>
+        <li>
+          Search for a county by name, or select one on the map or in the table, to see its details
+          in the panel.
+        </li>
+        <li>Use the theme menu in the header to choose light, dark or the system setting.</li>
       </ul>
       <p>
         Caveats and sources are on the <Link to="/methodology">methodology</Link> page.
@@ -36,8 +48,9 @@ export function About() {
 
       <h3>Built with</h3>
       <p>
-        Python (uv, pandas, LightGBM, SHAP) for the data pipeline and model; React, Vite, d3-geo
-        and Observable Plot for the site. GitHub Actions rebuilds the data and deploys the site to
+        Python (uv, pandas, LightGBM, SHAP) for the data pipeline and model; React, Vite, TypeScript,
+        Tailwind, Radix and shadcn components, Lucide icons, d3-geo and Observable Plot for the
+        site. GitHub Actions rebuilds the data and deploys the site to
         GitHub Pages.
       </p>
 
