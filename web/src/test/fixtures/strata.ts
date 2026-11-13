@@ -24,6 +24,12 @@ export const strata: StrataFile = {
           hispanic: null,
         },
         "16001": { white: null, black: null, hispanic: null },
+        // A group reported without an interval.
+        "02016": {
+          white: { v: 76.0, lo: null, hi: null },
+          black: null,
+          hispanic: { v: 80.2, lo: 78.9, hi: 81.5 },
+        },
       },
     },
     preventable_hospital_stays: {

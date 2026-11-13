@@ -27,6 +27,17 @@ export function formatBound(v: number, unit: Unit, digits?: number): string {
   }
 }
 
+/** The panel's interval text, such as "95% CI 73.8–74.6", or null without both bounds and a level. */
+export function formatCi(
+  lo: number | null,
+  hi: number | null,
+  indicator: { unit: Unit; ci_level: number | null },
+): string | null {
+  if (lo === null || hi === null || indicator.ci_level === null) return null;
+  const { unit } = indicator;
+  return `${Math.round(indicator.ci_level * 100)}% CI ${formatBound(lo, unit)}–${formatBound(hi, unit)}`;
+}
+
 const SUFFIX: Record<Unit, string> = {
   percent: "%",
   years: " years",

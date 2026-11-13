@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router";
-import { formatBound, formatValue } from "../color/formatValue";
+import { formatCi, formatValue } from "../color/formatValue";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import type {
   County,
@@ -8,6 +8,7 @@ import type {
   Indicator,
   Manifest,
   Peers,
+  StrataFile,
   TargetModel,
   ValueEntry,
   ValuesFile,
@@ -15,6 +16,7 @@ import type {
 import { buildPeerRows } from "./buildPeerRows";
 import { SimilarCounties } from "./SimilarCounties";
 import { ModelCard } from "./ModelCard";
+import { RaceBreakdown } from "./RaceBreakdown";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
 import { WhoLivesHere } from "./WhoLivesHere";
@@ -28,6 +30,9 @@ type Props = {
   target: TargetModel;
   manifest: Manifest;
   values: ValuesFile;
+  strata: StrataFile;
+  /** The manifest indicator for the model target; its race breakdown follows the model card. */
+  targetIndicator: Indicator | undefined;
   /** In model mode the model card comes first (parent spec §6). */
   modelMode: boolean;
   peers: Peers;
@@ -47,6 +52,8 @@ export function CountyPanel({
   target,
   manifest,
   values,
+  strata,
+  targetIndicator,
   modelMode,
   peers,
   onSelectCounty,
@@ -83,10 +90,7 @@ export function CountyPanel({
   const entry = entries[county.fips];
   const v = entry?.v ?? null;
   const legacy = entry?.legacy ?? null;
-  const ci =
-    entry && entry.lo !== null && entry.hi !== null && indicator.ci_level !== null
-      ? `${Math.round(indicator.ci_level * 100)}% CI ${formatBound(entry.lo, indicator.unit)}–${formatBound(entry.hi, indicator.unit)}`
-      : null;
+  const ci = entry ? formatCi(entry.lo, entry.hi, indicator) : null;
   const ranks =
     v !== null && indicator.direction !== "neutral"
       ? rankSummary(county.fips, entries, counties)
@@ -114,6 +118,10 @@ export function CountyPanel({
             : "Suppressed or not available"}{" "}
           <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
         </p>
+      )}
+      {/* In model mode the breakdown is the target's, after the model card, so it is not repeated here. */}
+      {!modelMode && (
+        <RaceBreakdown indicator={indicator} fips={county.fips} overall={entry} strata={strata} />
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
     </>
@@ -169,6 +177,14 @@ export function CountyPanel({
       </div>
       <div id={bodyId} className="panel-body">
         {modelMode && modelCard}
+        {modelMode && targetIndicator && (
+          <RaceBreakdown
+            indicator={targetIndicator}
+            fips={county.fips}
+            overall={values[targetIndicator.id]?.[county.fips]}
+            strata={strata}
+          />
+        )}
         {indicatorSection}
         {!modelMode && modelCard}
         <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />
