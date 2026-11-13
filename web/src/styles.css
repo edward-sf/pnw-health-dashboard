@@ -418,6 +418,17 @@ main {
   background: #6b7280;
 }
 
+.who-group-heading {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.who-universe {
+  display: block;
+  font-size: 0.75rem;
+  color: #555;
+}
+
 .who-note {
   font-size: 0.8rem;
   color: #555;

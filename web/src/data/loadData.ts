@@ -1,10 +1,11 @@
-import type { CountiesTopology, Manifest, ModelFile, ValuesFile } from "../types";
+import type { CountiesTopology, Manifest, ModelFile, StrataFile, ValuesFile } from "../types";
 
 export type AppData = {
   manifest: Manifest;
   values: ValuesFile;
   topology: CountiesTopology;
   model: ModelFile;
+  strata: StrataFile;
 };
 
 /** Must match the major of the pipeline's `SCHEMA_VERSION`; a test checks it. */
@@ -23,11 +24,12 @@ export async function loadData(
   signal?: AbortSignal,
 ): Promise<AppData> {
   const dir = `${baseUrl}data/`;
-  const [manifest, values, topology, model] = await Promise.all([
+  const [manifest, values, topology, model, strata] = await Promise.all([
     fetchJson<Manifest>(`${dir}manifest.json`, signal),
     fetchJson<ValuesFile>(`${dir}values.json`, signal),
     fetchJson<CountiesTopology>(`${dir}counties.topojson`, signal),
     fetchJson<unknown>(`${dir}model.json`, signal),
+    fetchJson<unknown>(`${dir}strata.json`, signal),
   ]);
   const major = Number.parseInt(String(manifest.schema_version).split(".")[0] ?? "", 10);
   if (major !== SUPPORTED_SCHEMA_MAJOR) {
@@ -40,7 +42,12 @@ export async function loadData(
       "The model data (model.json) is incomplete or malformed. Reload the page to try again.",
     );
   }
-  return { manifest, values, topology, model };
+  if (!isStrataFile(strata)) {
+    throw new Error(
+      "The race breakdown data (strata.json) is incomplete or malformed. Reload the page to try again.",
+    );
+  }
+  return { manifest, values, topology, model, strata };
 }
 
 const isObject = (x: unknown): x is Record<string, unknown> =>
@@ -57,4 +64,9 @@ function isModelFile(model: unknown): model is ModelFile {
     isObject(peers.method) &&
     isObject(peers.counties)
   );
+}
+
+/** The parts of strata.json the county panel relies on. */
+function isStrataFile(strata: unknown): strata is StrataFile {
+  return isObject(strata) && Array.isArray(strata.groups) && isObject(strata.indicators);
 }

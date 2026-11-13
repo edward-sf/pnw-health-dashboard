@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { manifest, model, topology, values } from "./test/fixtures";
+import { manifest, model, strata, topology, values } from "./test/fixtures";
 
 function LocationProbe({ onChange }: { onChange: (search: string) => void }) {
   onChange(useLocation().search);
@@ -15,6 +15,7 @@ const bodies: Record<string, unknown> = {
   "values.json": values,
   "counties.topojson": topology,
   "model.json": model,
+  "strata.json": strata,
 };
 
 beforeEach(() => {

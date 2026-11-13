@@ -47,6 +47,8 @@ export const manifest: Manifest = {
       ci_level: null,
       year: 2023,
       category: "Demographics",
+      profile: "race",
+      universe: null,
       direction: "neutral",
       description: "Share of residents identifying as Asian.",
     },
