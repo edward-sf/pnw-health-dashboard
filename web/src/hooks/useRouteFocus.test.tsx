@@ -37,6 +37,7 @@ function Shell() {
       <button type="button">Elsewhere</button>
       <TransitionLink to="/b#sub">B sub in a transition</TransitionLink>
       <Link to="/late">Late</Link>
+      <Link to="/late#x">Late x</Link>
       <Link to="/">Home</Link>
       <Link to="/b">B</Link>
       <Link to="/b#sub">B sub</Link>
@@ -125,6 +126,19 @@ test("leaving before the heading renders cancels the wait", async () => {
   // URL means the new route itself leaves focus alone.
   fireEvent.click(screen.getByRole("link", { name: "B sub" }));
   await screen.findByRole("heading", { name: "B page" });
+  expect(late).toHaveFocus();
+});
+
+test("a hash-only change on the same path cancels the wait", async () => {
+  const user = userEvent.setup();
+  at("/");
+  const late = screen.getByRole("link", { name: "Late" });
+  await user.click(late);
+  // Same pathname, new hash: only the hash dependency re-runs the effect and cancels the wait.
+  // fireEvent keeps focus on "Late", so a leftover wait would take it for the late heading.
+  fireEvent.click(screen.getByRole("link", { name: "Late x" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load" }));
+  await screen.findByRole("heading", { name: "Late page" });
   expect(late).toHaveFocus();
 });
 
