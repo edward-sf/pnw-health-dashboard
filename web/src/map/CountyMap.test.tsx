@@ -16,6 +16,7 @@ function setup(selected: string | null = null, onSelect = vi.fn()) {
       tooltipFor={(fips) => `tip ${fips}`}
       selected={selected}
       onSelect={onSelect}
+      stateBorders="M0,0L10,10"
     />,
   );
   return { ...view, onSelect };
@@ -24,7 +25,7 @@ function setup(selected: string | null = null, onSelect = vi.fn()) {
 describe("CountyMap", () => {
   test("renders a path[data-fips] per county", () => {
     const { container } = setup();
-    expect(container.querySelectorAll("path[data-fips]")).toHaveLength(5);
+    expect(container.querySelectorAll("path.county[data-fips]")).toHaveLength(5);
   });
 
   test("each county path is a named image (aria-label needs a role)", () => {
@@ -37,18 +38,18 @@ describe("CountyMap", () => {
 
   test("click calls onSelect with the zero-padded fips", async () => {
     const { container, onSelect } = setup();
-    await userEvent.click(container.querySelector('path[data-fips="02016"]')!);
+    await userEvent.click(container.querySelector('path.county[data-fips="02016"]')!);
     expect(onSelect).toHaveBeenCalledWith("02016");
   });
 
   test("hover shows tooltipFor text", () => {
     const { container } = setup();
     expect(screen.queryByText("tip 53033")).not.toBeInTheDocument();
-    fireEvent.pointerEnter(container.querySelector('path[data-fips="53033"]')!, {
+    fireEvent.pointerEnter(container.querySelector('path.county[data-fips="53033"]')!, {
       pointerType: "mouse",
     });
     expect(screen.getByText("tip 53033")).toBeVisible();
-    fireEvent.pointerLeave(container.querySelector('path[data-fips="53033"]')!, {
+    fireEvent.pointerLeave(container.querySelector('path.county[data-fips="53033"]')!, {
       pointerType: "mouse",
     });
     expect(screen.queryByText("tip 53033")).not.toBeInTheDocument();
@@ -56,7 +57,7 @@ describe("CountyMap", () => {
 
   test("touch shows no tooltip and a tap still selects", () => {
     const { container, onSelect } = setup();
-    const king = container.querySelector('path[data-fips="53033"]')!;
+    const king = container.querySelector('path.county[data-fips="53033"]')!;
     fireEvent.pointerEnter(king, { pointerType: "mouse" });
     expect(screen.getByRole("tooltip")).toBeInTheDocument();
     fireEvent.pointerEnter(king, { pointerType: "touch" });
@@ -75,6 +76,51 @@ describe("CountyMap", () => {
     expect(lowerGroup.lastElementChild).toBe(current[0]);
   });
 
+  test("draws a halo path under the counties for each county that has one", () => {
+    const { container } = setup();
+    const withHalo = paths.filter((p) => p.halo > 0);
+    expect(withHalo.length).toBeGreaterThan(0);
+    const halos = container.querySelectorAll("g.map-halos > path.county-halo[data-fips]");
+    expect(halos).toHaveLength(withHalo.length);
+    const widths = [...halos].map((h) => Number(h.getAttribute("stroke-width")));
+    expect(widths).toEqual([...widths].sort((a, b) => b - a));
+    const halosGroup = container.querySelector("g.map-halos")!;
+    const main = container.querySelector(".map-main")!;
+    const inset = container.querySelector(".map-inset")!;
+    for (const g of [main, inset]) {
+      expect(halosGroup.compareDocumentPosition(g) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  test("a halo click selects its county", async () => {
+    const { container, onSelect } = setup();
+    await userEvent.click(container.querySelector('path.county-halo[data-fips="02016"]')!);
+    expect(onSelect).toHaveBeenCalledWith("02016");
+  });
+
+  test("the selected county has a ring under it with the same d", () => {
+    const { container } = setup("53033");
+    const ring = container.querySelector("path.county-ring")!;
+    const county = container.querySelector('path.county[data-fips="53033"]')!;
+    expect(ring.getAttribute("d")).toBe(county.getAttribute("d"));
+    expect(ring.compareDocumentPosition(county) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelectorAll("path.county-ring")).toHaveLength(1);
+  });
+
+  test("no ring without a selection", () => {
+    const { container } = setup();
+    expect(container.querySelector("path.county-ring")).toBeNull();
+  });
+
+  test("state borders are drawn above the counties and ignore the pointer", () => {
+    const { container } = setup();
+    const borders = container.querySelector("path.state-borders")!;
+    expect(borders.getAttribute("d")).toBe("M0,0L10,10");
+    expect(borders.hasAttribute("data-fips")).toBe(false);
+    const main = container.querySelector(".map-main")!;
+    expect(main.compareDocumentPosition(borders) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   test("labels the inset 'Alaska (not to scale)'", () => {
     setup();
     expect(screen.getByText("Alaska (not to scale)")).toBeInTheDocument();
@@ -87,7 +133,7 @@ describe("CountyMap", () => {
       vi.spyOn(map, "getBoundingClientRect").mockReturnValue({
         left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300, x: 0, y: 0, toJSON: () => ({}),
       });
-      fireEvent.pointerMove(container.querySelector('path[data-fips="53033"]')!, {
+      fireEvent.pointerMove(container.querySelector('path.county[data-fips="53033"]')!, {
         pointerType: "mouse",
         clientX,
         clientY: 50,
@@ -117,8 +163,9 @@ test("each county path carries the outline chosen for its fill", () => {
       tooltipFor={() => ""}
       selected={null}
       onSelect={() => {}}
+      stateBorders=""
     />,
   );
-  const path = container.querySelector<SVGPathElement>("path[data-fips]")!;
+  const path = container.querySelector<SVGPathElement>("path.county[data-fips]")!;
   expect(path.style.getPropertyValue("--county-stroke")).toBe(outlineFor("#e34a33"));
 });

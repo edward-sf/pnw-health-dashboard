@@ -7,6 +7,7 @@ import { makeColorScale } from "../color/makeColorScale";
 import type { AppData } from "../data/loadData";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
+import { buildStateBorders } from "../map/buildStateBorders";
 import { ModelLegend } from "../model/ModelLegend";
 import { outcomeName, targetModel } from "../model/targetView";
 import { countyModel, modelTooltip, tierCounts, tierFill } from "../model/modelView";
@@ -33,6 +34,7 @@ export function Explorer({ data }: { data: AppData }) {
     [targetIds, data.model],
   );
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
+  const stateBorders = useMemo(() => buildStateBorders(topology), [topology]);
   const fipsSet = useMemo(
     () =>
       new Set(
@@ -257,6 +259,7 @@ export function Explorer({ data }: { data: AppData }) {
               }}
               selected={params.county}
               onSelect={onSelectFromMap}
+              stateBorders={stateBorders}
             />
             {modelMode ? (
               <ModelLegend counts={counts} />

@@ -22,7 +22,7 @@ async function explorer(page: Page, query: string) {
 
 test("explorer: values map", async ({ page }, testInfo) => {
   await explorer(page, "?i=poverty_rate");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
   await audit(page, testInfo);
 });
 

@@ -17,6 +17,9 @@
   --fir-soft: #e2eee9;
   --wash: #e9edec;
   --alert: #b42318;
+  --map-state-border: #17252a;
+  --map-selected: #000;
+  --map-selected-under: #fff;
 
   --radius: 0.5rem;
   --header-height: 3.5rem;
@@ -481,8 +484,29 @@
   }
 
   .county[aria-current="true"] {
-    stroke: #000;
+    stroke: var(--map-selected);
     stroke-width: 2;
+  }
+
+  /* Invisible wider strokes that make thin or scattered counties easy to hit. */
+  .county-halo {
+    pointer-events: all;
+    cursor: pointer;
+  }
+
+  /* A light underlay so the selected outline reads against any fill. */
+  .county-ring {
+    fill: none;
+    stroke: var(--map-selected-under);
+    stroke-width: 4.5;
+    pointer-events: none;
+  }
+
+  .state-borders {
+    fill: none;
+    stroke: var(--map-state-border);
+    stroke-width: 1.5;
+    pointer-events: none;
   }
 
   .inset-frame {
@@ -491,7 +515,7 @@
   }
 
   .inset-label {
-    font-size: 12px;
+    font-size: 14px;
     fill: #555;
   }
 

@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test("tap a county, expand, collapse and close the sheet", async ({ page }) => {
   await page.goto("./?i=poverty_rate");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
-  await page.locator('path[data-fips="53033"]').tap();
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
+  await page.locator('path.county[data-fips="53033"]').tap();
   const sheet = page.locator(".county-panel--sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("heading", { level: 2 })).toHaveText("King County");
