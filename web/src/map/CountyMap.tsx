@@ -1,4 +1,5 @@
-import { type CSSProperties, type PointerEvent, useState } from "react";
+import { type PointerEvent, useState } from "react";
+import { HATCH_BACKGROUND } from "../color/makeColorScale";
 import { outlineFor } from "../color/outline";
 import { MAP_LAYOUT, type MapPath } from "./buildMapPaths";
 
@@ -36,7 +37,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
           data-fips={p.fips}
           d={p.d}
           fill={fill}
-          style={{ "--county-stroke": outlineFor(fill) } as CSSProperties}
+          style={{ "--county-stroke": outlineFor(fill) }}
           className="county"
           role="img"
           aria-label={`${p.name}, ${p.state}`}
@@ -67,7 +68,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(45)"
           >
-            <rect width="4" height="4" fill="#f2f2f2" />
+            <rect width="4" height="4" fill={HATCH_BACKGROUND} />
             <line x1="0" y1="0" x2="0" y2="4" stroke="#999" strokeWidth="1.5" />
           </pattern>
         </defs>

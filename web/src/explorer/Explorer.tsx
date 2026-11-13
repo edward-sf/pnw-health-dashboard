@@ -133,9 +133,12 @@ export function Explorer({ data }: { data: AppData }) {
         className="skip-link"
         href={`#${SEARCH_INPUT_ID}`}
         onClick={(e) => {
-          // Focus the search without adding a hash to the URL.
+          // Focus the search without adding a hash to the URL. Without the search, let the
+          // anchor do its default.
+          const search = document.getElementById(SEARCH_INPUT_ID);
+          if (!search) return;
           e.preventDefault();
-          document.getElementById(SEARCH_INPUT_ID)?.focus();
+          search.focus();
         }}
       >
         Skip to county search
@@ -243,7 +246,7 @@ export function Explorer({ data }: { data: AppData }) {
           values={values}
           strata={data.strata}
           targetIndicator={targetIndicator}
-          modelMode={params.mode === "model"}
+          modelMode={modelMode}
           peers={data.model.peers}
           onSelectCounty={onSelectPeer}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}

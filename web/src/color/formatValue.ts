@@ -51,8 +51,13 @@ export function formatValue(v: number | null, unit: Unit, digits?: number): stri
   return `${formatBound(v, unit, digits)}${SUFFIX[unit]}`;
 }
 
-/** Signed value with + or the true minus (U+2212), and no sign when it rounds to zero. */
+/**
+ * Signed value with + or the true minus (U+2212), and no sign when it rounds to zero.
+ * Without `digits` it uses the unit's own digits, as `formatBound` does. NaN and ±Infinity
+ * read "Not available" rather than as an unsigned zero.
+ */
 export function formatSigned(v: number, unit: Unit, digits?: number): string {
+  if (!Number.isFinite(v)) return "Not available";
   const body = formatBound(Math.abs(v), unit, digits);
   const isZero = Number(body.replace(/[^0-9.]/g, "")) === 0;
   const sign = isZero ? "" : v > 0 ? "+" : "−";

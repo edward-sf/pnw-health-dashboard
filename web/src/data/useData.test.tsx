@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { manifest, model, strata, topology, values } from "../test/fixtures";
+import { LOAD_TIMEOUT_MS } from "./loadData";
 import { useData } from "./useData";
 
 const bodies: Record<string, unknown> = {
@@ -24,6 +25,22 @@ describe("useData", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     if (result.current.status === "ready") {
       expect(result.current.data.manifest).toEqual(manifest);
+    }
+  });
+
+  it("ends the loading state with the timeout error when the data never arrives", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+      const { result } = renderHook(() => useData());
+      expect(result.current.status).toBe("loading");
+      await act(() => vi.advanceTimersByTimeAsync(LOAD_TIMEOUT_MS));
+      expect(result.current).toMatchObject({
+        status: "error",
+        message: "Loading the data took too long. Reload the page to try again.",
+      });
+    } finally {
+      vi.useRealTimers();
     }
   });
 
