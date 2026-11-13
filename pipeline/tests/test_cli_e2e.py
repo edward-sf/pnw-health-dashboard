@@ -71,10 +71,10 @@ def test_full_run_produces_valid_exports(tmp_path: Path, full_zip: Path) -> None
     manifest = Manifest.model_validate_json((paths.out / "manifest.json").read_text())
     values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
     topo = json.loads((paths.out / "counties.topojson").read_text())
-    assert len(manifest.indicators) == 37
+    assert len(manifest.indicators) == 44
     assert {s.source for s in manifest.sources} == {"acs", "places", "chr", "boundaries"}
     assert sorted(s.year for s in manifest.sources if s.source == "chr") == [2023, 2025]
-    assert len(values.root) == 37
+    assert len(values.root) == 44
     assert all(len(entries) == 149 for entries in values.root.values())
     assert len(topo["objects"]["counties"]["geometries"]) == 149
     assert (paths.interim / "warnings.txt").exists()
@@ -279,10 +279,10 @@ def test_harmonize_reports_warning_count(
     write_acs_cache(paths, report_only_valdez_cordova)
     with client_for(failing) as client:
         run_pipeline(paths, Stage.harmonize, client=client)
-    # One legacy-only warning per ACS indicator (14) plus one per CHR indicator the 2023
+    # One legacy-only warning per ACS indicator (21) plus one per CHR indicator the 2023
     # fixture reports for 02261 where 2025 has no successor value (4); PLACES has none.
-    assert "18 warning(s)" in capsys.readouterr().err
-    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 18
+    assert "25 warning(s)" in capsys.readouterr().err
+    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 25
 
 
 def test_unreliable_flag_reaches_values_json(tmp_path: Path, full_zip: Path) -> None:

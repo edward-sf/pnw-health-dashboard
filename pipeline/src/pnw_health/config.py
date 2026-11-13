@@ -21,7 +21,7 @@ CHR_FILES: dict[int, str] = {2025: "analytic_data2025_v3.csv", 2023: "analytic_d
 GEO_YEAR = 2024
 # Valdez-Cordova Census Area, split in 2019 into Chugach (02063) and Copper River (02066).
 VALDEZ_CORDOVA_FIPS = "02261"
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 
 
 @dataclass(frozen=True)

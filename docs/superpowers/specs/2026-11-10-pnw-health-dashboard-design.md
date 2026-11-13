@@ -68,9 +68,9 @@ CDC WONDER is excluded: its API does not support sub-national queries.
 Display covers the **149 county-equivalents** in the four states (WA 39, OR 36, ID 44, AK 30). Sources are fetched **nationally** (~3,100 counties) because the model trains on all US counties (§5).
 
 ### Indicator catalog
-A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic / Demographics), `direction` (`higher_is_better` | `higher_is_worse` | `neutral`), `description`.
+A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic / Demographics), `direction` (`higher_is_better` | `higher_is_worse` | `neutral`), `description`, and optionally `profile` (population / age_sex / race / other, which places Demographics indicators in the "Who lives here" section) and `universe` (the population a measure is a share of, when that would otherwise mislead).
 
-**Demographics category:** ACS population shares by race/ethnicity (AI/AN, Hispanic, Black, Asian, NHPI, White, two or more races). These are descriptive context only — `direction: neutral` (no ranks, neutral sequential color scale) and never used as model features (§5).
+**Demographics category:** the ACS population profile: total population, age and sex shares, race/ethnicity shares (AI/AN, Hispanic, Black, Asian, NHPI, White, two or more races), and disability, veteran, foreign-born and limited-English shares. (`age_65_plus` stays in Social & Economic because it is a model feature, but carries the age/sex `profile`.) These are descriptive context only — `direction: neutral` (no ranks, neutral sequential color scale) and never used as model features (§5).
 
 ### Harmonization rules
 - **Geography:** 2020 Census vintage FIPS, zero-padded 5-character strings.
@@ -94,7 +94,7 @@ The four files are written as a set: into a temporary directory under `data/inte
 
 | File | Contents |
 |---|---|
-| `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog |
+| `manifest.json` | `schema_version`, `built_at`, source vintages, indicator catalog (indicators carry optional `profile` and `universe`) |
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
 | `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value`. A top-level `peers` block (M9 spec §3.2) holds `method` `{features, k, min_features}` and `counties`: for each PNW county, its `k` nearest PNW counties on the model features, nearest first, or `[]` when it has too few features |

@@ -15,6 +15,7 @@ from pnw_health.errors import InputError
 Unit = Literal["percent", "dollars", "years", "rate_per_100k", "count"]
 Category = Literal["Outcomes", "Behaviors", "Access", "Social & Economic", "Demographics"]
 Direction = Literal["higher_is_better", "higher_is_worse", "neutral"]
+Profile = Literal["population", "age_sex", "race", "other"]
 Source = Literal["acs", "places", "chr"]
 
 DEFAULT_CATALOG = Path(__file__).with_name("indicators.yaml")
@@ -35,6 +36,8 @@ class Indicator(BaseModel):
     category: Category
     direction: Direction
     description: str
+    profile: Profile | None = None
+    universe: str | None = None
 
 
 def load_catalog(path: Path | None = None) -> list[Indicator]:

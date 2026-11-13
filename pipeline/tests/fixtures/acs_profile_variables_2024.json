@@ -7,6 +7,38 @@
     "limit": 0,
     "predicateType": "float"
   },
+  "DP02_0070PE": {
+    "attributes": "DP02_0070PEA,DP02_0070PM,DP02_0070PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!VETERAN STATUS!!Civilian population 18 years and over!!Civilian veterans",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP02_0072PE": {
+    "attributes": "DP02_0072PEA,DP02_0072PM,DP02_0072PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!DISABILITY STATUS OF THE CIVILIAN NONINSTITUTIONALIZED POPULATION!!Total Civilian Noninstitutionalized Population!!With a disability",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP02_0094PE": {
+    "attributes": "DP02_0094PEA,DP02_0094PM,DP02_0094PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!PLACE OF BIRTH!!Total population!!Foreign-born",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP02_0115PE": {
+    "attributes": "DP02_0115PEA,DP02_0115PM,DP02_0115PMA",
+    "concept": "Selected Social Characteristics in the United States",
+    "group": "DP02",
+    "label": "Percent!!LANGUAGE SPOKEN AT HOME!!Population 5 years and over!!Language other than English!!Speak English less than \"very well\"",
+    "limit": 0,
+    "predicateType": "float"
+  },
   "DP02_0154PE": {
     "attributes": "DP02_0154PEA,DP02_0154PM,DP02_0154PMA",
     "concept": "Selected Social Characteristics in the United States",
@@ -44,6 +76,30 @@
     "concept": "Selected Economic Characteristics",
     "group": "DP03",
     "label": "Percent!!PERCENTAGE OF FAMILIES AND PEOPLE WHOSE INCOME IN THE PAST 12 MONTHS IS BELOW THE POVERTY LEVEL!!All people",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0001E": {
+    "attributes": "DP05_0001EA,DP05_0001M,DP05_0001MA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Estimate!!SEX AND AGE!!Total population",
+    "limit": 0,
+    "predicateType": "int"
+  },
+  "DP05_0003PE": {
+    "attributes": "DP05_0003PEA,DP05_0003PM,DP05_0003PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!SEX AND AGE!!Total population!!Female",
+    "limit": 0,
+    "predicateType": "float"
+  },
+  "DP05_0019PE": {
+    "attributes": "DP05_0019PEA,DP05_0019PM,DP05_0019PMA",
+    "concept": "ACS Demographic and Housing Estimates",
+    "group": "DP05",
+    "label": "Percent!!SEX AND AGE!!Total population!!Under 18 years",
     "limit": 0,
     "predicateType": "float"
   },

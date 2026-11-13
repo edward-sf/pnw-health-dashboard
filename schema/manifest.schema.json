@@ -57,6 +57,24 @@
           ],
           "title": "Moe Field"
         },
+        "profile": {
+          "anyOf": [
+            {
+              "enum": [
+                "population",
+                "age_sex",
+                "race",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile"
+        },
         "source": {
           "enum": [
             "acs",
@@ -80,6 +98,18 @@
           ],
           "title": "Unit",
           "type": "string"
+        },
+        "universe": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Universe"
         },
         "year": {
           "title": "Year",
