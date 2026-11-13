@@ -25,8 +25,9 @@ export type MapPath = { fips: string; name: string; state: string; d: string; ha
 type CountyFeature = Feature<Polygon | MultiPolygon, CountyProperties>;
 type Counties = FeatureCollection<Polygon | MultiPolygon, CountyProperties>;
 
-// Smallest comfortable hit size in canvas units: 24 CSS px once the map is drawn 1000px wide or wider.
-const MIN_HIT = 26;
+// Smallest comfortable hit size in canvas units: 24 CSS px once the map is drawn at 0.8 scale or
+// more (1024px wide), which leaves room for a tall title block above a 1440×900 stage.
+const MIN_HIT = 30;
 const MIN_HALO = 12;
 const SPARSE_HALO = 16;
 const SPARSE_FILL = 0.15;

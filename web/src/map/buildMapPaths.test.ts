@@ -56,8 +56,11 @@ describe("haloWidth", () => {
   });
 
   test("a county narrower than the minimum gets the shortfall, at least 12", () => {
-    expect(haloWidth([[0, 0], [60, 10]], 500)).toBe(16);
+    // The minimum is 30 canvas units: 24 CSS px once the map is drawn at 0.8 scale or more.
+    expect(haloWidth([[0, 0], [60, 10]], 500)).toBe(20);
     expect(haloWidth([[0, 0], [60, 20]], 1100)).toBe(12);
+    expect(haloWidth([[0, 0], [60, 29]], 1600)).toBe(12);
+    expect(haloWidth([[0, 0], [60, 30]], 1600)).toBe(0);
   });
 
   test("a sparse island chain gets a halo even when its box is large", () => {

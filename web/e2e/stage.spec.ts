@@ -65,31 +65,33 @@ test("at 375×812 the map starts within 330px of the top", async ({ page }, test
   expect(box.y).toBeLessThanOrEqual(330);
 });
 
-test("every county has a 24px pointer target at 1440×900", async ({ page }, testInfo) => {
-  onlyIn("chromium", testInfo.project.name);
-  await open(page, { width: 1440, height: 900 });
-  const small = await page.locator(".county-map svg").evaluate((svg: SVGSVGElement) => {
-    const scale = svg.getScreenCTM()!.a;
-    const out: string[] = [];
-    for (const county of svg.querySelectorAll<SVGPathElement>("path.county[data-fips]")) {
-      const fips = county.dataset.fips!;
-      const b = county.getBBox();
-      let [x0, y0, x1, y1] = [b.x, b.y, b.x + b.width, b.y + b.height];
-      const halo = svg.querySelector<SVGPathElement>(`path.county-halo[data-fips="${fips}"]`);
-      if (halo) {
-        // getBBox leaves out the stroke, which is the halo's whole point; add half its width.
-        const h = halo.getBBox();
-        const pad = Number(halo.getAttribute("stroke-width")) / 2;
-        x0 = Math.min(x0, h.x - pad);
-        y0 = Math.min(y0, h.y - pad);
-        x1 = Math.max(x1, h.x + h.width + pad);
-        y1 = Math.max(y1, h.y + h.height + pad);
+for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
+  test(`every county has a 24px pointer target at 1440×900 on ${query}`, async ({ page }, testInfo) => {
+    onlyIn("chromium", testInfo.project.name);
+    await open(page, { width: 1440, height: 900 }, query);
+    const small = await page.locator(".county-map svg").evaluate((svg: SVGSVGElement) => {
+      const scale = svg.getScreenCTM()!.a;
+      const out: string[] = [];
+      for (const county of svg.querySelectorAll<SVGPathElement>("path.county[data-fips]")) {
+        const fips = county.dataset.fips!;
+        const b = county.getBBox();
+        let [x0, y0, x1, y1] = [b.x, b.y, b.x + b.width, b.y + b.height];
+        const halo = svg.querySelector<SVGPathElement>(`path.county-halo[data-fips="${fips}"]`);
+        if (halo) {
+          // getBBox leaves out the stroke, which is the halo's whole point; add half its width.
+          const h = halo.getBBox();
+          const pad = Number(halo.getAttribute("stroke-width")) / 2;
+          x0 = Math.min(x0, h.x - pad);
+          y0 = Math.min(y0, h.y - pad);
+          x1 = Math.max(x1, h.x + h.width + pad);
+          y1 = Math.max(y1, h.y + h.height + pad);
+        }
+        const w = (x1 - x0) * scale;
+        const hgt = (y1 - y0) * scale;
+        if (w < 24 || hgt < 24) out.push(`${fips}: ${w.toFixed(1)}×${hgt.toFixed(1)}`);
       }
-      const w = (x1 - x0) * scale;
-      const hgt = (y1 - y0) * scale;
-      if (w < 24 || hgt < 24) out.push(`${fips}: ${w.toFixed(1)}×${hgt.toFixed(1)}`);
-    }
-    return out;
+      return out;
+    });
+    expect(small).toEqual([]);
   });
-  expect(small).toEqual([]);
-});
+}
