@@ -1,4 +1,6 @@
+import { Search } from "lucide-react";
 import { useId, useMemo, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import type { County } from "../types";
 import { STATE_NAMES } from "../panel/rankSummary";
 
@@ -77,9 +79,11 @@ export function CountySearch({ counties, onSelect, inputId }: Props) {
       <label htmlFor={inputDomId} className="visually-hidden">
         Search counties
       </label>
-      <input
+      <Search className="county-search-icon" aria-hidden="true" />
+      <Input
         ref={inputRef}
         id={inputDomId}
+        className="pl-9"
         type="text"
         role="combobox"
         placeholder="Search counties"

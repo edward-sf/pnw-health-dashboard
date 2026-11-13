@@ -1,3 +1,4 @@
+import { MountainSnow } from "lucide-react";
 import { useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import ErrorPage from "./data/ErrorPage";
@@ -20,7 +21,7 @@ function ExplorerRoute({ state }: { state: DataState }) {
   usePageTitle("PNW Health Dashboard");
   return (
     <>
-      {state.status === "loading" && <p>Loading data…</p>}
+      {state.status === "loading" && <p className="app-status">Loading data…</p>}
       {state.status === "error" && (
         <ErrorPage message={state.message} onRetry={state.retry} pageHeading />
       )}
@@ -37,14 +38,19 @@ export default function App() {
   return (
     <>
       <header className="site-header">
-        <h1>PNW Health Dashboard</h1>
-        <nav aria-label="Primary">
-          <NavLink to={{ pathname: "/", search: explorerSearch }} end>
-            Explorer
-          </NavLink>{" "}
-          <NavLink to="/methodology">Methodology</NavLink>{" "}
-          <NavLink to="/about">About</NavLink>
-        </nav>
+        <div className="site-header-inner">
+          <h1>
+            <MountainSnow className="site-mark" aria-hidden="true" />
+            PNW Health Dashboard
+          </h1>
+          <nav aria-label="Primary">
+            <NavLink to={{ pathname: "/", search: explorerSearch }} end>
+              Explorer
+            </NavLink>
+            <NavLink to="/methodology">Methodology</NavLink>
+            <NavLink to="/about">About</NavLink>
+          </nav>
+        </div>
       </header>
       <main>
         <RouteErrorBoundary key={pathname}>

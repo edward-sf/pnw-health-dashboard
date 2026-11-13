@@ -21,7 +21,7 @@ test("contrastRatio rejects anything but #rrggbb", () => {
 // The fallback stroke actually shipped: `var(--county-stroke, #rrggbb)` in the `.county` rule.
 function cssFallbackStroke(): string {
   const css = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
-  const block = /(?:^|\n)\.county\s*\{([^}]*)\}/.exec(css)?.[1];
+  const block = /(?:^|\n)[ \t]*\.county\s*\{([^}]*)\}/.exec(css)?.[1];
   const stroke =
     block && /stroke:\s*var\(--county-stroke,\s*(#[0-9a-fA-F]{6})\)\s*;/.exec(block)?.[1];
   if (!stroke) throw new Error("no var(--county-stroke, #rrggbb) stroke in the .county rule");

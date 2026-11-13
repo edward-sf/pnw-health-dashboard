@@ -40,7 +40,7 @@ export function Methodology({ state }: { state: DataState }) {
       <h2 tabIndex={-1} data-page-heading>
         Methodology
       </h2>
-      {state.status === "loading" && <p>Loading data…</p>}
+      {state.status === "loading" && <p className="app-status">Loading data…</p>}
       {state.status === "error" && <ErrorPage message={state.message} onRetry={state.retry} />}
       {state.status === "ready" && (
         <>

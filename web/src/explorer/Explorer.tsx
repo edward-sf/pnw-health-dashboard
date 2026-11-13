@@ -1,4 +1,6 @@
+import { ChartNoAxesColumn, Map as MapIcon, Scale, Table2 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
@@ -144,6 +146,28 @@ export function Explorer({ data }: { data: AppData }) {
         Skip to county search
       </a>
       <aside className="explorer-picker">
+        <div className="view-toggle view-toggle--full" role="group" aria-label="Mode">
+          <Button
+            type="button"
+            variant="segment"
+            size="sm"
+            aria-pressed={!modelMode}
+            onClick={() => setMode("values")}
+          >
+            <ChartNoAxesColumn aria-hidden="true" />
+            Values
+          </Button>
+          <Button
+            type="button"
+            variant="segment"
+            size="sm"
+            aria-pressed={modelMode}
+            onClick={() => setMode("model")}
+          >
+            <Scale aria-hidden="true" />
+            Model
+          </Button>
+        </div>
         {modelMode ? (
           <OutcomePicker targets={targetOptions} value={params.target} onChange={setTarget} />
         ) : (
@@ -156,26 +180,34 @@ export function Explorer({ data }: { data: AppData }) {
         )}
       </aside>
       <section className="explorer-main">
-        <CountySearch counties={counties} onSelect={onSelectWithOpener} inputId={SEARCH_INPUT_ID} />
-        <div className="view-toggle" role="group" aria-label="Mode">
-          <button type="button" aria-pressed={!modelMode} onClick={() => setMode("values")}>
-            Values
-          </button>
-          <button type="button" aria-pressed={modelMode} onClick={() => setMode("model")}>
-            Model
-          </button>
-        </div>
-        <div className="view-toggle" role="group" aria-label="View">
-          <button type="button" aria-pressed={params.view === "map"} onClick={() => setView("map")}>
-            Map
-          </button>
-          <button
-            type="button"
-            aria-pressed={params.view === "table"}
-            onClick={() => setView("table")}
-          >
-            Table
-          </button>
+        <div className="explorer-toolbar">
+          <CountySearch
+            counties={counties}
+            onSelect={onSelectWithOpener}
+            inputId={SEARCH_INPUT_ID}
+          />
+          <div className="view-toggle" role="group" aria-label="View">
+            <Button
+              type="button"
+              variant="segment"
+              size="sm"
+              aria-pressed={params.view === "map"}
+              onClick={() => setView("map")}
+            >
+              <MapIcon aria-hidden="true" />
+              Map
+            </Button>
+            <Button
+              type="button"
+              variant="segment"
+              size="sm"
+              aria-pressed={params.view === "table"}
+              onClick={() => setView("table")}
+            >
+              <Table2 aria-hidden="true" />
+              Table
+            </Button>
+          </div>
         </div>
         <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
           {modelMode ? `${model.label}: compared with expected` : indicator.label}
@@ -208,7 +240,7 @@ export function Explorer({ data }: { data: AppData }) {
             />
           )
         ) : (
-          <>
+          <div className="map-stage">
             <CountyMap
               paths={paths}
               fillFor={(fips) =>
@@ -231,7 +263,7 @@ export function Explorer({ data }: { data: AppData }) {
             ) : (
               <Legend scale={scale} unit={indicator.unit} />
             )}
-          </>
+          </div>
         )}
       </section>
       {selectedCounty && (
