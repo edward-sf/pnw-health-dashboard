@@ -1,10 +1,12 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import pytest
+from pydantic import ValidationError
 
+from pnw_health.config import RACE_GROUP_LABELS
 from pnw_health.errors import InputError
-from pnw_health.indicators import load_catalog
+from pnw_health.indicators import Indicator, RaceGroup, load_catalog
 
 EXPECTED_LABEL_FRAGMENTS = {
     "median_household_income": "Median household income (dollars)",
@@ -195,3 +197,42 @@ def test_universe_set_where_the_row_would_mislead() -> None:
         "pct_veterans": "Civilian population 18 and over",
         "pct_limited_english": "Population 5 and over",
     }
+
+
+RACE_GROUPS_BY_ID = {
+    "life_expectancy": ("aian", "asian", "black", "hispanic", "nhopi", "white"),
+    "premature_death": ("aian", "asian", "black", "hispanic", "nhopi", "white"),
+    "low_birth_weight": ("aian", "asian", "black", "hispanic", "nhopi", "white", "tom"),
+    "injury_deaths": ("aian", "asian", "black", "hispanic", "nhopi", "white"),
+    "preventable_hospital_stays": ("aian", "asian", "black", "hispanic", "white"),
+}
+
+
+def test_race_groups_on_the_five_chr_outcomes() -> None:
+    found = {i.id: i.race_groups for i in load_catalog() if i.race_groups is not None}
+    assert found == RACE_GROUPS_BY_ID
+
+
+def test_race_groups_only_on_chr() -> None:
+    acs = next(i for i in load_catalog() if i.source == "acs")
+    with pytest.raises(ValidationError, match="race_groups"):
+        Indicator.model_validate({**acs.model_dump(), "race_groups": ["white"]})
+
+
+def test_race_groups_not_in_manifest_schema() -> None:
+    assert "race_groups" not in Indicator.model_json_schema()["properties"]
+    life = next(i for i in load_catalog() if i.id == "life_expectancy")
+    assert "race_groups" not in life.model_dump()
+
+
+def test_race_group_labels_in_display_order() -> None:
+    assert list(RACE_GROUP_LABELS.items()) == [
+        ("aian", "American Indian and Alaska Native"),
+        ("asian", "Asian"),
+        ("black", "Black"),
+        ("hispanic", "Hispanic or Latino"),
+        ("nhopi", "Native Hawaiian and Pacific Islander"),
+        ("white", "White"),
+        ("tom", "Two or more races"),
+    ]
+    assert list(RACE_GROUP_LABELS) == list(get_args(RaceGroup))
