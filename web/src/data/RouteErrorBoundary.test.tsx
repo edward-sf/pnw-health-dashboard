@@ -27,7 +27,49 @@ test("renders the fallback when a child throws, and reloads on request", async (
     </RouteErrorBoundary>,
   );
   expect(screen.getByRole("alert")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeInTheDocument();
-  await userEvent.setup().click(screen.getByRole("button", { name: "Reload the page" }));
+  expect(
+    screen.getByRole("heading", { name: "Something went wrong" }),
+  ).toBeInTheDocument();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Reload the page" }));
   expect(reload).toHaveBeenCalledTimes(1);
+});
+
+test("moves focus to the fallback heading when a child throws", () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  render(
+    <RouteErrorBoundary>
+      <Broken />
+    </RouteErrorBoundary>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Something went wrong" }),
+  ).toHaveFocus();
+});
+
+test("moves focus to the fallback heading when a mounted page later throws", () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  function Flaky({ broken }: { broken: boolean }) {
+    if (broken) throw new Error("render failed");
+    return (
+      <h1 data-page-heading="" tabIndex={-1}>
+        Page
+      </h1>
+    );
+  }
+  const { rerender } = render(
+    <RouteErrorBoundary>
+      <Flaky broken={false} />
+    </RouteErrorBoundary>,
+  );
+  screen.getByRole("heading", { name: "Page" }).focus();
+  rerender(
+    <RouteErrorBoundary>
+      <Flaky broken />
+    </RouteErrorBoundary>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Something went wrong" }),
+  ).toHaveFocus();
 });
