@@ -410,16 +410,13 @@
       display: none;
     }
 
+    /* Only shown while no county is open, so the panel never covers it. */
     .stage-hint {
       position: absolute;
       top: 0.75rem;
       right: 0.75rem;
       margin: 0;
       pointer-events: none;
-    }
-
-    .explorer .county-panel {
-      margin-top: 1rem;
     }
   }
 
@@ -656,6 +653,19 @@
 
   /* ---------- County panel ---------- */
 
+  /* The map stage or the table, with the county panel laid over it from 721px. */
+  .explorer-view {
+    position: relative;
+  }
+
+  .explorer-view--table {
+    margin-top: 1rem;
+  }
+
+  .explorer-view .county-table-wrap {
+    margin-top: 0;
+  }
+
   .county-panel {
     display: flex;
     flex-direction: column;
@@ -663,6 +673,35 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-xl);
     background: var(--surface);
+  }
+
+  /* A card floating over the stage's right edge (or the table's), with its own scroll. It is
+     positioned out of flow, so opening it never moves or resizes the map. */
+  @media (min-width: 721px) {
+    .explorer-view > .county-panel {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 5;
+      width: 400px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      box-shadow: 0 12px 32px rgb(23 37 42 / 18%), 0 2px 6px rgb(23 37 42 / 10%);
+    }
+
+    .explorer-view > .county-panel .panel-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    /* A table has no size to keep, so its frame narrows instead of hiding ranks under the panel. */
+    .explorer-view--table.explorer-view--panel-open .county-table-wrap {
+      /* The panel's 400px, its 12px inset and a 12px gap. */
+      margin-right: 424px;
+    }
   }
 
   .panel-header {
@@ -687,10 +726,8 @@
     font-size: 0.875rem;
   }
 
-  .panel-actions {
-    display: flex;
+  .panel-close {
     flex: none;
-    gap: 0.25rem;
   }
 
   .panel-body {
@@ -832,6 +869,24 @@
   /* Model card */
   .model-card {
     font-size: 0.875rem;
+  }
+
+  /* The card's title and, on measures that are not an outcome, its Outcome select. */
+  .model-card-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.375rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .panel-body .model-card-heading h3 {
+    margin: 0;
+  }
+
+  .model-outcome {
+    max-width: 100%;
   }
 
   .model-card p {
@@ -1093,51 +1148,54 @@
       padding: 0.25rem 0.5rem 0.5rem;
     }
 
-    /* Keeps counties at the bottom of the map tappable above the peek sheet. */
+    /* Keeps counties at the bottom of the map tappable above the drawer in peek. */
     .explorer--sheet-open {
       padding-bottom: 40dvh;
     }
 
-    .county-panel--sheet {
+    /* The drawer is a viewport tall; vaul slides it down so only the snap point's share shows.
+       The header stays put while the body scrolls, and the body pads its end by the hidden share
+       (--drawer-hidden, set by PanelShell) so its last line can reach the screen. */
+    .county-panel[data-vaul-drawer] {
       position: fixed;
       right: 0;
       bottom: 0;
       left: 0;
-      z-index: 5;
+      z-index: 20;
       box-sizing: border-box;
-      height: 40dvh;
-      overflow-y: auto;
-      padding-top: 8px;
+      height: 100dvh;
       border-bottom: 0;
       border-radius: 16px 16px 0 0;
       box-shadow: 0 -4px 24px rgb(23 37 42 / 18%);
-      transition: height 200ms ease;
     }
 
-    .county-panel--expanded {
-      height: 85dvh;
+    .county-panel[data-vaul-drawer] .panel-header {
+      flex: none;
+      padding: 0.25rem 0.5rem 0.5rem 1rem;
     }
 
-    /* Keeps the heading, Expand/Collapse and Close in view while the sheet scrolls. */
-    .county-panel--sheet .panel-header {
-      position: sticky;
-      /* Cancels the sheet's top padding, so scrolled content never shows above the header. */
-      top: -8px;
-      z-index: 1;
-      padding: 0.5rem 0.5rem 0.5rem 1rem;
+    .county-panel[data-vaul-drawer] .panel-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 0 1rem calc(1rem + var(--drawer-hidden, 0px));
     }
 
-    .county-panel--sheet .panel-body {
-      padding: 0 1rem 1rem;
-    }
-
-    .sheet-handle {
+    /* vaul's handle; its hit area (vaul's own CSS) is at least 44px square. */
+    .county-panel [data-vaul-handle].drawer-handle {
       flex: none;
       width: 40px;
       height: 4px;
-      margin: 0 auto;
+      margin: 10px auto 6px;
       border-radius: 2px;
       background: var(--line-strong);
+      opacity: 1;
+    }
+
+    /* Radix Select options are divs, so the button rule below doesn't reach them. */
+    [data-slot="select-item"] {
+      min-height: 2.75rem;
     }
 
     /* Touch targets: buttons, view toggles and table sort buttons. */
@@ -1148,9 +1206,11 @@
     }
   }
 
+  /* vaul sets its slide transition inline, so only !important can turn it off. */
   @media (max-width: 720px) and (prefers-reduced-motion: reduce) {
-    .county-panel--sheet {
-      transition: none;
+    .county-panel[data-vaul-drawer] {
+      transition: none !important;
+      animation: none !important;
     }
   }
 

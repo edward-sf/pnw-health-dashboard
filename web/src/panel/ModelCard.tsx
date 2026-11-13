@@ -1,5 +1,6 @@
 import { useId, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
 import { buildShapBars, type ShapBar } from "../model/buildShapBars";
@@ -14,15 +15,36 @@ type Props = {
   entry: CountyModel;
   indicators: Indicator[];
   target: TargetModel;
+  /** The outcomes to choose between. With `onTargetChange`, the heading carries an Outcome select. */
+  targets?: { id: string; label: string }[];
+  onTargetChange?: (id: string) => void;
 };
 
-export function ModelCard({ county, entry, indicators, target }: Props) {
+export function ModelCard({ county, entry, indicators, target, targets, onTargetChange }: Props) {
   const headingId = useId();
   const bars = useMemo(() => buildShapBars(entry, indicators, target.unit), [entry, indicators, target.unit]);
+  // Target models carry no id of their own, so the current one is found by its label.
+  const selectedId = targets?.find((t) => t.label === target.label)?.id;
 
   return (
     <section className="model-card" aria-labelledby={headingId} data-county={county.fips}>
-      <h3 id={headingId}>{target.label} model</h3>
+      <div className="model-card-heading">
+        <h3 id={headingId}>{target.label} model</h3>
+        {targets && onTargetChange && (
+          <Select value={selectedId} onValueChange={onTargetChange}>
+            <SelectTrigger aria-label="Outcome" className="model-outcome">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {targets.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
       {hasModelResult(entry) ? (
         <ModelResult entry={entry} bars={bars} target={target} />
       ) : (

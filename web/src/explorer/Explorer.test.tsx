@@ -74,7 +74,7 @@ test("close clears only c", async () => {
   const router = setup("/?i=poverty_rate&c=53033");
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(router.state.location.search).toBe("?i=poverty_rate");
-  expect(screen.queryByRole("complementary", { name: "County details" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "County details" })).not.toBeInTheDocument();
 });
 
 test("Escape clears only c", async () => {
@@ -93,7 +93,7 @@ test("select from search moves focus to panel heading", async () => {
 
 test("clicking a peer in the panel moves focus to the new county's heading", async () => {
   const router = setup("/?i=poverty_rate&c=53033");
-  const panel = screen.getByRole("complementary", { name: "County details" });
+  const panel = screen.getByRole("dialog", { name: "County details" });
   await userEvent.click(within(panel).getByRole("button", { name: /^Multnomah/ }));
   expect(router.state.location.search).toContain("c=41051");
   expect(screen.getByRole("heading", { level: 2, name: "Multnomah" })).toHaveFocus();
@@ -292,7 +292,7 @@ test("a pending focus request doesn't fire for a different county", async () => 
     await userEvent.keyboard("{ArrowDown}{Enter}");
     await router.navigate("/?c=bogus");
   });
-  expect(screen.queryByRole("complementary", { name: "County details" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "County details" })).not.toBeInTheDocument();
   // A URL change, not a select handler, so only the request's FIPS binding keeps it from firing.
   await act(async () => {
     await router.navigate("/?c=41051");
@@ -339,6 +339,61 @@ test("model mode: hovering King shows the tier tooltip", () => {
   );
 });
 
+test("the panel is a dialog and the map stays live: a second county replaces the first", async () => {
+  const router = setup("/?i=poverty_rate");
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  const panel = screen.getByRole("dialog", { name: "County details" });
+  expect(within(panel).getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("Multnomah, OR"));
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=41051");
+  expect(screen.getAllByRole("dialog", { name: "County details" })).toHaveLength(1);
+  expect(
+    within(screen.getByRole("dialog", { name: "County details" })).getByRole("heading", {
+      level: 2,
+      name: "Multnomah",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText("Multnomah, OR")).toHaveAttribute("aria-current", "true");
+});
+
+test("on a non-target measure the card's Outcome select sets t; on a target there is none", async () => {
+  const router = setup("/?i=poverty_rate&c=53033");
+  const panel = screen.getByRole("dialog", { name: "County details" });
+  await userEvent.click(within(panel).getByRole("combobox", { name: "Outcome" }));
+  await userEvent.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&t=premature_death");
+  expect(
+    within(panel).getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
+  ).toBeInTheDocument();
+  cleanup();
+  setup("/?i=life_expectancy&c=53033");
+  const targetPanel = screen.getByRole("dialog", { name: "County details" });
+  expect(within(targetPanel).queryByRole("combobox", { name: "Outcome" })).not.toBeInTheDocument();
+  expect(
+    within(targetPanel).getByRole("heading", { level: 3, name: "Life expectancy model" }),
+  ).toBeInTheDocument();
+});
+
+test("Escape with the measure popover open closes the popover and keeps the county", async () => {
+  const router = setup("/?i=poverty_rate&c=53033");
+  const trigger = screen.getByRole("button", { name: "Measure: Poverty rate" });
+  await userEvent.click(trigger);
+  await userEvent.keyboard("{Escape}");
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("dialog", { name: "County details" })).toBeInTheDocument();
+  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033");
+  await userEvent.keyboard("{Escape}");
+  expect(router.state.location.search).toBe("?i=poverty_rate");
+});
+
+test("Escape with focus on the map closes the panel", async () => {
+  const router = setup("/?i=poverty_rate");
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  screen.getByLabelText("King, WA").focus();
+  await userEvent.keyboard("{Escape}");
+  expect(router.state.location.search).toBe("?i=poverty_rate");
+});
+
 test("phone: the sheet-open class and Escape in the measure list keeps the county", async () => {
   mockMatchMedia(true);
   const router = setup("/?i=poverty_rate&c=53033");
@@ -348,7 +403,7 @@ test("phone: the sheet-open class and Escape in the measure list keeps the count
   await userEvent.click(screen.getByRole("combobox", { name: "Filter measures" }));
   await userEvent.keyboard("{Escape}");
   expect(trigger).toHaveAttribute("aria-expanded", "false");
-  expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "County details" })).toBeInTheDocument();
   expect(router.state.location.search).toBe("?i=poverty_rate&c=53033");
 });
 
@@ -434,7 +489,7 @@ test("switching to model mode with a county open puts the card first and keeps f
   await user.click(modelButton);
   expect(router.state.location.search).toContain("c=53033");
   expect(modelButton).toHaveFocus();
-  const panel = screen.getByRole("complementary", { name: "County details" });
+  const panel = screen.getByRole("dialog", { name: "County details" });
   const card = within(panel).getByRole("heading", { name: "Life expectancy model" });
   const measure = panel.querySelector(".panel-measure")!;
   expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -487,7 +542,7 @@ test("an old model link is rewritten in place", () => {
     screen.getByRole("heading", { level: 2, name: "Injury deaths: compared with expected" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
-  expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "County details" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "King" })).toBeInTheDocument();
   expect(router.state.location.search).toBe("?c=53033&view=table&i=injury_deaths&show=expected");
   expect(router.state.historyAction).toBe("REPLACE");

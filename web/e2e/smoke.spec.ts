@@ -10,7 +10,7 @@ test("load, pick an indicator, select a county", async ({ page }) => {
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(page.locator('path.county[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
   await expect(
-    page.getByRole("complementary", { name: "County details" }).locator("svg circle").first(),
+    page.getByRole("dialog", { name: "County details" }).locator("svg circle").first(),
   ).toBeVisible();
 });
 
@@ -24,7 +24,7 @@ test("table view and county search", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/[?&]c=41051/);
   await expect(
-    page.getByRole("complementary", { name: "County details" }).getByRole("heading", { level: 2 }),
+    page.getByRole("dialog", { name: "County details" }).getByRole("heading", { level: 2 }),
   ).toBeFocused();
 });
 
@@ -77,7 +77,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.locator(".legend li")).toHaveCount(6);
   await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  const panel = page.getByRole("complementary", { name: "County details" });
+  const panel = page.getByRole("dialog", { name: "County details" });
   await expect(
     panel.getByRole("heading", { name: "Life expectancy model" }),
   ).toBeVisible();
@@ -124,7 +124,7 @@ test("model mode: change the outcome", async ({ page }) => {
 
 test("select a similar county", async ({ page }) => {
   await page.goto("./?c=53033");
-  const panel = page.getByRole("complementary", { name: "County details" });
+  const panel = page.getByRole("dialog", { name: "County details" });
   const similar = panel.getByRole("region", { name: "Similar counties" });
   const peer = similar.getByRole("button").first();
   const label = (await peer.textContent())?.trim() ?? "";
@@ -153,7 +153,7 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   // King County (53033) has a model result, so its model card has no Methodology link. Chugach
   // doesn't, so its card links to #no-result (the panel's Similar counties link is a different one).
   await page.goto("./?i=life_expectancy&show=expected&c=02063");
-  const panel = page.getByRole("complementary", { name: "County details" });
+  const panel = page.getByRole("dialog", { name: "County details" });
   await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
   const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
@@ -200,4 +200,22 @@ test("who lives here shows population and groups", async ({ page }) => {
   await expect(who.getByRole("heading", { level: 4, name: "Age and sex" })).toBeVisible();
   await expect(who.getByRole("heading", { level: 4, name: "Race and ethnicity" })).toBeVisible();
   await expect(who.getByRole("heading", { level: 4, name: "Other" })).toBeVisible();
+});
+
+test("the panel floats over a live map: clicks keep it open, Escape anywhere closes it", async ({
+  page,
+}) => {
+  await page.goto("./?i=poverty_rate");
+  await page.locator('path.county[data-fips="53033"]').click();
+  const panel = page.getByRole("dialog", { name: "County details" });
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  // Opening from the map leaves focus where it was.
+  await expect(panel.getByRole("heading", { level: 2 })).not.toBeFocused();
+  await page.locator('path.county[data-fips="53077"]').click();
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+  // Escape with focus on the toolbar, outside the panel, still closes it.
+  await page.getByRole("radio", { name: "Map", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "County details" })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/[?&]c=/);
 });
