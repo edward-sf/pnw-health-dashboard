@@ -267,7 +267,7 @@ class StrataIndicator(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     groups: list[RaceGroup]
-    counties: dict[str, dict[str, StratumEntry | None]]
+    counties: dict[str, dict[RaceGroup, StratumEntry | None]]
 
 
 class StrataFile(BaseModel):

@@ -44,6 +44,17 @@
                 }
               ]
             },
+            "propertyNames": {
+              "enum": [
+                "aian",
+                "asian",
+                "black",
+                "hispanic",
+                "nhopi",
+                "white",
+                "tom"
+              ]
+            },
             "type": "object"
           },
           "title": "Counties",

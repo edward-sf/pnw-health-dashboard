@@ -95,6 +95,13 @@ def test_unknown_pnw_fips_raises(
         build_strata_file(pd.concat([rows, extra]), county_fips, catalog)
 
 
+def test_duplicate_rows_raise(
+    rows: pd.DataFrame, county_fips: set[str], catalog: list[Indicator]
+) -> None:
+    with pytest.raises(DataValidationError, match="life_expectancy/53001/white"):
+        build_strata_file(pd.concat([rows, rows.iloc[[0]]]), county_fips, catalog)
+
+
 def test_no_rank_fields_and_unreliable_omitted_when_false(
     rows: pd.DataFrame, county_fips: set[str], catalog: list[Indicator]
 ) -> None:

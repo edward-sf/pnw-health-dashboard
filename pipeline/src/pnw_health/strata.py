@@ -10,7 +10,7 @@ import pandas as pd
 
 from pnw_health.config import CHR_YEAR, RACE_GROUP_LABELS, state_abbr
 from pnw_health.contract import StrataFile, StrataGroup, StrataIndicator, StratumEntry
-from pnw_health.indicators import Indicator
+from pnw_health.indicators import Indicator, RaceGroup
 from pnw_health.numeric import nan_to_none
 from pnw_health.validate import DataValidationError
 
@@ -29,14 +29,21 @@ def build_strata_file(
         raise DataValidationError(
             [f"strata reference PNW counties that are not display counties: {', '.join(unknown)}"]
         )
+    keys = ["indicator_id", "fips", "group"]
+    dupes = rows[rows.duplicated(keys, keep=False)]
+    if not dupes.empty:
+        names = sorted({f"{r.indicator_id}/{r.fips}/{r.group}" for r in dupes.itertuples()})
+        raise DataValidationError(
+            [f"duplicate strata rows (indicator_id/fips/group): {', '.join(names)}"]
+        )
     found = {(r.indicator_id, r.fips, r.group): r for r in rows.itertuples(index=False)}
     indicators: dict[str, StrataIndicator] = {}
     for ind in catalog:
         if not ind.race_groups:
             continue
-        counties: dict[str, dict[str, StratumEntry | None]] = {}
+        counties: dict[str, dict[RaceGroup, StratumEntry | None]] = {}
         for fips in sorted(county_fips):
-            groups: dict[str, StratumEntry | None] = {}
+            groups: dict[RaceGroup, StratumEntry | None] = {}
             for group in ind.race_groups:
                 r = found.get((ind.id, fips, group))
                 groups[group] = (
