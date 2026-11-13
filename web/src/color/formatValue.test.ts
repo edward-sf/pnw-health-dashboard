@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatBound, formatSigned, formatTick, formatValue } from "./formatValue";
+import { formatBound, formatCi, formatSigned, formatTick, formatValue } from "./formatValue";
 
 test("formats by unit", () => {
   expect(formatValue(12.34, "percent")).toBe("12.3%");
@@ -47,4 +47,13 @@ test("formatSigned defaults to the unit's own digits", () => {
   expect(formatSigned(1500, "dollars")).toBe("+$1,500");
   expect(formatSigned(2.6, "percent")).toBe("+2.6%");
   expect(formatSigned(3.65, "years")).toBe("+3.7 years");
+});
+
+test("formatCi uses the indicator's level and bounds, or null without both bounds", () => {
+  const ind = { unit: "years", ci_level: 0.95 } as const;
+  expect(formatCi(73.84, 74.6, ind)).toBe("95% CI 73.8–74.6");
+  expect(formatCi(9.1, 9.9, { unit: "percent", ci_level: 0.9 })).toBe("90% CI 9.1–9.9");
+  expect(formatCi(null, 74.6, ind)).toBeNull();
+  expect(formatCi(73.8, null, ind)).toBeNull();
+  expect(formatCi(73.8, 74.6, { unit: "years", ci_level: null })).toBeNull();
 });

@@ -259,6 +259,64 @@ main {
   font-size: 0.875rem;
 }
 
+/* Race breakdown: text rows, each over a dot-and-interval mark on one shared axis. One neutral
+   ink for every group, so no group reads as better or worse by color. */
+.race-breakdown h3 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.race-breakdown-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.race-breakdown-row {
+  padding: 0.2rem 0;
+}
+
+.race-breakdown-row:first-child {
+  font-weight: 600;
+}
+
+.race-breakdown-ci {
+  font-weight: 400;
+  color: #555;
+}
+
+.race-breakdown-mark {
+  position: relative;
+  display: block;
+  height: 10px;
+  margin-top: 2px;
+  border-bottom: 1px solid #ddd;
+}
+
+.race-breakdown-interval {
+  position: absolute;
+  top: 4px;
+  height: 2px;
+  background: #555;
+}
+
+.race-breakdown-dot {
+  position: absolute;
+  top: 1px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #1a1a1a;
+}
+
+.race-breakdown-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
 @media (min-width: 1100px) {
   .explorer--panel {
     grid-template-columns: 280px minmax(0, 1fr) 360px;
