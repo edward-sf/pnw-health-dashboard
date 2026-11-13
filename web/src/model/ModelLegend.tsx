@@ -1,8 +1,10 @@
 import { HatchSwatch } from "../color/HatchSwatch";
+import { usePalette } from "../color/palette";
 import type { Flag } from "../types";
 import { TIERS, tierFill, tierLabel } from "./modelView";
 
 export function ModelLegend({ counts }: { counts: Record<Flag, number> }) {
+  const palette = usePalette();
   return (
     <div className="legend">
       <ul className="legend-bins">
@@ -10,7 +12,7 @@ export function ModelLegend({ counts }: { counts: Record<Flag, number> }) {
           <li key={flag}>
             <span
               className="legend-swatch"
-              style={{ background: tierFill(flag) }}
+              style={{ background: tierFill(flag, palette) }}
               aria-hidden="true"
             />
             <span>

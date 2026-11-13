@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import { topology } from "../test/fixtures";
 import { buildMapPaths } from "./buildMapPaths";
 import { outlineFor } from "../color/outline";
+import { PALETTES } from "../color/palette";
 import { CountyMap } from "./CountyMap";
 
 const paths = buildMapPaths(topology);
@@ -167,5 +168,5 @@ test("each county path carries the outline chosen for its fill", () => {
     />,
   );
   const path = container.querySelector<SVGPathElement>("path.county[data-fips]")!;
-  expect(path.style.getPropertyValue("--county-stroke")).toBe(outlineFor("#e34a33"));
+  expect(path.style.getPropertyValue("--county-stroke")).toBe(outlineFor("#e34a33", PALETTES.light));
 });

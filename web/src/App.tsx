@@ -9,6 +9,7 @@ import { useRouteFocus } from "./hooks/useRouteFocus";
 import { Explorer } from "./explorer/Explorer";
 import { About } from "./pages/About";
 import { Methodology } from "./pages/Methodology";
+import { ThemeMenu } from "./theme/ThemeMenu";
 
 function useLastExplorerSearch(): string {
   const { pathname, search } = useLocation();
@@ -50,6 +51,7 @@ export default function App() {
             <NavLink to="/methodology">Methodology</NavLink>
             <NavLink to="/about">About</NavLink>
           </nav>
+          <ThemeMenu />
         </div>
       </header>
       <main>

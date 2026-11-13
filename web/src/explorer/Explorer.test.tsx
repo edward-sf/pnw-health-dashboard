@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
 import { manifest as fixtureManifest, model, prematureDeath, strata, topology, values } from "../test/fixtures";
+import { PALETTES } from "../color/palette";
 import { tierFill } from "../model/modelView";
 import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
@@ -278,11 +279,11 @@ test("the Observed and Compared with expected switch only shows for a model targ
 test("the selected target drives the map fill", () => {
   setupTwo("/?i=life_expectancy&show=expected");
   const king = () => screen.getByLabelText("King, WA").getAttribute("fill");
-  expect(king()).toBe(tierFill("notably_better"));
+  expect(king()).toBe(tierFill("notably_better", PALETTES.light));
   cleanup();
   setupTwo("/?i=premature_death&show=expected");
-  expect(king()).toBe(tierFill("notably_worse"));
-  expect(king()).not.toBe(tierFill("notably_better"));
+  expect(king()).toBe(tierFill("notably_worse", PALETTES.light));
+  expect(king()).not.toBe(tierFill("notably_better", PALETTES.light));
 });
 
 test("a pending focus request doesn't fire for a different county", async () => {

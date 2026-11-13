@@ -92,7 +92,7 @@ test("the factors section draws neutral bars and never uses a tier colour", () =
   const factors = container.querySelector(".model-factors")!;
   const rects = factors.querySelectorAll("rect.shap-bar");
   expect(rects.length).toBeGreaterThan(0);
-  for (const r of rects) expect(r.getAttribute("fill")).toBe("#6b7280");
+  for (const r of rects) expect(r).not.toHaveAttribute("fill");
   const tiers = ["#ca0020", "#f4a582", "#e3e3e3", "#92c5de", "#0571b0"];
   for (const el of [factors, ...factors.querySelectorAll("*")]) {
     const used = ["style", "fill", "stroke"]

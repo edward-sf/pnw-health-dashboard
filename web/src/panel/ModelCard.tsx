@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
+import { usePalette } from "../color/palette";
 import { buildShapBars, type ShapBar } from "../model/buildShapBars";
 import { type CompleteModel, hasModelResult, modelDigits, tierFill, tierLabel } from "../model/modelView";
 import { directionNote, outcomeName } from "../model/targetView";
@@ -66,6 +67,7 @@ function ModelResult({
   bars: ShapBar[];
   target: TargetModel;
 }) {
+  const palette = usePalette();
   const { unit } = target;
   const note = directionNote(target);
   const d = modelDigits(unit);
@@ -88,7 +90,7 @@ function ModelResult({
             <span
               className="tier-swatch"
               aria-hidden="true"
-              style={{ background: tierFill(entry.flag) }}
+              style={{ background: tierFill(entry.flag, palette) }}
             />
             {tierLabel(entry.flag)}
           </Badge>

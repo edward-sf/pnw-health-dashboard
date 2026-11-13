@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatSigned, formatValue } from "../color/formatValue";
+import { usePalette } from "../color/palette";
 import { modelDigits, tierFill, tierLabel } from "../model/modelView";
 import type { TargetModel } from "../types";
 import { CountyCell } from "./CountyCell";
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function ModelTable({ rows, selected, onSelect, target }: Props) {
+  const palette = usePalette();
   const [sort, setSort] = useState<Sort<ModelSortKey>>({
     key: "result",
     dir: "asc",
@@ -63,7 +65,7 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
                       <span
                         className="tier-swatch"
                         aria-hidden="true"
-                        style={{ background: tierFill(flag) }}
+                        style={{ background: tierFill(flag, palette) }}
                       />
                     )}
                     {tierLabel(flag)}

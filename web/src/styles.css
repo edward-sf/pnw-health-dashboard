@@ -1,11 +1,16 @@
 @import "tailwindcss";
 @import "@fontsource-variable/archivo/wdth.css";
 
+/* `dark:` utilities follow the `dark` class on <html> (set by index.html and ThemeProvider). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Design tokens. The map and charts carry all the saturated color (their fills are data), so the
    interface around them is a cool neutral with one fir-green accent that none of the data ramps
-   (blues, orange-reds, red-blue) uses. Light theme only: the map's outline contrast and the
-   legend swatches are computed against a white stage. */
+   (blues, orange-reds, red-blue) uses. `:root` is the light theme and `.dark` redefines every
+   color token; tokens.test.ts checks the contrast of both sets. The map's outlines are computed
+   against --stage, which must match the palette's `stage` in src/color/palette.ts (also tested). */
 :root {
+  color-scheme: light;
   --paper: #f3f5f4;
   --surface: #ffffff;
   --ink: #17252a;
@@ -17,15 +22,62 @@
   --fir-soft: #e2eee9;
   --wash: #e9edec;
   --alert: #b42318;
+  --stage: #ffffff;
   --map-state-border: #17252a;
-  --map-selected: #000;
-  --map-selected-under: #fff;
+  /* The selected county: a dark outline over a light ring, so it reads against any fill. */
+  --map-selected: #000000;
+  --map-selected-under: #ffffff;
+  --map-hover: #333333;
+  --map-inset-frame: #7c8a8d;
+  /* Legend and tier swatch borders: 3:1 against the stage and the surface (WCAG 1.4.11). */
+  --swatch-border: #6b7280;
+  /* Neutral chart marks: --chart-ink for text and the selected mark, --chart-muted for bars and
+     the other counties, and the model card's two threshold bands (75% inside 90%). */
+  --chart-ink: #374151;
+  --chart-muted: #6b7280;
+  --chart-band-75: #e6e9ee;
+  --chart-band-90: #c9ced6;
+  /* Floating surfaces: the county panel, the drawer, and popovers and menus. */
+  --shadow-float: 0 12px 32px rgb(23 37 42 / 18%), 0 2px 6px rgb(23 37 42 / 10%);
+  --shadow-drawer: 0 -4px 24px rgb(23 37 42 / 18%);
+  --shadow-pop: 0 8px 24px rgb(23 37 42 / 14%);
 
   --radius: 0.5rem;
   --header-height: 3.5rem;
   --gutter: 1.25rem;
   /* Archivo's width axis: headings and figures run condensed, text runs at normal width. */
   --condensed: 78%;
+}
+
+/* The dark theme: a dark blue-grey stage, lighter surfaces raised on it, and the same data colors.
+   Shadows barely show on dark, so floating surfaces lean on their border and a deeper shadow. */
+.dark {
+  color-scheme: dark;
+  --paper: #11181a;
+  --surface: #1b2427;
+  --ink: #e4eae9;
+  --ink-muted: #9aabb0;
+  --line: #2f3b3f;
+  --line-strong: #6e7f84;
+  --fir: #78c4a4;
+  --fir-soft: #1f3a31;
+  --wash: #253034;
+  --alert: #ff8a80;
+  --stage: #161d20;
+  --map-state-border: #c3ced1;
+  /* Inverted: a white outline over a black ring, against dark neighbours and the dark stage. */
+  --map-selected: #ffffff;
+  --map-selected-under: #000000;
+  --map-hover: #f2f5f5;
+  --map-inset-frame: #7c8a8d;
+  --swatch-border: #8b9aa0;
+  --chart-ink: #d6dee0;
+  --chart-muted: #8b9aa0;
+  --chart-band-75: #263236;
+  --chart-band-90: #364449;
+  --shadow-float: 0 12px 32px rgb(0 0 0 / 50%), 0 2px 6px rgb(0 0 0 / 35%);
+  --shadow-drawer: 0 -4px 24px rgb(0 0 0 / 55%);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 45%);
 }
 
 @theme inline {
@@ -36,7 +88,7 @@
   --color-card: var(--surface);
   --color-card-foreground: var(--ink);
   --color-primary: var(--ink);
-  --color-primary-foreground: #ffffff;
+  --color-primary-foreground: var(--surface);
   --color-secondary: var(--wash);
   --color-secondary-foreground: var(--ink);
   --color-muted: var(--wash);
@@ -166,6 +218,11 @@
     border-bottom-color: var(--fir);
     color: var(--ink);
     font-weight: 650;
+  }
+
+  /* The theme switch, at the header's right end. */
+  .site-header .theme-menu {
+    margin-left: auto;
   }
 
   main {
@@ -335,15 +392,15 @@
 
   /* ---------- Map ---------- */
 
-  /* The white stage the map and its legend sit on. County outlines and legend swatches are
-     checked for contrast against white, so this must stay white. */
+  /* The stage the map and its legend sit on. County outlines and legend swatches are checked for
+     contrast against --stage, which is the palette's stage for the theme. */
   .map-stage {
     position: relative;
     box-sizing: border-box;
     padding: 0.75rem;
     border: 1px solid var(--line);
     border-radius: var(--radius-xl);
-    background: #fff;
+    background: var(--stage);
   }
 
   .county-map {
@@ -430,7 +487,7 @@
 
   .county:hover,
   .county:focus-visible {
-    stroke: #333;
+    stroke: var(--map-hover);
     stroke-width: 1;
     outline: none;
   }
@@ -462,13 +519,13 @@
   }
 
   .inset-frame {
-    stroke: #999;
+    stroke: var(--map-inset-frame);
     stroke-width: 1;
   }
 
   .inset-label {
     font-size: 14px;
-    fill: #555;
+    fill: var(--ink-muted);
   }
 
   .map-tooltip {
@@ -477,7 +534,7 @@
     padding: 0.25rem 0.5rem;
     border-radius: var(--radius-sm);
     background: var(--ink);
-    color: #fff;
+    color: var(--surface);
     font-size: 0.8125rem;
     max-width: min(240px, 60vw);
     width: max-content;
@@ -531,7 +588,7 @@
     width: 16px;
     height: 16px;
     /* 3:1 against the stage (WCAG 1.4.11), so the pale tier and no-data swatches stay visible. */
-    border: 1px solid #6b7280;
+    border: 1px solid var(--swatch-border);
     border-radius: 3px;
     box-sizing: border-box;
   }
@@ -688,7 +745,7 @@
       box-sizing: border-box;
       overflow-y: auto;
       overscroll-behavior: contain;
-      box-shadow: 0 12px 32px rgb(23 37 42 / 18%), 0 2px 6px rgb(23 37 42 / 10%);
+      box-shadow: var(--shadow-float);
     }
 
     .explorer-view > .county-panel .panel-header {
@@ -796,10 +853,16 @@
     margin-top: 0.5rem;
   }
 
+  /* Plot draws its axis in currentColor on its own white background; both follow the theme. */
+  .strip-plot-chart {
+    color: var(--chart-ink);
+  }
+
   .strip-plot-chart svg {
     max-width: 100%;
     height: auto;
     font-family: inherit;
+    background: transparent;
   }
 
   .strip-plot-missing {
@@ -847,7 +910,7 @@
     position: absolute;
     top: 4px;
     height: 2px;
-    background: #555;
+    background: var(--chart-muted);
   }
 
   .race-breakdown-dot {
@@ -857,7 +920,7 @@
     height: 8px;
     margin-left: -4px;
     border-radius: 50%;
-    background: #1a1a1a;
+    background: var(--chart-ink);
   }
 
   .race-breakdown-note {
@@ -909,7 +972,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 1px solid #111;
+    border: 1px solid var(--ink);
   }
 
   .residual-range svg,
@@ -917,6 +980,39 @@
     max-width: 100%;
     height: auto;
     font-family: inherit;
+  }
+
+  .range-band-90 {
+    fill: var(--chart-band-90);
+  }
+
+  .range-band-75 {
+    fill: var(--chart-band-75);
+  }
+
+  .range-zero {
+    stroke: var(--chart-ink);
+  }
+
+  .range-dot {
+    stroke: var(--ink);
+  }
+
+  .range-label {
+    fill: var(--ink-muted);
+  }
+
+  .shap-label,
+  .shap-value {
+    fill: var(--chart-ink);
+  }
+
+  .shap-bar {
+    fill: var(--chart-muted);
+  }
+
+  .shap-zero {
+    stroke: var(--chart-muted);
   }
 
   .model-factors-note,
@@ -966,7 +1062,7 @@
   .who-bar {
     display: block;
     height: 100%;
-    background: #6b7280;
+    background: var(--chart-muted);
   }
 
   .panel-body .who-group-heading {
@@ -1058,7 +1154,17 @@
     }
 
     .site-header nav {
+      order: 2;
+      flex-basis: 100%;
       margin-left: -0.75rem;
+    }
+
+    /* Beside the brand on the first row, so the nav keeps the second row to itself. Its 44px
+       target overhangs the row instead of making it taller than the brand. */
+    .site-header .theme-menu {
+      order: 1;
+      margin-block: -0.625rem -0.75rem;
+      margin-right: -0.5rem;
     }
 
     /* The phone toolbar is three rows; keep the map's top within the first screen. */
@@ -1166,7 +1272,7 @@
       height: 100dvh;
       border-bottom: 0;
       border-radius: 16px 16px 0 0;
-      box-shadow: 0 -4px 24px rgb(23 37 42 / 18%);
+      box-shadow: var(--shadow-drawer);
     }
 
     .county-panel[data-vaul-drawer] .panel-header {
@@ -1193,8 +1299,9 @@
       opacity: 1;
     }
 
-    /* Radix Select options are divs, so the button rule below doesn't reach them. */
-    [data-slot="select-item"] {
+    /* Radix Select and DropdownMenu options are divs, so the button rule below doesn't reach them. */
+    [data-slot="select-item"],
+    [data-slot="dropdown-menu-radio-item"] {
       min-height: 2.75rem;
     }
 

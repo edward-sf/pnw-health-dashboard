@@ -176,3 +176,17 @@ test("the measure list's options and filter input are 44px touch targets", async
   expect(heights.length).toBeGreaterThan(0);
   expect(heights.filter(([, h]) => h < 44)).toEqual([]);
 });
+
+test("the theme menu's options are 44px touch targets", async ({ page }) => {
+  await page.goto("./?i=poverty_rate");
+  const trigger = page.getByRole("button", { name: "Theme" });
+  const box = (await trigger.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await trigger.tap();
+  for (const name of ["Light", "Dark", "System"]) {
+    const item = page.getByRole("menuitemradio", { name });
+    await expect(item).toBeVisible();
+    expect((await item.boundingBox())!.height, name).toBeGreaterThanOrEqual(44);
+  }
+});
