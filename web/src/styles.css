@@ -1117,6 +1117,9 @@
       height: 2.75rem;
     }
 
+    /* Command lists (cmdk) render options as divs, so the button rule below doesn't reach them. */
+    [cmdk-item],
+    [cmdk-input],
     .county-search input,
     select {
       min-height: 2.75rem;

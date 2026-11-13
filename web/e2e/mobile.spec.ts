@@ -69,3 +69,18 @@ test("the sheet header stays in view while the sheet scrolls", async ({ page }) 
   }
   await expect(sheet.getByRole("heading", { level: 2 })).toBeInViewport();
 });
+
+test("the measure list's options and filter input are 44px touch targets", async ({ page }) => {
+  await page.goto("./?i=poverty_rate");
+  await page.getByRole("button", { name: "Measure: Poverty rate" }).tap();
+  const input = page.getByRole("combobox", { name: "Filter measures" });
+  await expect(input).toBeVisible();
+  expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeVisible();
+  const heights = await options.evaluateAll((els) =>
+    els.map((el) => [el.textContent, el.getBoundingClientRect().height] as const),
+  );
+  expect(heights.length).toBeGreaterThan(0);
+  expect(heights.filter(([, h]) => h < 44)).toEqual([]);
+});
