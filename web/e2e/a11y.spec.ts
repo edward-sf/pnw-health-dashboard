@@ -27,7 +27,7 @@ test("explorer: values map", async ({ page }, testInfo) => {
 });
 
 test("explorer: model map", async ({ page }, testInfo) => {
-  await explorer(page, "?i=poverty_rate&mode=model");
+  await explorer(page, "?i=life_expectancy&show=expected");
   await expect(page.locator(".legend li")).toHaveCount(6);
   await audit(page, testInfo);
 });
@@ -55,7 +55,7 @@ test("explorer: county panel with race breakdown", async ({ page }, testInfo) =>
 });
 
 test("explorer: model mode county panel", async ({ page }, testInfo) => {
-  await explorer(page, "?mode=model&c=53077");
+  await explorer(page, "?i=life_expectancy&show=expected&c=53077");
   const panel = page.getByRole("complementary", { name: "County details" });
   await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
   await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
