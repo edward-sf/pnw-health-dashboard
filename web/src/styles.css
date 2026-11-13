@@ -1299,8 +1299,9 @@
       opacity: 1;
     }
 
-    /* Radix Select options are divs, so the button rule below doesn't reach them. */
-    [data-slot="select-item"] {
+    /* Radix Select and DropdownMenu options are divs, so the button rule below doesn't reach them. */
+    [data-slot="select-item"],
+    [data-slot="dropdown-menu-radio-item"] {
       min-height: 2.75rem;
     }
 
