@@ -9,11 +9,12 @@ type Props = {
   tooltipFor: (fips: string) => string;
   selected: string | null;
   onSelect: (fips: string) => void;
+  stateBorders: string;
 };
 
 type Tip = { fips: string; x: number; y: number; flip: boolean };
 
-export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Props) {
+export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stateBorders }: Props) {
   const [tip, setTip] = useState<Tip | null>(null);
 
   // On touch a tap selects the county and opens the panel, which replaces the tooltip.
@@ -29,9 +30,12 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
 
   const renderGroup = (items: MapPath[]) => {
     const ordered = [...items.filter((p) => p.fips !== selected), ...items.filter((p) => p.fips === selected)];
-    return ordered.map((p) => {
+    return ordered.flatMap((p) => {
       const fill = fillFor(p.fips);
-      return (
+      const ring =
+        p.fips === selected ? [<path key={`${p.fips}-ring`} className="county-ring" d={p.d} />] : [];
+      return [
+        ...ring,
         <path
           key={p.fips}
           data-fips={p.fips}
@@ -46,10 +50,13 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
           onPointerEnter={(e) => place(e, p.fips)}
           onPointerMove={(e) => place(e, p.fips)}
           onPointerLeave={() => setTip(null)}
-        />
-      );
+        />,
+      ];
     });
   };
+
+  // Widest first, so the smallest county's halo is on top and wins where halos overlap.
+  const halos = paths.filter((p) => p.halo > 0).sort((a, b) => b.halo - a.halo);
 
   const [[ix0, iy0], [ix1, iy1]] = MAP_LAYOUT.inset;
 
@@ -72,7 +79,25 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect }: Pr
             <line x1="0" y1="0" x2="0" y2="4" stroke="#999" strokeWidth="1.5" />
           </pattern>
         </defs>
+        <g className="map-halos" aria-hidden="true">
+          {halos.map((p) => (
+            <path
+              key={p.fips}
+              className="county-halo"
+              data-fips={p.fips}
+              d={p.d}
+              fill="transparent"
+              stroke="transparent"
+              strokeWidth={p.halo}
+              onClick={() => onSelect(p.fips)}
+              onPointerEnter={(e) => place(e, p.fips)}
+              onPointerMove={(e) => place(e, p.fips)}
+              onPointerLeave={() => setTip(null)}
+            />
+          ))}
+        </g>
         <g className="map-main">{renderGroup(paths.filter((p) => p.state !== "AK"))}</g>
+        <path className="state-borders" d={stateBorders} />
         <rect
           className="inset-frame"
           x={ix0}

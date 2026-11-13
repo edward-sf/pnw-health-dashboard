@@ -2,12 +2,12 @@ import { expect, test } from "@playwright/test";
 
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
   await page.getByRole("button", { name: "Poverty rate", exact: true }).click();
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
-  await page.locator('path[data-fips="53033"]').click();
+  await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  await expect(page.locator('path[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
+  await expect(page.locator('path.county[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
   await expect(
     page.getByRole("complementary", { name: "County details" }).locator("svg circle").first(),
   ).toBeVisible();
@@ -69,12 +69,12 @@ test("strip plot axis text does not overlap", async ({ page }) => {
 
 test("model mode: map, card, table and back", async ({ page }) => {
   await page.goto("./?i=poverty_rate");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
   await page.getByRole("button", { name: "Model", exact: true }).click();
   await expect(page).toHaveURL(/[?&]mode=model/);
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await expect(page.locator(".legend li")).toHaveCount(6);
-  await page.locator('path[data-fips="53033"]').click();
+  await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
   const panel = page.getByRole("complementary", { name: "County details" });
   await expect(
@@ -104,7 +104,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
 
 test("model mode: change the outcome", async ({ page }) => {
   await page.goto("./?mode=model&c=53033");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
   await page
     .getByRole("combobox", { name: "Outcome" })
     .selectOption({ label: "Premature death (years lost)" });
