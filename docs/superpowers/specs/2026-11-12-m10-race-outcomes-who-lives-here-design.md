@@ -227,7 +227,7 @@ By race and ethnicity (CHR 2025)
   Hispanic or Latino        81.3   (79.9–82.7)
   White                     74.0   (73.5–74.5)
   Not reported: Asian, Black, Native Hawaiian and Pacific Islander.
-  CHR does not report a group when there are too few births or deaths to give a stable figure.
+  CHR does not report a group when there are too few cases to give a stable figure.
 ```
 
 - First row is the county's overall value from `values.json`, for comparison. Then one row per group with a value, in `groups` display order, each with value and CI formatted with the indicator's unit (`formatValue`).
@@ -235,7 +235,7 @@ By race and ethnicity (CHR 2025)
 - Unreliable values carry the same marker and wording the panel already uses for unreliable estimates.
 - Groups with `null` are listed by label in one "Not reported:" line, followed by the explanation sentence. If every group is null, the section shows only that line and sentence (still listing the groups), so the absence is visible.
 - No color encoding of better or worse between groups. The direction of the indicator is already stated by the indicator itself.
-- The Valdez-Cordova legacy note does not apply; Chugach and Copper River simply show every group as not reported.
+- The Valdez-Cordova legacy note does not apply; Chugach and Copper River show every group as not reported. Because CHR has no figures for them at all, the explanation sentence there (the county's overall entry has `legacy` set) reads instead: "CHR {year} reports no figures for this area."
 
 ### 5.3 Loading
 

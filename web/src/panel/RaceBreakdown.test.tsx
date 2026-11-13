@@ -61,7 +61,7 @@ it("names unreported groups in one 'Not reported: …' line plus the explanation
   expect(within(section()).getByText("Not reported: Hispanic.")).toBeInTheDocument();
   expect(
     within(section()).getByText(
-      "CHR does not report a group when there are too few births or deaths to give a stable figure.",
+      "CHR does not report a group when there are too few cases to give a stable figure.",
     ),
   ).toBeInTheDocument();
 });
@@ -80,7 +80,7 @@ it("all groups null: only the not-reported note, every group listed", () => {
   expect(within(section()).getByText("Not reported: White, Black, Hispanic.")).toBeInTheDocument();
   expect(
     within(section()).getByText(
-      "CHR does not report a group when there are too few births or deaths to give a stable figure.",
+      "CHR does not report a group when there are too few cases to give a stable figure.",
     ),
   ).toBeInTheDocument();
 });
@@ -168,4 +168,18 @@ it("a measure's label override replaces the group label in rows and the not-repo
   expect(rows()[2]).toHaveTextContent("Black (override)");
   expect(rows()[1]).toHaveTextContent("White");
   expect(within(section()).getByText("Not reported: Hispanic (override).")).toBeInTheDocument();
+});
+
+it("legacy-area county: says CHR reports no figures here, not the too-few-cases sentence", () => {
+  setup("16001", {
+    v: null,
+    lo: null,
+    hi: null,
+    rank: null,
+    state_rank: null,
+    legacy: { fips: "02261", name: "Valdez-Cordova", year: 2023, v: 75, lo: 74, hi: 76 },
+  });
+  expect(within(section()).getByText("Not reported: White, Black, Hispanic.")).toBeInTheDocument();
+  expect(within(section()).getByText("CHR 2025 reports no figures for this area.")).toBeInTheDocument();
+  expect(within(section()).queryByText(/too few cases/)).toBeNull();
 });

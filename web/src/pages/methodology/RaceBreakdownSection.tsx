@@ -46,8 +46,8 @@ export function RaceBreakdownSection({
       </p>
       <h4>Groups CHR does not report</h4>
       <p>
-        CHR does not report a group when there are too few births or deaths to give a stable
-        figure, so most counties have values for only a few groups. The county panel lists the
+        CHR does not report a group when there are too few cases to give a stable figure, so
+        most counties have values for only a few groups. The county panel lists the
         groups with no value by name instead of leaving a blank. A missing group is not a zero
         and does not mean there is no gap. Some reported values carry CHR's unreliable flag, and
         the panel marks them as described under{" "}

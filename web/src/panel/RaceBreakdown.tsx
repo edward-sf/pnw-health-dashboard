@@ -112,8 +112,9 @@ export function RaceBreakdown({ indicator, fips, overall, strata }: Props) {
         <>
           <p className="race-breakdown-note">Not reported: {notReported.join(", ")}.</p>
           <p className="race-breakdown-note">
-            CHR does not report a group when there are too few births or deaths to give a stable
-            figure.
+            {overall?.legacy
+              ? `CHR ${strata.year} reports no figures for this area.`
+              : "CHR does not report a group when there are too few cases to give a stable figure."}
           </p>
         </>
       )}
