@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { expect, test } from "vitest";
+import { PALETTES } from "../color/palette";
 import { tierFill } from "../model/modelView";
 import { ResidualRange } from "./ResidualRange";
 
@@ -14,10 +15,10 @@ function dot(residual: number, flag: Parameters<typeof tierFill>[0], t90 = 3.37)
 
 test("the dot takes the tier colour and sits on the side of its sign", () => {
   const pos = dot(3.7, "notably_better");
-  expect(pos.fill).toBe(tierFill("notably_better"));
+  expect(pos.fill).toBe(tierFill("notably_better", PALETTES.light));
   expect(pos.cx).toBeGreaterThan(pos.zero);
   const neg = dot(-2.6, "somewhat_worse");
-  expect(neg.fill).toBe(tierFill("somewhat_worse"));
+  expect(neg.fill).toBe(tierFill("somewhat_worse", PALETTES.light));
   expect(neg.cx).toBeLessThan(neg.zero);
 });
 

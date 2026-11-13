@@ -52,12 +52,12 @@ test("spreads dots over a fixed jitter band with no y axis", () => {
   expect((base as { fillOpacity: number }).fillOpacity).toBeLessThan(1);
 });
 
-test("draws the selected county as a larger black mark on top", () => {
+test("draws the selected county as a larger ink mark on top", () => {
   setup();
   expect(dot).toHaveBeenCalledTimes(2);
   const [data, top] = dot.mock.calls[1]!;
   expect(data).toEqual([expect.objectContaining({ fips: "53033" })]);
-  expect(top).toMatchObject({ fill: "#000" });
+  expect(top).toMatchObject({ fill: "var(--chart-ink)" });
   expect((top as { r: number }).r).toBeGreaterThan(2.5);
 });
 

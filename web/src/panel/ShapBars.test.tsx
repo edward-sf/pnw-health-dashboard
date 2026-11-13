@@ -7,13 +7,14 @@ import { ShapBars } from "./ShapBars";
 const bars = buildShapBars(model.counties["53033"]!, manifest.indicators, "years");
 
 test("bars follow buildShapBars order with All other factors last, in one neutral fill", () => {
+  // The fill is the --chart-muted token, applied by the .shap-bar class, so it follows the theme.
   const { container } = render(<ShapBars bars={bars} />);
   const groups = [...container.querySelectorAll("svg g")];
   expect(groups.map((g) => g.getAttribute("data-key"))).toEqual(bars.map((b) => b.key));
   expect(groups.at(-1)!.textContent).toContain("All other factors");
   const rects = container.querySelectorAll("rect.shap-bar");
   expect(rects).toHaveLength(bars.length);
-  for (const r of rects) expect(r.getAttribute("fill")).toBe("#6b7280");
+  for (const r of rects) expect(r).not.toHaveAttribute("fill");
 });
 
 test("direction is shown by side of the zero rule", () => {

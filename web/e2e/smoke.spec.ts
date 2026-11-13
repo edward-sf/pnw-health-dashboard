@@ -35,20 +35,21 @@ test("strip plot shows every county inside the chart", async ({ page }) => {
   const chart = page.locator(".strip-plot-chart");
   await expect(chart).toHaveAttribute("aria-hidden", "true");
   await expect(chart.locator("svg circle")).toHaveCount(150);
-  const { grey, selected, outside } = await chart.locator("svg").evaluate((svg) => {
+  // The marks take the chart tokens, so they follow the theme.
+  const { muted, selected, outside } = await chart.locator("svg").evaluate((svg) => {
     const box = svg.getBoundingClientRect();
     const circles = [...svg.querySelectorAll("circle")];
     const fill = (c: Element) => c.getAttribute("fill") ?? c.parentElement?.getAttribute("fill");
     return {
-      grey: circles.filter((c) => fill(c) === "#9ca3af").length,
-      selected: circles.filter((c) => fill(c) === "#000").length,
+      muted: circles.filter((c) => fill(c) === "var(--chart-muted)").length,
+      selected: circles.filter((c) => fill(c) === "var(--chart-ink)").length,
       outside: circles.filter((c) => {
         const r = c.getBoundingClientRect();
         return r.left < box.left || r.right > box.right || r.top < box.top || r.bottom > box.bottom;
       }).length,
     };
   });
-  expect(grey).toBe(149);
+  expect(muted).toBe(149);
   expect(selected).toBe(1);
   expect(outside).toBe(0);
 });

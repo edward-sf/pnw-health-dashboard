@@ -1,5 +1,6 @@
 import { formatSigned } from "../color/formatValue";
 import { HATCH_FILL } from "../color/makeColorScale";
+import type { Palette } from "../color/palette";
 import type { CountyModel, Flag, TargetModel, Unit } from "../types";
 
 export const TIERS: readonly Flag[] = [
@@ -19,10 +20,10 @@ const LABELS: Record<Flag, string> = {
   insufficient_data: "Not enough data",
 };
 
-const FILLS: Record<Flag, string> = {
+// The colored tiers are data, the same in every theme; "none" is a neutral from the palette.
+const FILLS: Record<Exclude<Flag, "none">, string> = {
   notably_worse: "#ca0020",
   somewhat_worse: "#f4a582",
-  none: "#e3e3e3",
   somewhat_better: "#92c5de",
   notably_better: "#0571b0",
   insufficient_data: HATCH_FILL,
@@ -33,7 +34,8 @@ export const modelDigits = (unit: Unit, fallback?: number): number | undefined =
   unit === "rate_per_100k" ? 0 : fallback;
 
 export const tierLabel = (flag: Flag): string => LABELS[flag];
-export const tierFill = (flag: Flag): string => FILLS[flag];
+export const tierFill = (flag: Flag, palette: Palette): string =>
+  flag === "none" ? palette.tierNone : FILLS[flag];
 
 export function tierRank(flag: Flag): number | null {
   const i = TIERS.indexOf(flag);

@@ -6,6 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
+import { usePalette } from "../color/palette";
 import type { AppData } from "../data/loadData";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { buildMapPaths } from "../map/buildMapPaths";
@@ -31,6 +32,7 @@ const SHOW_ITEM = "max-[720px]:whitespace-normal max-[720px]:leading-tight";
 
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
+  const palette = usePalette();
   const targetIds = useMemo(() => Object.keys(data.model.targets), [data.model]);
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
   const stateBorders = useMemo(() => buildStateBorders(topology), [topology]);
@@ -280,7 +282,7 @@ export function Explorer({ data }: { data: AppData }) {
               paths={paths}
               fillFor={(fips) =>
                 compared
-                  ? tierFill(countyModel(model, fips).flag)
+                  ? tierFill(countyModel(model, fips).flag, palette)
                   : scale.fill(entries?.[fips]?.v ?? null)
               }
               tooltipFor={(fips) => {

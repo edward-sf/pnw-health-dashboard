@@ -102,3 +102,35 @@ test("skip link reaches the county search", async ({ page }) => {
   await expect(page.getByRole("combobox", { name: "Search counties" })).toBeFocused();
   expect(new URL(page.url()).hash).toBe("");
 });
+
+test.describe("dark theme", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("pnw-theme", "dark"));
+  });
+
+  test("explorer: values map with the county panel", async ({ page }, testInfo) => {
+    await explorer(page, "?i=life_expectancy&c=53077");
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    const panel = page.getByRole("dialog", { name: "County details" });
+    await expect(panel.locator("svg circle").first()).toBeVisible();
+    await audit(page, testInfo);
+  });
+
+  test("explorer: model map with the county panel", async ({ page }, testInfo) => {
+    await explorer(page, "?i=life_expectancy&show=expected&c=53077");
+    await expect(page.getByRole("dialog", { name: "County details" })).toBeVisible();
+    await audit(page, testInfo);
+  });
+
+  test("explorer: table view", async ({ page }, testInfo) => {
+    await explorer(page, "?i=poverty_rate&view=table&c=53033");
+    await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
+    await audit(page, testInfo);
+  });
+
+  test("methodology page", async ({ page }, testInfo) => {
+    await page.goto("./methodology");
+    await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
+    await audit(page, testInfo);
+  });
+});

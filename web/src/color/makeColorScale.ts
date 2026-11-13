@@ -3,8 +3,6 @@ import { schemeBlues, schemeOrRd } from "d3-scale-chromatic";
 import type { Indicator, ValueEntry } from "../types";
 
 export const HATCH_FILL = "url(#hatch-null)" as const;
-/** The background of the hatch pattern for missing values: the map's and the legend swatch's. */
-export const HATCH_BACKGROUND = "#f2f2f2";
 
 export type LegendBin = { color: string; min: number; max: number };
 export type ColorScale = {

@@ -1,6 +1,7 @@
 import * as Plot from "@observablehq/plot";
 import { useEffect, useMemo, useRef } from "react";
 import { formatTick, formatValue } from "../color/formatValue";
+import { useTheme } from "../theme/ThemeProvider";
 import type { Indicator, Unit, ValueEntry } from "../types";
 import { buildStripData } from "./buildStripData";
 import type { County } from "../types";
@@ -21,6 +22,7 @@ export function StripPlot({ county, indicator, entries }: Props) {
   const data = useMemo(() => buildStripData(entries, county.fips), [entries, county.fips]);
   const { points, nullCount, selected, below } = data;
   const unit = indicator.unit;
+  const { theme } = useTheme();
 
   useEffect(() => {
     const el = ref.current;
@@ -41,15 +43,17 @@ export function StripPlot({ county, indicator, entries }: Props) {
       },
       y: { axis: null, domain: [-1, 1] },
       marks: [
-        Plot.dot(points, { x: "v", y: "jitter", r: 2.5, fill: "#9ca3af", fillOpacity: 0.6 }),
-        Plot.dot(selected ? [selected] : [], { x: "v", y: "jitter", r: 5, fill: "#000" }),
+        Plot.dot(points, { x: "v", y: "jitter", r: 2.5, fill: "var(--chart-muted)", fillOpacity: 0.6 }),
+        Plot.dot(selected ? [selected] : [], { x: "v", y: "jitter", r: 5, fill: "var(--chart-ink)" }),
       ],
     });
     el.replaceChildren(chart);
     return () => {
       chart.remove();
     };
-  }, [points, selected, unit]);
+    // The marks and axis take their colors from CSS tokens, which already follow the theme;
+    // redrawing on a theme change keeps anything Plot resolves at draw time in step too.
+  }, [points, selected, unit, theme]);
 
   return (
     <section className="strip-plot" aria-label="Distribution across counties">

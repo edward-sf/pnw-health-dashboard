@@ -1,6 +1,6 @@
 import { type PointerEvent, useState } from "react";
-import { HATCH_BACKGROUND } from "../color/makeColorScale";
 import { outlineFor } from "../color/outline";
+import { usePalette } from "../color/palette";
 import { MAP_LAYOUT, type MapPath } from "./buildMapPaths";
 
 type Props = {
@@ -16,6 +16,7 @@ type Tip = { fips: string; x: number; y: number; flip: boolean };
 
 export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stateBorders }: Props) {
   const [tip, setTip] = useState<Tip | null>(null);
+  const palette = usePalette();
 
   // On touch a tap selects the county and opens the panel, which replaces the tooltip.
   const place = (e: PointerEvent<SVGPathElement>, fips: string) => {
@@ -41,7 +42,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
           data-fips={p.fips}
           d={p.d}
           fill={fill}
-          style={{ "--county-stroke": outlineFor(fill) }}
+          style={{ "--county-stroke": outlineFor(fill, palette) }}
           className="county"
           role="img"
           aria-label={`${p.name}, ${p.state}`}
@@ -76,8 +77,8 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(45)"
           >
-            <rect width="4" height="4" fill={HATCH_BACKGROUND} />
-            <line x1="0" y1="0" x2="0" y2="4" stroke="#999" strokeWidth="1.5" />
+            <rect width="4" height="4" fill={palette.hatchBackground} />
+            <line x1="0" y1="0" x2="0" y2="4" stroke={palette.hatchLine} strokeWidth="1.5" />
           </pattern>
         </defs>
         <g className="map-halos" aria-hidden="true">
