@@ -246,7 +246,7 @@ export function Explorer({ data }: { data: AppData }) {
           values={values}
           strata={data.strata}
           targetIndicator={targetIndicator}
-          modelMode={params.mode === "model"}
+          modelMode={modelMode}
           peers={data.model.peers}
           onSelectCounty={onSelectPeer}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
