@@ -3,29 +3,48 @@ import { Link } from "react-router";
 import { formatValue } from "../color/formatValue";
 import { modelDigits, tierLabel } from "../model/modelView";
 import type { Unit } from "../types";
+import type { Indicator } from "../types/generated/manifest";
 import type { PeerData, PeerRow } from "./buildPeerRows";
 
 const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 const countWord = (n: number): string => WORDS[n] ?? String(n);
-/** Income, poverty and education are named in the sentence; any other factors are counted. */
+/** This many factors are named in the sentence; any others are counted. */
 const NAMED_FACTORS = 3;
 
-function basis(factorCount: number): string {
-  const others = Math.max(factorCount - NAMED_FACTORS, 0);
-  if (others === 0) return "Most similar PNW counties on income, poverty and education.";
+/** Lower-cases the first letter unless the label starts with an acronym or proper noun. */
+function lowerFirst(label: string): string {
+  const second = label.charAt(1);
+  return second !== "" && second === second.toLowerCase() ? label.charAt(0).toLowerCase() + label.slice(1) : label;
+}
+
+function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+function basis(features: readonly string[], indicators: readonly Indicator[]): string {
+  const labels = new Map(indicators.map((i) => [i.id, i.label]));
+  const names = features
+    .slice(0, NAMED_FACTORS)
+    .map((id) => lowerFirst(labels.get(id) ?? id));
+  const others = features.length - NAMED_FACTORS;
+  const lead = "Most similar PNW counties on";
+  if (others <= 0) return `${lead} ${joinNames(names)}.`;
   const measures = others === 1 ? "measure" : "measures";
-  return `Most similar PNW counties on income, poverty, education and ${countWord(others)} other social and economic ${measures}.`;
+  return `${lead} ${names.join(", ")} and ${countWord(others)} other social and economic ${measures}.`;
 }
 
 type Props = {
   data: PeerData;
   unit: Unit;
-  /** How many factors define similarity; three are named in the sentence, the rest counted. */
-  factorCount: number;
+  /** Ordered feature ids that define similarity; the first three are named, the rest counted. */
+  features: readonly string[];
+  /** Manifest indicators, used to turn feature ids into labels. */
+  indicators: readonly Indicator[];
   onSelect: (fips: string) => void;
 };
 
-export function SimilarCounties({ data, unit, factorCount, onSelect }: Props) {
+export function SimilarCounties({ data, unit, features, indicators, onSelect }: Props) {
   const headingId = useId();
   const model = data.kind === "model";
   const rows: readonly PeerRow[] = data.rows;
@@ -36,7 +55,7 @@ export function SimilarCounties({ data, unit, factorCount, onSelect }: Props) {
     <section className="similar-counties" aria-labelledby={headingId}>
       <h3 id={headingId}>Similar counties</h3>
       <p className="similar-basis">
-        {basis(factorCount)}{" "}
+        {basis(features, indicators)}{" "}
         <Link to="/methodology#similar-counties">Methodology</Link>
       </p>
       <table className="similar-table">
