@@ -1,19 +1,26 @@
+import csv
+import io
 from pathlib import Path
 
 import httpx
+import pandas as pd
 import pytest
 
 from pnw_health.fetch import FetchError, make_client
-from pnw_health.indicators import Indicator
+from pnw_health.indicators import Indicator, load_catalog
 from pnw_health.long import LONG_COLUMNS
 from pnw_health.sources.chr import (
+    STRATA_COLUMNS,
     chr_cache_path,
     chr_url,
     fetch_chr,
     parse_chr,
     parse_chr_legacy,
+    parse_chr_strata,
 )
 from tests.helpers import make_indicator
+
+CHR_SAMPLE = Path(__file__).parents[1] / "fixtures" / "chr_2025_sample.csv"
 
 HEADER = "statecode,countycode,fipscode,state,county,year,v147_rawvalue,v147_cilow,v147_cihigh"
 LABELS = "State FIPS,County FIPS,5-digit FIPS,State,Name,Release Year,Life exp,low,high"
@@ -196,3 +203,79 @@ def test_fetch_does_not_need_ci_columns_without_ci_level(tmp_path: Path) -> None
     no_ci = chr_indicator().model_copy(update={"ci_level": None})
     with make_client(httpx.MockTransport(handler)) as client:
         fetch_chr(client, tmp_path, [no_ci])
+
+
+@pytest.fixture(scope="module")
+def strata() -> pd.DataFrame:
+    return parse_chr_strata(CHR_SAMPLE, load_catalog())
+
+
+def stratum(strata: pd.DataFrame, ind: str, fips: str, group: str) -> pd.DataFrame:
+    return strata[(strata.indicator_id == ind) & (strata.fips == fips) & (strata.group == group)]
+
+
+def test_strata_values_cis_and_scale(strata: pd.DataFrame) -> None:
+    assert list(strata.columns) == STRATA_COLUMNS
+    # Yakima: CHR's low birth weight is a proportion; the catalog's is a percent.
+    row = stratum(strata, "low_birth_weight", "53077", "white").iloc[0]
+    assert row.value == pytest.approx(5.99421877)
+    assert row.ci_low == pytest.approx(5.42034308)
+    assert row.ci_high == pytest.approx(6.56809447)
+    assert not row.unreliable
+    life = stratum(strata, "life_expectancy", "53077", "aian").iloc[0]
+    assert (life.value, life.ci_low, life.ci_high) == pytest.approx(
+        (57.378306, 55.369509, 59.387103)
+    )
+
+
+def test_strata_premature_death_flag_1_is_unreliable(strata: pd.DataFrame) -> None:
+    assert bool(stratum(strata, "premature_death", "53077", "asian").iloc[0].unreliable)
+    assert not bool(stratum(strata, "premature_death", "53077", "white").iloc[0].unreliable)
+
+
+def test_strata_blank_value_has_no_row(strata: pd.DataFrame) -> None:
+    # Yakima NHPI premature death is suppressed (flag 2, blank value).
+    assert stratum(strata, "premature_death", "53077", "nhopi").empty
+    assert strata.value.notna().all()
+
+
+def test_strata_only_listed_groups(strata: pd.DataFrame) -> None:
+    groups = {i.id: set(i.race_groups or ()) for i in load_catalog() if i.race_groups}
+    assert set(strata.indicator_id) == set(groups)
+    for ind_id, listed in groups.items():
+        assert set(strata[strata.indicator_id == ind_id].group) <= listed
+    assert "tom" in set(strata[strata.indicator_id == "low_birth_weight"].group)
+
+
+def test_strata_preventable_stays_have_null_cis(strata: pd.DataFrame) -> None:
+    stays = strata[strata.indicator_id == "preventable_hospital_stays"]
+    assert not stays.empty
+    assert stays.ci_low.isna().all()
+    assert stays.ci_high.isna().all()
+    assert stratum(strata, "preventable_hospital_stays", "53077", "white").iloc[0].value == 2422
+
+
+def test_strata_drops_state_and_national_rows(strata: pd.DataFrame) -> None:
+    assert not strata.fips.isin(["00000", "53000"]).any()
+    assert not strata.fips.str.endswith("000").any()
+    assert {"53033", "06037"} <= set(strata.fips)
+
+
+def test_fetch_check_requires_race_value_columns(tmp_path: Path) -> None:
+    rows = list(csv.reader(CHR_SAMPLE.read_text(encoding="latin-1").splitlines()))
+    drop = rows[1].index("v147_race_white")
+    out = io.StringIO()
+    csv.writer(out, lineterminator="\n").writerows(r[:drop] + r[drop + 1 :] for r in rows)
+    body = out.getvalue().encode("latin-1")
+    handler = lambda r: httpx.Response(200, content=body)  # noqa: E731
+    with (
+        make_client(httpx.MockTransport(handler)) as client,
+        pytest.raises(FetchError, match="v147_race_white"),
+    ):
+        fetch_chr(client, tmp_path, load_catalog())
+
+
+def test_fetch_accepts_the_recorded_sample(tmp_path: Path) -> None:
+    handler = lambda r: httpx.Response(200, content=CHR_SAMPLE.read_bytes())  # noqa: E731
+    with make_client(httpx.MockTransport(handler)) as client:
+        fetch_chr(client, tmp_path, load_catalog())

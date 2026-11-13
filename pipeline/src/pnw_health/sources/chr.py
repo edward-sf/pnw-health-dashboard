@@ -17,6 +17,7 @@ from pnw_health.long import LONG_COLUMNS
 CHR_BASE_URL = "https://www.countyhealthrankings.org/sites/default/files/media/document/"
 ID_COLUMNS = ("countycode", "fipscode")
 ENCODING = "latin-1"
+STRATA_COLUMNS = ["fips", "indicator_id", "group", "value", "ci_low", "ci_high", "unreliable"]
 
 
 def chr_url(year: int) -> str:
@@ -38,8 +39,17 @@ def _fields(catalog: list[Indicator]) -> list[Indicator]:
 
 
 def _ci_columns(field: str) -> tuple[str, str]:
-    stem = field.removesuffix("_rawvalue")
+    stem = _stem(field)
     return f"{stem}_cilow", f"{stem}_cihigh"
+
+
+def _stem(field: str) -> str:
+    return field.removesuffix("_rawvalue")
+
+
+def _race_fields(ind: Indicator) -> list[tuple[str, str]]:
+    """``(group, value column)`` for each of the indicator's race groups."""
+    return [(g, f"{_stem(ind.source_field)}_race_{g}") for g in ind.race_groups or ()]
 
 
 def _check_columns(path: Path, needed: list[str]) -> None:
@@ -64,7 +74,9 @@ def fetch_chr(
     """Download the CHR analytic file for ``year``, checking it holds the catalog's columns.
 
     Only the current ``CHR_YEAR`` file is checked against the catalog; other vintages are
-    fetched for specific legacy indicators, so only the id columns are required.
+    fetched for specific legacy indicators, so only the id columns are required. The
+    check covers each race group's value column, but not its CI or flag columns: some
+    measures (``v005``) have no race CIs, and only ``v001`` has race flags.
     """
     needed = list(ID_COLUMNS)
     if year == CHR_YEAR:
@@ -72,6 +84,7 @@ def fetch_chr(
             needed.append(ind.source_field)
             if ind.ci_level is not None:
                 needed += _ci_columns(ind.source_field)
+            needed += [column for _, column in _race_fields(ind)]
 
     return cached_get(
         client,
@@ -91,7 +104,7 @@ def _numeric(table: pd.DataFrame, column: str) -> pd.Series:
 
 def _unreliable(table: pd.DataFrame, field: str) -> pd.Series:
     """CHR's flag column is 0 = no flag, 1 = unreliable, 2 = suppressed; most fields have none."""
-    column = f"{field.removesuffix('_rawvalue')}_flag"
+    column = f"{_stem(field)}_flag"
     if column not in table:
         return pd.Series(False, index=table.index, dtype="bool")
     return table[column].eq("1")
@@ -131,6 +144,46 @@ def parse_chr(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
             raise _invalid(f"missing column {ind.source_field}")
         frames.append(_long_frame(counties, ind, ind.year))
     return pd.concat(frames, ignore_index=True)[LONG_COLUMNS]
+
+
+def parse_chr_strata(path: Path, catalog: list[Indicator]) -> pd.DataFrame:
+    """One row per county x indicator x race group with a value (M10 spec §4.2).
+
+    Covers catalog indicators with ``race_groups``. The indicator's ``source_scale``
+    applies to the value and CIs; absent CI columns are NaN; a ``_flag`` of 1 marks the
+    value unreliable. Blank values (suppressed or not computed) get no row, and state
+    and national rows are dropped.
+    """
+    table = pd.read_csv(path, header=1, dtype=str, encoding=ENCODING, low_memory=False)
+    missing = sorted(set(ID_COLUMNS) - set(table.columns))
+    if missing:
+        raise _invalid(f"missing column(s) {', '.join(missing)}")
+    counties = table[table["countycode"] != "000"]
+    frames = []
+    for ind in _fields(catalog):
+        for group, column in _race_fields(ind):
+            if column not in counties:
+                raise _invalid(f"missing column {column}")
+            frame = pd.DataFrame(
+                {
+                    "fips": counties["fipscode"].astype(str),
+                    "indicator_id": ind.id,
+                    "group": group,
+                    **{
+                        name: (_numeric(counties, source) * ind.source_scale).round(6)
+                        for name, source in (
+                            ("value", column),
+                            ("ci_low", f"{column}_cilow"),
+                            ("ci_high", f"{column}_cihigh"),
+                        )
+                    },
+                    "unreliable": _unreliable(counties, column),
+                }
+            )
+            frames.append(frame[frame["value"].notna()])
+    if not frames:
+        return pd.DataFrame(columns=STRATA_COLUMNS)
+    return pd.concat(frames, ignore_index=True)[STRATA_COLUMNS]
 
 
 def parse_chr_legacy(path: Path, catalog: list[Indicator]) -> pd.DataFrame:

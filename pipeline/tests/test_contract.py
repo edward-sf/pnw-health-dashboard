@@ -2,8 +2,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pnw_health.contract import Manifest, write_schemas
-from pnw_health.indicators import Indicator
+from pnw_health.contract import Manifest, StrataFile, write_schemas
+from pnw_health.indicators import Indicator, load_catalog
 from tests.helpers import make_indicator
 
 REPO_SCHEMA = Path(__file__).resolve().parents[2] / "schema"
@@ -15,6 +15,7 @@ def test_write_schemas_files(tmp_path: Path) -> None:
     assert sorted(p.name for p in paths) == [
         "manifest.schema.json",
         "model.schema.json",
+        "strata.schema.json",
         "values.schema.json",
     ]
 
@@ -35,3 +36,19 @@ def test_source_scale_not_exported() -> None:
     )
     assert "source_scale" not in json.dumps(manifest.model_dump(mode="json"))
     assert "source_scale" not in json.dumps(Manifest.model_json_schema())
+
+
+def test_race_groups_not_exported() -> None:
+    life = next(i for i in load_catalog() if i.id == "life_expectancy")
+    assert life.race_groups
+    manifest = Manifest(
+        schema_version="2.1.0", built_at=datetime.now(UTC), sources=[], indicators=[life]
+    )
+    assert "race_groups" not in json.dumps(manifest.model_dump(mode="json"))
+    assert "race_groups" not in json.dumps(Manifest.model_json_schema())
+
+
+def test_strata_schema_has_no_rank_fields() -> None:
+    schema = json.dumps(StrataFile.model_json_schema())
+    assert '"rank"' not in schema
+    assert '"state_rank"' not in schema
