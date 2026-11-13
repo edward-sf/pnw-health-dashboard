@@ -52,7 +52,7 @@ test("no model result", () => {
   renderCard(model.counties["02063"]!, { fips: "02063", name: "Chugach", state: "AK" });
   expect(
     screen.getByText(
-      /The model has no result for this county because this county's life expectancy figure isn't reported\./,
+      /The model has no result for this county because its life expectancy figure isn't reported\./,
     ),
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute(
@@ -146,7 +146,7 @@ test("names the chosen target when the county has no result", () => {
   renderCard(prematureDeath.counties["16001"]!, { fips: "16001", name: "Ada", state: "ID" }, prematureDeath);
   expect(
     screen.getByText(
-      /because this county's premature death figure isn't reported\./,
+      /because its premature death figure isn't reported\./,
     ),
   ).toBeInTheDocument();
   expect(screen.queryByText(NOTE)).not.toBeInTheDocument();
@@ -162,7 +162,7 @@ test.each([
   const entry = { ...prematureDeath.counties["16001"]! };
   const { container } = renderCard(entry, { fips: "16001", name: "Ada", state: "ID" }, target);
   const text = container.querySelector(".model-none")!.textContent!;
-  expect(text).toMatch(/because this county's .+ figure isn't reported\./);
+  expect(text).toMatch(/because its .+ figure isn't reported\./);
   expect(text).not.toContain("(");
   expect(text).not.toMatch(/deaths isn't/);
 });

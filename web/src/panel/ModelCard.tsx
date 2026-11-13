@@ -26,7 +26,7 @@ export function ModelCard({ county, entry, indicators, target }: Props) {
         <ModelResult entry={entry} bars={bars} target={target} />
       ) : (
         <p className="model-none">
-          The model has no result for this county because this county's {outcomeName(target.label)} figure isn't reported.{" "}
+          The model has no result for this county because its {outcomeName(target.label)} figure isn't reported.{" "}
           <Link to="/methodology#no-result">Methodology</Link>
         </p>
       )}
