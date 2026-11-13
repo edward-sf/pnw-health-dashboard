@@ -699,7 +699,8 @@
 
     /* A table has no size to keep, so its frame narrows instead of hiding ranks under the panel. */
     .explorer-view--table.explorer-view--panel-open .county-table-wrap {
-      margin-right: 412px;
+      /* The panel's 400px, its 12px inset and a 12px gap. */
+      margin-right: 424px;
     }
   }
 

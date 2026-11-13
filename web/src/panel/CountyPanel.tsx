@@ -134,7 +134,7 @@ export function CountyPanel({
   );
 
   return (
-    <PanelShell onClose={onClose}>
+    <PanelShell onClose={onClose} county={county.fips}>
       <div className="panel-header">
         <div>
           <h2 ref={headingRef} tabIndex={-1}>

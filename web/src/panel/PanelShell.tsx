@@ -21,9 +21,23 @@ const contentProps = {
  * The county panel's frame: a non-modal dialog floating over the map stage from 721px, a
  * non-modal bottom drawer with two snap points on phones. Escape closes either.
  */
-export function PanelShell({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+export function PanelShell({
+  onClose,
+  county,
+  children,
+}: {
+  onClose: () => void;
+  /** The open county; the drawer returns to peek whenever it changes. */
+  county?: string;
+  children: ReactNode;
+}) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]!);
+  const [snapCounty, setSnapCounty] = useState(county);
+  if (snapCounty !== county) {
+    setSnapCounty(county);
+    setSnap(SNAP_POINTS[0]!);
+  }
   const onOpenChange = (open: boolean) => {
     if (!open) onClose();
   };

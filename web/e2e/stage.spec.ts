@@ -62,7 +62,8 @@ test("in table view the open panel sits beside the table, not over it", async ({
   await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
   const table = (await page.locator(".county-table-wrap").boundingBox())!;
   const box = (await panel.boundingBox())!;
-  expect(table.x + table.width).toBeLessThanOrEqual(box.x);
+  // A 12px gap between the table frame and the panel.
+  expect(box.x - (table.x + table.width)).toBeCloseTo(12, 0);
   expect(box.y).toBeGreaterThanOrEqual(table.y);
   expect(box.y + box.height).toBeLessThanOrEqual(table.y + table.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);

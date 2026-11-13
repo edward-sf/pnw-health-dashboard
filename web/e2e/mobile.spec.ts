@@ -46,6 +46,19 @@ test("tap a county: the drawer opens at 40%, the handle drags it to 85% and back
   await expect(page).not.toHaveURL(/[?&]c=/);
 });
 
+test("a new county reopens the drawer in peek", async ({ page }) => {
+  await page.goto("./?i=poverty_rate&c=53033");
+  const drawer = page.getByRole("dialog", { name: "County details" });
+  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
+  await drawer.locator("[data-vaul-handle]").click();
+  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.85, 1);
+  const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("button").first();
+  await peer.scrollIntoViewIfNeeded();
+  await peer.tap();
+  await expect(page).not.toHaveURL(/[?&]c=53033/);
+  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
+});
+
 test("dragging the drawer below its lower snap point closes it", async ({ page }) => {
   await page.goto("./?i=poverty_rate&c=53033");
   await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);

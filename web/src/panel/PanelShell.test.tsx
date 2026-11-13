@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { mockMatchMedia } from "../test/matchMedia";
@@ -77,4 +77,21 @@ test("phone: the page behind stays reachable and a press outside does not close 
   expect(outside).toHaveFocus();
   expect(onClose).not.toHaveBeenCalled();
   expect(document.body.style.pointerEvents).not.toBe("none");
+});
+
+test("phone: the drawer returns to peek when the county changes", async () => {
+  mockMatchMedia(true);
+  const shell = (county: string) => (
+    <PanelShell onClose={() => {}} county={county}>
+      <h2>{county}</h2>
+    </PanelShell>
+  );
+  const { rerender } = render(shell("53033"));
+  const dialog = () => screen.getByRole("dialog", { name: "County details" });
+  // --drawer-hidden is the share of the viewport the drawer leaves off-screen at its snap point.
+  expect(dialog().style.getPropertyValue("--drawer-hidden")).toBe("60dvh");
+  await userEvent.click(document.querySelector("[data-vaul-handle]")!);
+  await waitFor(() => expect(dialog().style.getPropertyValue("--drawer-hidden")).toBe("15dvh"));
+  rerender(shell("41051"));
+  expect(dialog().style.getPropertyValue("--drawer-hidden")).toBe("60dvh");
 });
