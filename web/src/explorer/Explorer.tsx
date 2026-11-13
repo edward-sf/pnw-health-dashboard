@@ -1,6 +1,8 @@
-import { ChartNoAxesColumn, Map as MapIcon, Scale, Table2 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { ChartNoAxesColumn, Info, Map as MapIcon, Scale, Table2 } from "lucide-react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
 import { makeColorScale } from "../color/makeColorScale";
@@ -19,11 +21,13 @@ import { CountyTable } from "../table/CountyTable";
 import { ModelTable } from "../table/ModelTable";
 import type { ModelRow } from "../table/sortModelRows";
 import type { Row } from "../table/sortRows";
-import { IndicatorPicker } from "./IndicatorPicker";
+import { MeasurePicker } from "./MeasurePicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
 const SEARCH_INPUT_ID = "county-search";
+// On phones the two Show options share the screen width, so their labels may wrap.
+const SHOW_ITEM = "max-[720px]:whitespace-normal max-[720px]:leading-tight";
 
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
@@ -56,6 +60,23 @@ export function Explorer({ data }: { data: AppData }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const openerRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const titleBlockRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  // The stage fills the viewport height left under it, so it needs its own page offset. The
+  // toolbar and title block above it are what can change that offset (wrapping, a longer title).
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const measure = () => {
+      const top = stage.getBoundingClientRect().top + window.scrollY;
+      stage.style.setProperty("--stage-top", `${Math.round(top)}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const el of [toolbarRef.current, titleBlockRef.current]) if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, [params.view]);
   // The county a search or table selection asked to focus. It is bound to that FIPS, so a
   // selection that renders no panel cannot hand its request to a later map selection.
   const [focusFips, setFocusFips] = useState<string | null>(null);
@@ -119,12 +140,15 @@ export function Explorer({ data }: { data: AppData }) {
   if (!indicator || !scale) return null;
   const compared = params.show === "expected";
   const targetIndicator = manifest.indicators.find((x) => x.id === params.target);
+  const description = compared
+    ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
+    : indicator.description;
 
   return (
     <div
       className={
         selectedCounty
-          ? `explorer explorer--panel${isPhone ? " explorer--sheet-open" : ""}`
+          ? `explorer${isPhone ? " explorer--sheet-open" : ""}`
           : "explorer"
       }
     >
@@ -142,126 +166,133 @@ export function Explorer({ data }: { data: AppData }) {
       >
         Skip to county search
       </a>
-      <aside className="explorer-picker">
-        {targetIds.includes(indicator.id) && (
-          <div className="view-toggle view-toggle--full" role="group" aria-label="Show">
-            <Button
-              type="button"
-              variant="segment"
-              size="sm"
-              aria-pressed={!compared}
-              onClick={() => setShow("observed")}
-            >
-              <ChartNoAxesColumn aria-hidden="true" />
-              Observed
-            </Button>
-            <Button
-              type="button"
-              variant="segment"
-              size="sm"
-              aria-pressed={compared}
-              onClick={() => setShow("expected")}
-            >
-              <Scale aria-hidden="true" />
-              Compared with expected
-            </Button>
-          </div>
-        )}
-        <IndicatorPicker
+      <div ref={toolbarRef} className="explorer-toolbar">
+        <MeasurePicker
           indicators={manifest.indicators}
           selectedId={indicator.id}
           onSelect={setIndicator}
-          collapsible={isPhone}
         />
-      </aside>
-      <section className="explorer-main">
-        <div className="explorer-toolbar">
+        <div className="toolbar-end">
           <CountySearch
             counties={counties}
             onSelect={onSelectWithOpener}
             inputId={SEARCH_INPUT_ID}
           />
-          <div className="view-toggle" role="group" aria-label="View">
-            <Button
-              type="button"
-              variant="segment"
-              size="sm"
-              aria-pressed={params.view === "map"}
-              onClick={() => setView("map")}
-            >
+          <ToggleGroup
+            type="single"
+            aria-label="View"
+            value={params.view}
+            onValueChange={(v) => {
+              if (v === "map" || v === "table") setView(v);
+            }}
+          >
+            <ToggleGroupItem value="map">
               <MapIcon aria-hidden="true" />
               Map
-            </Button>
-            <Button
-              type="button"
-              variant="segment"
-              size="sm"
-              aria-pressed={params.view === "table"}
-              onClick={() => setView("table")}
-            >
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table">
               <Table2 aria-hidden="true" />
               Table
-            </Button>
-          </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
-        <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
-          {compared ? `${model.label}: compared with expected` : indicator.label}
-        </h2>
-        <p className="indicator-description">
-          {compared
-            ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
-            : indicator.description}
-        </p>
+      </div>
+      <div ref={titleBlockRef} className="title-block">
+        <div className="title-row">
+          <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
+            {compared ? `${model.label}: compared with expected` : indicator.label}
+          </h2>
+          {isPhone && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="about-measure"
+                  aria-label="About this measure"
+                >
+                  <Info aria-hidden="true" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] text-sm">
+                <p className="indicator-description">{description}</p>
+              </PopoverContent>
+            </Popover>
+          )}
+          {targetIds.includes(indicator.id) && (
+            <ToggleGroup
+              type="single"
+              className="show-toggle"
+              aria-label="Show"
+              value={params.show}
+              onValueChange={(v) => {
+                if (v === "observed" || v === "expected") setShow(v);
+              }}
+            >
+              <ToggleGroupItem value="observed" className={SHOW_ITEM}>
+                <ChartNoAxesColumn aria-hidden="true" />
+                Observed
+              </ToggleGroupItem>
+              <ToggleGroupItem value="expected" className={SHOW_ITEM}>
+                <Scale aria-hidden="true" />
+                Compared with expected
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
+        </div>
+        {!isPhone && <p className="indicator-description">{description}</p>}
         {compared ? (
           targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>
         ) : (
           <p className="indicator-source">{sourceLine(indicator)}</p>
         )}
-        {params.view === "table" ? (
-          compared ? (
-            <ModelTable
-              rows={modelRows}
-              selected={params.county}
-              onSelect={onSelectWithOpener}
-              target={model}
-            />
-          ) : (
-            <CountyTable
-              key={indicator.id}
-              rows={rows}
-              indicator={indicator}
-              selected={params.county}
-              onSelect={onSelectWithOpener}
-            />
-          )
+      </div>
+      {params.view === "table" ? (
+        compared ? (
+          <ModelTable
+            rows={modelRows}
+            selected={params.county}
+            onSelect={onSelectWithOpener}
+            target={model}
+          />
         ) : (
-          <div className="map-stage">
-            <CountyMap
-              paths={paths}
-              fillFor={(fips) =>
-                compared
-                  ? tierFill(countyModel(model, fips).flag)
-                  : scale.fill(entries?.[fips]?.v ?? null)
+          <CountyTable
+            key={indicator.id}
+            rows={rows}
+            indicator={indicator}
+            selected={params.county}
+            onSelect={onSelectWithOpener}
+          />
+        )
+      ) : (
+        <div ref={stageRef} className="map-stage">
+          <CountyMap
+            paths={paths}
+            fillFor={(fips) =>
+              compared
+                ? tierFill(countyModel(model, fips).flag)
+                : scale.fill(entries?.[fips]?.v ?? null)
+            }
+            tooltipFor={(fips) => {
+              const p = paths.find((x) => x.fips === fips);
+              if (compared) {
+                return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
               }
-              tooltipFor={(fips) => {
-                const p = paths.find((x) => x.fips === fips);
-                if (compared) {
-                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
-                }
-                return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
-              }}
-              selected={params.county}
-              onSelect={onSelectFromMap}
-              stateBorders={stateBorders}
-            />
-            {compared ? (
-              <ModelLegend counts={counts} />
-            ) : (
-              <Legend scale={scale} unit={indicator.unit} />
-            )}
-          </div>
-        )}
-      </section>
+              return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
+            }}
+            selected={params.county}
+            onSelect={onSelectFromMap}
+            stateBorders={stateBorders}
+          />
+          {compared ? (
+            <ModelLegend counts={counts} />
+          ) : (
+            <Legend scale={scale} unit={indicator.unit} />
+          )}
+          {!selectedCounty && <p className="stage-hint">Select a county for its details</p>}
+        </div>
+      )}
       {selectedCounty && (
         <CountyPanel
           county={selectedCounty}

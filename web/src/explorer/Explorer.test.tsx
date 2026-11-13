@@ -39,13 +39,11 @@ test("picking an indicator updates the legend and the URL", async () => {
   const router = setup();
   const legend = () => document.querySelector(".legend")!.textContent;
   expect(legend()).toContain("%");
-  await userEvent.click(screen.getByRole("button", { name: "Median household income" }));
+  await userEvent.click(screen.getByRole("button", { name: /^Measure: / }));
+  await userEvent.click(screen.getByRole("option", { name: "Median household income" }));
   expect(router.state.location.search).toBe("?i=median_household_income");
   expect(legend()).toContain("$");
-  expect(screen.getByRole("button", { name: "Median household income" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  expect(screen.getByRole("button", { name: "Measure: Median household income" })).toBeInTheDocument();
 });
 
 test("clicking a county sets c and marks it selected", async () => {
@@ -57,7 +55,8 @@ test("clicking a county sets c and marks it selected", async () => {
 
 test("indicator title survives filtering", async () => {
   setup("/?i=poverty_rate");
-  await userEvent.type(screen.getByLabelText("Filter indicators"), "zzz");
+  await userEvent.click(screen.getByRole("button", { name: "Measure: Poverty rate" }));
+  await userEvent.type(screen.getByRole("combobox", { name: "Filter measures" }), "zzz");
   expect(screen.getByRole("heading", { name: "Poverty rate" })).toBeInTheDocument();
 });
 
@@ -65,7 +64,7 @@ test("changing indicator re-renders the panel", async () => {
   setup("/?i=poverty_rate&c=02016");
   expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
   expect(screen.getByText("14.2%", { selector: ".panel-value" })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Demographics" }));
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
   expect(screen.queryByText("14.2%", { selector: ".panel-value" })).not.toBeInTheDocument();
   expect(screen.getByText("5.0%", { selector: ".panel-value" })).toBeInTheDocument();
@@ -141,20 +140,20 @@ test("close in table view keeps view", async () => {
 
 test("toggle switches between map and table and legend is map-only", async () => {
   const router = setup();
-  expect(screen.getByRole("button", { name: "Map" })).toHaveAttribute("aria-pressed", "true");
-  await userEvent.click(screen.getByRole("button", { name: "Table" }));
+  expect(screen.getByRole("radio", { name: "Map" })).toBeChecked();
+  await userEvent.click(screen.getByRole("radio", { name: "Table" }));
   expect(router.state.location.search).toBe("?view=table");
-  expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("radio", { name: "Table" })).toBeChecked();
   expect(document.querySelector(".legend")).toBeNull();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(5);
-  await userEvent.click(screen.getByRole("button", { name: "Map" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Map" }));
   expect(router.state.location.search).toBe("");
   expect(document.querySelector(".legend")).not.toBeNull();
 });
 
 test("back restores view and county", async () => {
   const router = setup("/?c=53033");
-  await userEvent.click(screen.getByRole("button", { name: "Table" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Table" }));
   expect(router.state.location.search).toBe("?c=53033&view=table");
   await act(async () => {
     await router.navigate(-1);
@@ -205,7 +204,7 @@ test("searching for the open county focuses the heading again", async () => {
 test("table select, switch to map, close focuses the title", async () => {
   setup("/?view=table");
   await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
-  await userEvent.click(screen.getByRole("button", { name: "Map" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Map" }));
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(title()).toHaveFocus();
 });
@@ -213,7 +212,7 @@ test("table select, switch to map, close focuses the title", async () => {
 test("indicator change remounts the table, close focuses the new title", async () => {
   setup("/?view=table");
   await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
-  await userEvent.click(screen.getByRole("button", { name: "Asian population" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Demographics" }));
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(screen.getByRole("heading", { level: 2, name: "Asian population" })).toHaveFocus();
 });
@@ -227,13 +226,10 @@ test("close of a map-opened panel focuses the title", async () => {
 
 test("Compared with expected sets show, fills the map by tier, and shows the model title and source", async () => {
   const router = setup("/?i=life_expectancy");
-  await userEvent.click(screen.getByRole("button", { name: "Compared with expected" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Compared with expected" }));
   expect(router.state.location.search).toBe("?i=life_expectancy&show=expected");
-  expect(screen.getByRole("button", { name: "Compared with expected" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  expect(screen.getByRole("button", { name: "Observed" })).toHaveAttribute("aria-pressed", "false");
+  expect(screen.getByRole("radio", { name: "Compared with expected" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "Observed" })).not.toBeChecked();
   expect(screen.getByLabelText("King, WA").getAttribute("fill")).toBe("#0571b0");
   expect(screen.getByLabelText("Chugach, AK").getAttribute("fill")).toBe(HATCH_FILL);
   expect(
@@ -272,11 +268,11 @@ function setupTwo(url: string) {
 
 test("the Observed and Compared with expected switch only shows for a model target", () => {
   setup("/?i=poverty_rate");
-  expect(screen.queryByRole("group", { name: "Show" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("radiogroup", { name: "Show" })).not.toBeInTheDocument();
   cleanup();
   setup("/?i=life_expectancy");
-  expect(screen.getByRole("group", { name: "Show" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Observed" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("radiogroup", { name: "Show" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "Observed" })).toBeChecked();
 });
 
 test("the selected target drives the map fill", () => {
@@ -321,7 +317,7 @@ test("Back to the county a pending request named fulfils it", async () => {
 test("model table replaces the value table, keeps c and view, and back restores values", async () => {
   const router = setup("/?i=life_expectancy&c=53033&view=table");
   expect(screen.getByRole("columnheader", { name: "Rank" })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Compared with expected" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Compared with expected" }));
   expect(router.state.location.search).toBe("?i=life_expectancy&c=53033&view=table&show=expected");
   expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
   expect(screen.queryByRole("columnheader", { name: "Rank" })).not.toBeInTheDocument();
@@ -343,26 +339,57 @@ test("model mode: hovering King shows the tier tooltip", () => {
   );
 });
 
-test("phone: the sheet-open class and Escape in the picker keeps the county", async () => {
+test("phone: the sheet-open class and Escape in the measure list keeps the county", async () => {
   mockMatchMedia(true);
   const router = setup("/?i=poverty_rate&c=53033");
   expect(document.querySelector(".explorer")).toHaveClass("explorer--sheet-open");
-  await userEvent.click(screen.getByRole("button", { name: "Indicator: Poverty rate" }));
-  await userEvent.click(screen.getByLabelText("Filter indicators"));
+  const trigger = screen.getByRole("button", { name: "Measure: Poverty rate" });
+  await userEvent.click(trigger);
+  await userEvent.click(screen.getByRole("combobox", { name: "Filter measures" }));
   await userEvent.keyboard("{Escape}");
-  expect(screen.getByRole("button", { name: "Indicator: Poverty rate" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
   expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
   expect(router.state.location.search).toBe("?i=poverty_rate&c=53033");
 });
 
-test("wide viewport: no sheet-open class and no picker disclosure", () => {
+test("phone: the description waits behind About this measure", async () => {
+  mockMatchMedia(true);
+  setup("/?i=poverty_rate");
+  const text = "Share of residents living below the poverty line.";
+  expect(screen.queryByText(text)).not.toBeInTheDocument();
+  expect(screen.getByText("Source: Census ACS 5-year, 2023.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
+  expect(screen.getByText(text)).toBeInTheDocument();
+});
+
+test("wide viewport: no sheet-open class, and the description shows without a button", () => {
   mockMatchMedia(false);
   setup("/?i=poverty_rate&c=53033");
   expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
-  expect(screen.queryByRole("button", { name: /^Indicator:/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "About this measure" })).not.toBeInTheDocument();
+  expect(screen.getByText("Share of residents living below the poverty line.")).toBeInTheDocument();
+});
+
+test("there is no picker column; the toolbar holds the picker, search and View", () => {
+  setup("/?i=poverty_rate");
+  expect(document.querySelector(".explorer-picker")).toBeNull();
+  const toolbar = document.querySelector<HTMLElement>(".explorer-toolbar")!;
+  expect(within(toolbar).getByRole("radiogroup", { name: "Measure category" })).toBeInTheDocument();
+  expect(within(toolbar).getByRole("button", { name: "Measure: Poverty rate" })).toBeInTheDocument();
+  expect(within(toolbar).getByRole("combobox", { name: "Search counties" })).toBeInTheDocument();
+  expect(within(toolbar).getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
+});
+
+test("the legend sits inside the map stage", () => {
+  setup("/?i=poverty_rate");
+  expect(document.querySelector(".map-stage .legend")).not.toBeNull();
+});
+
+test("the stage hints at selecting a county until one is open", async () => {
+  setup("/?i=poverty_rate");
+  expect(screen.getByText("Select a county for its details")).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText("King, WA"));
+  expect(screen.queryByText("Select a county for its details")).not.toBeInTheDocument();
 });
 
 test("the indicator title is the route focus target", () => {
@@ -403,7 +430,7 @@ test("the skip link falls back to the plain anchor when the search isn't there",
 test("switching to model mode with a county open puts the card first and keeps focus", async () => {
   const router = setup("/?i=life_expectancy&c=53033");
   const user = userEvent.setup();
-  const modelButton = screen.getByRole("button", { name: "Compared with expected" });
+  const modelButton = screen.getByRole("radio", { name: "Compared with expected" });
   await user.click(modelButton);
   expect(router.state.location.search).toContain("c=53033");
   expect(modelButton).toHaveFocus();
@@ -468,8 +495,8 @@ test("an old model link is rewritten in place", () => {
 
 test("leaving a modelled outcome returns to Observed", async () => {
   const router = setup("/?i=life_expectancy&show=expected");
-  await userEvent.click(screen.getByRole("button", { name: "Poverty rate" }));
+  await userEvent.click(screen.getByRole("radio", { name: "Indicators" }));
   expect(router.state.location.search).toBe("?i=poverty_rate");
-  expect(screen.queryByRole("group", { name: "Show" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("radiogroup", { name: "Show" })).not.toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "Poverty rate" })).toBeInTheDocument();
 });

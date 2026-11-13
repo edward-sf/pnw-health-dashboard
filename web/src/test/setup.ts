@@ -8,6 +8,15 @@ vi.mock("@observablehq/plot", () => ({
   dot: () => ({}),
 }));
 
+// jsdom lacks these; Radix Popover, cmdk and the Explorer's stage measurement use them.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
+Element.prototype.scrollIntoView ??= function scrollIntoView() {};
+
 afterEach(() => {
   cleanup();
   resetMatchMedia();
