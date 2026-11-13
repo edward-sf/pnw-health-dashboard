@@ -118,6 +118,27 @@ main {
   font: inherit;
 }
 
+/* Shared by the Explorer's Outcome select and the methodology page's outcome select, so both
+   read as the same kind of control as the search input above. The global :focus-visible ring
+   applies; the border colour is only a resting state. */
+.picker select,
+.methodology-select select {
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #767676;
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .picker select,
+  .methodology-select select {
+    min-height: 44px;
+  }
+}
+
 .picker h2 {
   margin: 12px 0 4px;
   font-size: 0.85rem;
