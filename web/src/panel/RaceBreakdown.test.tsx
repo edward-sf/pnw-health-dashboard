@@ -6,16 +6,23 @@ import type { Indicator, ValueEntry } from "../types";
 import { RaceBreakdown } from "./RaceBreakdown";
 
 const lifeExpectancy = manifest.indicators.find((i) => i.id === "life_expectancy") as Indicator;
-const overall: ValueEntry = { v: 80.4, lo: 80.1, hi: 80.7, rank: 1, state_rank: 1 };
+const overall: ValueEntry = {
+  v: 80.4,
+  lo: 80.1,
+  hi: 80.7,
+  rank: 1,
+  state_rank: 1,
+};
 
-function setup(
-  fips: string,
-  entry: ValueEntry | "none" = overall,
-  indicator = lifeExpectancy,
-) {
+function setup(fips: string, entry: ValueEntry | "none" = overall, indicator = lifeExpectancy) {
   return render(
     <MemoryRouter>
-      <RaceBreakdown indicator={indicator} fips={fips} overall={entry === "none" ? undefined : entry} strata={strata} />
+      <RaceBreakdown
+        indicator={indicator}
+        fips={fips}
+        overall={entry === "none" ? undefined : entry}
+        strata={strata}
+      />
     </MemoryRouter>,
   );
 }
@@ -26,7 +33,10 @@ const rows = () => within(section()).getAllByRole("listitem");
 it("renders heading 'By race and ethnicity (CHR 2025)' and a County overall row first", () => {
   setup("53033");
   expect(
-    screen.getByRole("heading", { level: 3, name: "By race and ethnicity (CHR 2025)" }),
+    screen.getByRole("heading", {
+      level: 3,
+      name: "By race and ethnicity (CHR 2025)",
+    }),
   ).toBeInTheDocument();
   expect(rows()[0]).toHaveTextContent("County overall");
   expect(rows()[0]).toHaveTextContent("80.4 years");
@@ -56,13 +66,23 @@ it("names unreported groups in one 'Not reported: …' line plus the explanation
   ).toBeInTheDocument();
 });
 
-it("all groups null: overall row, every group listed as not reported", () => {
+it("all groups null: only the not-reported note, every group listed", () => {
   setup("16001");
-  const r = rows();
-  expect(r).toHaveLength(1);
-  expect(r[0]).toHaveTextContent("County overall");
+  expect(
+    screen.getByRole("heading", {
+      level: 3,
+      name: "By race and ethnicity (CHR 2025)",
+    }),
+  ).toBeInTheDocument();
+  expect(within(section()).queryAllByRole("listitem")).toHaveLength(0);
+  expect(within(section()).queryByText(/County overall/)).toBeNull();
+  expect(section().querySelector(".race-breakdown-mark")).toBeNull();
   expect(within(section()).getByText("Not reported: White, Black, Hispanic.")).toBeInTheDocument();
-  expect(within(section()).getByText(/too few births or deaths/)).toBeInTheDocument();
+  expect(
+    within(section()).getByText(
+      "CHR does not report a group when there are too few births or deaths to give a stable figure.",
+    ),
+  ).toBeInTheDocument();
 });
 
 it("group without CI shows value only, no interval text", () => {

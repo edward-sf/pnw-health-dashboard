@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
@@ -371,20 +371,22 @@ describe("race breakdown", () => {
     modelMode: boolean;
     target?: Indicator | undefined;
     targetModel?: typeof model;
+    fips?: string;
   }) => {
     const indicator =
       opts.indicatorId === "premature_death"
         ? prematureIndicator
         : (manifest.indicators.find((i) => i.id === opts.indicatorId) as Indicator);
     const tm = opts.targetModel ?? model;
+    const fips = opts.fips ?? "53033";
     return (
       <MemoryRouter>
         <CountyPanel
-          county={counties[0]!}
+          county={counties.find((c) => c.fips === fips)!}
           indicator={indicator}
           entries={withValues[opts.indicatorId]!}
           counties={counties}
-          modelEntry={countyModel(tm, "53033")}
+          modelEntry={countyModel(tm, fips)}
           target={tm}
           manifest={manifest}
           values={withValues}
@@ -465,4 +467,18 @@ describe("race breakdown", () => {
     render(panel({ indicatorId: "life_expectancy", modelMode: true, target: undefined }));
     expect(breakdowns()).toHaveLength(0);
   });
+
+  // Chugach has no strata entries, so every group is unreported, as in the real data.
+  test.each([false, true])(
+    "all groups unreported: only the not-reported note (model mode %s)",
+    (modelMode) => {
+      render(panel({ indicatorId: "life_expectancy", modelMode, fips: "02063" }));
+      expect(breakdowns()).toHaveLength(1);
+      const section = breakdowns()[0]!;
+      expect(within(section).queryAllByRole("listitem")).toHaveLength(0);
+      expect(section).not.toHaveTextContent("County overall");
+      expect(section).toHaveTextContent("Not reported: White, Black, Hispanic.");
+      expect(section).toHaveTextContent(/too few births or deaths/);
+    },
+  );
 });
