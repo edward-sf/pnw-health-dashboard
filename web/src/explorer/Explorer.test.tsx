@@ -388,6 +388,14 @@ test("the skip link works in model table view with a county open, and keeps c", 
   expect(router.state.location.hash).toBe("");
 });
 
+test("the skip link falls back to the plain anchor when the search isn't there", () => {
+  setup("/?i=poverty_rate");
+  // Stand-in for a render without the search: its id no longer matches the link's target.
+  screen.getByRole("combobox", { name: "Search counties" }).id = "elsewhere";
+  // fireEvent.click returns false only when a handler called preventDefault().
+  expect(fireEvent.click(screen.getByRole("link", { name: "Skip to county search" }))).toBe(true);
+});
+
 test("switching to model mode with a county open puts the card first and keeps focus", async () => {
   const router = setup("/?c=53033");
   const user = userEvent.setup();
