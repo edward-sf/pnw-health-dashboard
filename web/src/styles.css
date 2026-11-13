@@ -119,16 +119,12 @@ main {
 }
 
 /* Shared by the Explorer's Outcome select and the methodology page's outcome select, so both
-   read as the same kind of control as the search input above. The global :focus-visible ring
-   applies; the border colour is only a resting state. */
+   match the text inputs (`.picker input`, `.county-search input`): same font and padding, and
+   the browser's native control border. The global :focus-visible ring applies. */
 .picker select,
 .methodology-select select {
   padding: 6px 8px;
   font: inherit;
-  color: inherit;
-  background: #fff;
-  border: 1px solid #767676;
-  border-radius: 4px;
   max-width: 100%;
 }
 
