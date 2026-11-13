@@ -1,4 +1,5 @@
 import { useId, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
 import { buildShapBars, type ShapBar } from "../model/buildShapBars";
@@ -61,14 +62,14 @@ function ModelResult({
         {note && <p className="model-direction-note">{note}</p>}
         <p className="model-rounded-note">Figures are rounded.</p>
         <p>
-          <span className="tier-badge">
+          <Badge className="tier-badge">
             <span
               className="tier-swatch"
               aria-hidden="true"
               style={{ background: tierFill(entry.flag) }}
             />
             {tierLabel(entry.flag)}
-          </span>
+          </Badge>
         </p>
         <ResidualRange
           residual={residual}

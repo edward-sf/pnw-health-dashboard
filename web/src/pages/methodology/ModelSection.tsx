@@ -1,3 +1,4 @@
+import { NativeSelect } from "@/components/ui/native-select";
 import { formatValue } from "../../color/formatValue";
 import { modelDigits } from "../../model/modelView";
 import { defaultTargetId, targetModel } from "../../model/targetView";
@@ -49,14 +50,14 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
         differences between counties.
       </p>
       <label className="methodology-select">
-        Outcome{" "}
-        <select value={targetId} onChange={(e) => onTargetChange(e.target.value)}>
+        Outcome
+        <NativeSelect value={targetId} onChange={(e) => onTargetChange(e.target.value)}>
           {targets.map(([id, t]) => (
             <option key={id} value={id}>
               {t.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       <p>
         The details below, the factors by importance, and the details under Reproducibility are for

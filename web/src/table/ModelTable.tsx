@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatSigned, formatValue } from "../color/formatValue";
-import { modelDigits, tierLabel } from "../model/modelView";
+import { modelDigits, tierFill, tierLabel } from "../model/modelView";
 import type { TargetModel } from "../types";
 import { CountyCell } from "./CountyCell";
 import { SortHeader } from "./SortHeader";
@@ -57,7 +57,18 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
                 <td className="num">{actual !== null ? formatValue(actual, target.unit, d) : ""}</td>
                 <td className="num">{predicted !== null ? formatValue(predicted, target.unit, d) : ""}</td>
                 <td className="num">{residual !== null ? formatSigned(residual, target.unit, d) : ""}</td>
-                <td>{tierLabel(flag)}</td>
+                <td>
+                  <span className="table-tier">
+                    {flag !== "insufficient_data" && (
+                      <span
+                        className="tier-swatch"
+                        aria-hidden="true"
+                        style={{ background: tierFill(flag) }}
+                      />
+                    )}
+                    {tierLabel(flag)}
+                  </span>
+                </td>
               </tr>
             );
           })}

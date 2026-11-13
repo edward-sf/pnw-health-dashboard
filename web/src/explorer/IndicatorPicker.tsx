@@ -1,4 +1,7 @@
+import { ChevronsUpDown } from "lucide-react";
 import { type KeyboardEvent, useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { Indicator } from "../types";
 
 type Props = {
@@ -48,22 +51,24 @@ export function IndicatorPicker({
   return (
     <div className="picker" onKeyDown={onKeyDown}>
       {collapsible && (
-        <button
+        <Button
           ref={toggleRef}
           type="button"
-          className="picker-toggle"
+          variant="outline"
+          className="picker-toggle h-auto w-full justify-between px-3 py-1.5 text-left whitespace-normal"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          Indicator: {selectedLabel}
-        </button>
+          <span>Indicator: {selectedLabel}</span>
+          <ChevronsUpDown aria-hidden="true" />
+        </Button>
       )}
       {(!collapsible || open) && (
         <>
           <label htmlFor={inputId} className="picker-label">
             Filter indicators
           </label>
-          <input
+          <Input
             id={inputId}
             type="search"
             value={filter}
@@ -78,6 +83,7 @@ export function IndicatorPicker({
                   <li key={ind.id}>
                     <button
                       type="button"
+                      className="picker-item"
                       aria-pressed={ind.id === selectedId}
                       onClick={() => choose(ind.id)}
                     >

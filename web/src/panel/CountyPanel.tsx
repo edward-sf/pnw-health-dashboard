@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router";
 import { formatCi, formatValue } from "../color/formatValue";
@@ -97,7 +99,7 @@ export function CountyPanel({
       : null;
 
   const indicatorSection = (
-    <>
+    <div className="panel-indicator">
       <p className="panel-measure">{indicator.label}</p>
       {v !== null ? (
         <>
@@ -124,7 +126,7 @@ export function CountyPanel({
         <RaceBreakdown indicator={indicator} fips={county.fips} overall={entry} strata={strata} />
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
-    </>
+    </div>
   );
   const peerData = buildPeerRows(
     county.fips,
@@ -160,19 +162,30 @@ export function CountyPanel({
         </div>
         <div className="panel-actions">
           {isPhone && (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               className="panel-expand"
               aria-expanded={expanded}
               aria-controls={bodyId}
               onClick={() => setExpandedFips(expanded ? null : county.fips)}
             >
+              {expanded ? <ChevronDown aria-hidden="true" /> : <ChevronUp aria-hidden="true" />}
               {expanded ? "Collapse" : "Expand"}
-            </button>
+            </Button>
           )}
-          <button type="button" className="panel-close" onClick={onClose}>
-            Close
-          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="panel-close"
+            aria-label="Close"
+            title="Close"
+            onClick={onClose}
+          >
+            <X aria-hidden="true" />
+          </Button>
         </div>
       </div>
       <div id={bodyId} className="panel-body">

@@ -1,3 +1,5 @@
+import { RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { focusPageHeadingWhenReady } from "../hooks/focusPageHeading";
 
 type Props = {
@@ -18,13 +20,14 @@ type Props = {
  */
 export default function ErrorPage({ message, onRetry, pageHeading = false }: Props) {
   return (
-    <div>
+    <div className="error-page">
       <h2 {...(pageHeading ? { "data-page-heading": "", tabIndex: -1 } : {})}>
         Couldn't load the data
       </h2>
       <p role="alert">{message}</p>
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={(e) => {
           const button = e.currentTarget;
           onRetry();
@@ -34,8 +37,9 @@ export default function ErrorPage({ message, onRetry, pageHeading = false }: Pro
           queueMicrotask(() => focusPageHeadingWhenReady(button));
         }}
       >
+        <RotateCw aria-hidden="true" />
         Try again
-      </button>
+      </Button>
     </div>
   );
 }
