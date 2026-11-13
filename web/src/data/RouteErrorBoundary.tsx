@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, createRef, type ErrorInfo, type ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
@@ -19,6 +19,19 @@ export class RouteErrorBoundary extends Component<Props, State> {
     return { failed: true };
   }
 
+  private heading = createRef<HTMLHeadingElement>();
+
+  componentDidMount(): void {
+    // A child that throws on the very first render mounts the boundary already failed.
+    if (this.state.failed) this.heading.current?.focus();
+  }
+
+  componentDidUpdate(_prevProps: Props, prevState: State): void {
+    // Focus the heading only on the switch into the failed state, so keyboard and screen-reader
+    // users are told the page was replaced. The route hasn't changed, so route focus doesn't run.
+    if (this.state.failed && !prevState.failed) this.heading.current?.focus();
+  }
+
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error(error, info.componentStack);
   }
@@ -28,7 +41,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
     const reload = this.props.onReload ?? (() => window.location.reload());
     return (
       <div role="alert">
-        <h2 data-page-heading="" tabIndex={-1}>
+        <h2 ref={this.heading} data-page-heading="" tabIndex={-1}>
           Something went wrong
         </h2>
         <p>This page couldn't be shown. Reloading the page usually fixes it.</p>
