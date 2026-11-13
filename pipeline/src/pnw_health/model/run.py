@@ -58,7 +58,8 @@ EXCLUDED_FEATURE_GROUPS = (
     (
         "Demographics",
         "Race and ethnicity shares act as proxies for structural factors, "
-        "so attributions would mislead.",
+        "so attributions would mislead. The other population measures (size, age, sex, "
+        "disability, veterans, birthplace and English ability) are shown as context only.",
     ),
 )
 NO_DATA = CountyModel(

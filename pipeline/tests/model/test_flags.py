@@ -5,7 +5,7 @@ import math
 import pandas as pd
 import pytest
 
-from pnw_health.contract import Direction
+from pnw_health.contract import TargetDirection
 from pnw_health.model.config import Z_75, Z_90
 from pnw_health.model.features import ModelDataError
 from pnw_health.model.flags import classify, se_from_ci, sigma_model_sq
@@ -40,7 +40,7 @@ def test_sigma_mean_ignores_missing_ci() -> None:
 
 
 @pytest.mark.parametrize("direction, sign", DIRECTIONS)
-def test_tiers(direction: Direction, sign: int) -> None:
+def test_tiers(direction: TargetDirection, sign: int) -> None:
     scale = 3.0  # sqrt(sigma_sq + se**2) with se = 0
     above_90, above_75, below_75 = (
         scale * (Z_90 + 0.01),
@@ -60,7 +60,7 @@ def test_tiers(direction: Direction, sign: int) -> None:
 
 
 @pytest.mark.parametrize("direction, sign", DIRECTIONS)
-def test_exactly_on_threshold_is_lower_tier(direction: Direction, sign: int) -> None:
+def test_exactly_on_threshold_is_lower_tier(direction: TargetDirection, sign: int) -> None:
     residuals = sign * pd.Series([Z_75 * 3.0, Z_90 * 3.0])
     flags = classify(
         residuals, pd.Series([0.0, 0.0]), sigma_sq=9.0, mean_se_sq=0.0, direction=direction

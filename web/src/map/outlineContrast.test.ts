@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { contrastRatio } from "../color/contrast";
-import { HATCH_FILL, makeColorScale } from "../color/makeColorScale";
+import { HATCH_BACKGROUND, HATCH_FILL, makeColorScale } from "../color/makeColorScale";
 import { DEFAULT_OUTLINE, outlineFor } from "../color/outline";
 import { TIERS, tierFill } from "../model/modelView";
 import type { Direction, Indicator, ValueEntry } from "../types";
@@ -79,7 +79,8 @@ test("the lightest bins and the 'none' tier keep the grey outline", () => {
     return d === "higher_is_better" ? bins[bins.length - 1] : bins[0];
   });
   for (const fill of [...lightest, tierFill("none")]) {
-    expect(outlineFor(fill ?? "missing")).toBe(DEFAULT_OUTLINE);
+    expect(fill).toMatch(/^#[0-9a-fA-F]{6}$/);
+    expect(outlineFor(fill!)).toBe(DEFAULT_OUTLINE);
   }
 });
 
@@ -88,9 +89,25 @@ test("the default outline is at least 3:1 against the white page", () => {
 });
 
 test("hatched (missing) counties get an outline that reads against the hatch background", () => {
-  expect(contrastRatio(outlineFor(HATCH_FILL), "#f2f2f2")).toBeGreaterThanOrEqual(3);
+  expect(contrastRatio(outlineFor(HATCH_FILL), HATCH_BACKGROUND)).toBeGreaterThanOrEqual(3);
 });
 
-test("a fill that isn't #rrggbb falls back to the default outline", () => {
-  expect(outlineFor("url(#something-else)")).toBe(DEFAULT_OUTLINE);
+test("a fill that isn't #rrggbb falls back to the default outline, with a dev warning", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    expect(outlineFor("url(#something-else)")).toBe(DEFAULT_OUTLINE);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"url(#something-else)"'));
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+test("the hatch fill gets no warning", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    outlineFor(HATCH_FILL);
+    expect(warn).not.toHaveBeenCalled();
+  } finally {
+    warn.mockRestore();
+  }
 });

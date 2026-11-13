@@ -12,7 +12,7 @@ from typer.testing import CliRunner, Result
 from pnw_health import cli
 from pnw_health.cli import Stage, StageInputError, run_pipeline
 from pnw_health.config import CHR_LEGACY_YEAR, CHR_YEAR, Paths
-from pnw_health.contract import Manifest, ModelFile, ValuesFile, write_schemas
+from pnw_health.contract import Manifest, ModelFile, StrataFile, ValuesFile, write_schemas
 from pnw_health.fetch import FetchError, make_client
 from pnw_health.indicators import load_catalog
 from pnw_health.model.config import PEER_K, TARGETS, TOP_N
@@ -71,13 +71,33 @@ def test_full_run_produces_valid_exports(tmp_path: Path, full_zip: Path) -> None
     manifest = Manifest.model_validate_json((paths.out / "manifest.json").read_text())
     values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
     topo = json.loads((paths.out / "counties.topojson").read_text())
-    assert len(manifest.indicators) == 37
+    assert len(manifest.indicators) == 44
     assert {s.source for s in manifest.sources} == {"acs", "places", "chr", "boundaries"}
     assert sorted(s.year for s in manifest.sources if s.source == "chr") == [2023, 2025]
-    assert len(values.root) == 37
+    assert len(values.root) == 44
     assert all(len(entries) == 149 for entries in values.root.values())
     assert len(topo["objects"]["counties"]["geometries"]) == 149
     assert (paths.interim / "warnings.txt").exists()
+
+
+def test_full_run_writes_valid_strata(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.all, client=client, api_key="K")
+    strata = StrataFile.model_validate_json((paths.out / "strata.json").read_text())
+    by_id = {i.id: i for i in load_catalog() if i.race_groups}
+    assert list(strata.indicators) == list(by_id)
+    for ind_id, entry in strata.indicators.items():
+        assert entry.groups == list(by_id[ind_id].race_groups or ())
+        assert len(entry.counties) == 149
+    yakima = strata.indicators["low_birth_weight"].counties["53077"]["white"]
+    assert yakima is not None and yakima.v == 5.9942  # proportion x 100, rounded
+    assert strata.indicators["premature_death"].counties["53077"]["asian"].unreliable  # type: ignore[union-attr]
+    assert strata.indicators["premature_death"].counties["53077"]["nhopi"] is None
+    for fips in ("02063", "02066"):  # no legacy strata for the Valdez-Cordova successors
+        assert all(v is None for v in strata.indicators["life_expectancy"].counties[fips].values())
+    values = ValuesFile.model_validate_json((paths.out / "values.json").read_text())
+    assert list(values.root) == [i.id for i in load_catalog()]  # no race-group entries
 
 
 def test_chugach_gets_labeled_legacy(tmp_path: Path, full_zip: Path) -> None:
@@ -195,6 +215,19 @@ def test_export_before_harmonize_says_run_harmonize(tmp_path: Path, full_zip: Pa
         run_pipeline(paths, Stage.export, client=client)
 
 
+def test_export_without_strata_says_run_harmonize(tmp_path: Path, full_zip: Path) -> None:
+    paths = Paths.default(tmp_path / "repo")
+    with client_for(transport(full_zip)) as client:
+        run_pipeline(paths, Stage.fetch, client=client, api_key="K")
+    with client_for(failing) as client:
+        run_pipeline(paths, Stage.harmonize, client=client)
+        run_pipeline(paths, Stage.model, client=client)
+        (paths.interim / "strata.parquet").unlink()
+        with pytest.raises(StageInputError, match="strata.parquet.*--stage harmonize"):
+            run_pipeline(paths, Stage.export, client=client)
+    assert not paths.out.exists() or not any(paths.out.iterdir())
+
+
 def test_export_before_model_says_run_model(tmp_path: Path, full_zip: Path) -> None:
     paths = Paths.default(tmp_path / "repo")
     with client_for(transport(full_zip)) as client:
@@ -279,10 +312,10 @@ def test_harmonize_reports_warning_count(
     write_acs_cache(paths, report_only_valdez_cordova)
     with client_for(failing) as client:
         run_pipeline(paths, Stage.harmonize, client=client)
-    # One legacy-only warning per ACS indicator (14) plus one per CHR indicator the 2023
+    # One legacy-only warning per ACS indicator (21) plus one per CHR indicator the 2023
     # fixture reports for 02261 where 2025 has no successor value (4); PLACES has none.
-    assert "18 warning(s)" in capsys.readouterr().err
-    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 18
+    assert "25 warning(s)" in capsys.readouterr().err
+    assert len((paths.interim / "warnings.txt").read_text().splitlines()) == 25
 
 
 def test_unreliable_flag_reaches_values_json(tmp_path: Path, full_zip: Path) -> None:

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatBound, formatSigned, formatTick, formatValue } from "./formatValue";
+import { formatBound, formatCi, formatSigned, formatTick, formatValue } from "./formatValue";
 
 test("formats by unit", () => {
   expect(formatValue(12.34, "percent")).toBe("12.3%");
@@ -43,8 +43,23 @@ test("formatSigned uses the same unit suffix as formatValue", () => {
   expect(formatSigned(3.4, "rate_per_100k")).toBe("+3.4 per 100k");
 });
 
+test("formatSigned reports a non-finite value as not available, not as zero", () => {
+  expect(formatSigned(Number.NaN, "years")).toBe("Not available");
+  expect(formatSigned(Number.POSITIVE_INFINITY, "percent")).toBe("Not available");
+  expect(formatSigned(Number.NEGATIVE_INFINITY, "dollars")).toBe("Not available");
+});
+
 test("formatSigned defaults to the unit's own digits", () => {
   expect(formatSigned(1500, "dollars")).toBe("+$1,500");
   expect(formatSigned(2.6, "percent")).toBe("+2.6%");
   expect(formatSigned(3.65, "years")).toBe("+3.7 years");
+});
+
+test("formatCi uses the indicator's level and bounds, or null without both bounds", () => {
+  const ind = { unit: "years", ci_level: 0.95 } as const;
+  expect(formatCi(73.84, 74.6, ind)).toBe("95% CI 73.8–74.6");
+  expect(formatCi(9.1, 9.9, { unit: "percent", ci_level: 0.9 })).toBe("90% CI 9.1–9.9");
+  expect(formatCi(null, 74.6, ind)).toBeNull();
+  expect(formatCi(73.8, null, ind)).toBeNull();
+  expect(formatCi(73.8, 74.6, { unit: "years", ci_level: null })).toBeNull();
 });

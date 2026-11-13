@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from pnw_health.model.config import PEER_K, PEER_MIN_FEATURES
+from pnw_health.model.features import ModelDataError
 
 
 def find_peers(
@@ -23,6 +24,9 @@ def find_peers(
     table = table.sort_index()
     eligible = table.notna().sum(axis=1) >= min_features
     pool = table[eligible]
+    empty = pool.columns[pool.isna().all()] if len(pool) else pool.columns[:0]
+    if len(empty):
+        raise ModelDataError(f"peers: feature {empty[0]} has no values among eligible PNW counties")
     filled = pool.fillna(pool.median())
     std = filled.std(ddof=0)
     scaled = (filled - filled.mean()) / std.where(std > 0, 1.0)

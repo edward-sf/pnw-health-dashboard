@@ -21,10 +21,10 @@ from pydantic import (
     model_serializer,
 )
 
-from pnw_health.indicators import Indicator, Unit
+from pnw_health.indicators import Indicator, RaceGroup, Unit
 
 # Which way is better for a model target. Unlike the catalog's direction, never "neutral".
-Direction = Literal["higher_is_better", "higher_is_worse"]
+TargetDirection = Literal["higher_is_better", "higher_is_worse"]
 
 
 class SourceVintage(BaseModel):
@@ -205,7 +205,7 @@ class TargetModel(BaseModel):
 
     label: str
     unit: Unit
-    direction: Direction
+    direction: TargetDirection
     metrics: ModelMetricsBlock
     behaviors_comparison: BehaviorsComparison
     global_importance: list[ImportanceEntry]
@@ -236,9 +236,60 @@ class ModelFile(BaseModel):
     peers: Peers
 
 
+class StratumEntry(BaseModel):
+    """One race group's value for one county. Never ranked, never mapped (M10 spec §1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    v: float
+    lo: float | None
+    hi: float | None
+    unreliable: bool = False
+
+    @model_serializer(mode="wrap")
+    def _omit_reliable(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if not data.get("unreliable"):
+            data.pop("unreliable", None)
+        return data
+
+
+class StrataGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: RaceGroup
+    label: str
+
+
+class StrataIndicator(BaseModel):
+    """``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``.
+
+    ``labels`` holds only this measure's overrides of the file-level group labels.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    groups: list[RaceGroup]
+    labels: dict[RaceGroup, str] = {}
+    counties: dict[str, dict[RaceGroup, StratumEntry | None]]
+
+
+class StrataFile(BaseModel):
+    """``strata.json``: CHR outcomes by race and ethnicity for the display counties."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dimension: Literal["race"]
+    source: Literal["chr"]
+    year: int
+    groups: list[StrataGroup]
+    indicators: dict[str, StrataIndicator]
+
+
 SCHEMAS: dict[str, type[BaseModel]] = {
     "manifest.schema.json": Manifest,
     "model.schema.json": ModelFile,
+    "strata.schema.json": StrataFile,
     "values.schema.json": ValuesFile,
 }
 

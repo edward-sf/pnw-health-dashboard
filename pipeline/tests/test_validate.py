@@ -2,13 +2,20 @@ import pandas as pd
 import pytest
 
 from pnw_health import validate
-from pnw_health.contract import ModelFile, PeerMethod, Peers, ShapEntry
+from pnw_health.contract import ModelFile, PeerMethod, Peers, ShapEntry, StrataFile, StratumEntry
 from pnw_health.harmonize import LEGACY_COLUMNS
-from pnw_health.indicators import Indicator
+from pnw_health.indicators import Indicator, load_catalog
 from pnw_health.long import LONG_COLUMNS
 from pnw_health.model.config import FEATURES, PEER_K, PEER_MIN_FEATURES
 from pnw_health.model.config import TARGETS as real_targets
-from pnw_health.validate import DataValidationError, validate_display, validate_model
+from pnw_health.sources.chr import STRATA_COLUMNS
+from pnw_health.strata import build_strata_file
+from pnw_health.validate import (
+    DataValidationError,
+    validate_display,
+    validate_model,
+    validate_strata,
+)
 from tests.helpers import make_county_model, make_model_file, make_null_county_model, pnw_fips
 
 
@@ -586,4 +593,144 @@ def test_peer_method_stale_min_features_rejected() -> None:
     assert model_problems(peer_model(peers)) == [
         f"peer method min_features {PEER_MIN_FEATURES + 1} does not match "
         f"PEER_MIN_FEATURES {PEER_MIN_FEATURES}; {RERUN}"
+    ]
+
+
+# --- strata.json (M10 spec §4.5) ---------------------------------------------------------
+
+STRATA_FIPS = set(pnw_fips())
+
+
+def strata_catalog() -> list[Indicator]:
+    return [i for i in load_catalog() if i.race_groups]
+
+
+def valid_strata() -> StrataFile:
+    """Every race indicator has one White value in 53001 (and 53077 for life expectancy)."""
+    rows = [("53001", ind.id, "white", 10.0, 9.0, 11.0, False) for ind in strata_catalog()] + [
+        ("53077", "life_expectancy", "white", 75.0, 74.0, 76.0, False)
+    ]
+    frame = pd.DataFrame(rows, columns=STRATA_COLUMNS)
+    return build_strata_file(frame, STRATA_FIPS, strata_catalog())
+
+
+def strata_problems(strata: StrataFile, catalog: list[Indicator] | None = None) -> list[str]:
+    with pytest.raises(DataValidationError) as err:
+        validate_strata(strata, STRATA_FIPS, catalog or strata_catalog())
+    return err.value.problems
+
+
+def set_entry(strata: StrataFile, ind: str, fips: str, group: str, **fields: object) -> None:
+    current = strata.indicators[ind].counties[fips][group]
+    base = current.model_dump() if current is not None else {"v": 1.0, "lo": None, "hi": None}
+    strata.indicators[ind].counties[fips][group] = StratumEntry(**{**base, **fields})
+
+
+def test_validate_strata_valid_passes() -> None:
+    validate_strata(valid_strata(), STRATA_FIPS, strata_catalog())
+
+
+def test_validate_strata_lo_above_v_names_indicator_fips_group() -> None:
+    strata = valid_strata()
+    set_entry(strata, "life_expectancy", "53077", "white", lo=76.0)
+    problems = strata_problems(strata)
+    assert len(problems) == 1
+    assert problems[0].startswith("strata life_expectancy 53077 white:")
+
+
+def test_validate_strata_v_above_hi() -> None:
+    strata = valid_strata()
+    set_entry(strata, "injury_deaths", "53001", "white", hi=5.0)
+    assert strata_problems(strata) == [
+        "strata injury_deaths 53001 white: v 10.0 is outside its interval [9.0, 5.0]"
+    ]
+
+
+def test_validate_strata_percent_over_100() -> None:
+    strata = valid_strata()
+    set_entry(strata, "low_birth_weight", "53001", "tom", v=101.0)
+    assert strata_problems(strata) == ["strata low_birth_weight 53001 tom: 101.0 outside [0, 100]"]
+
+
+def test_validate_strata_negative_rate() -> None:
+    strata = valid_strata()
+    set_entry(strata, "premature_death", "53003", "black", v=5.0, lo=-1.0, hi=8.0)
+    assert strata_problems(strata) == ["strata premature_death 53003 black: -1.0 negative"]
+
+
+def test_validate_strata_years_have_no_upper_bound() -> None:
+    strata = valid_strata()
+    set_entry(strata, "life_expectancy", "53077", "white", v=115.0, lo=70.0, hi=161.0)
+    validate_strata(strata, STRATA_FIPS, strata_catalog())
+    set_entry(strata, "life_expectancy", "53077", "white", v=5.0, lo=-1.0, hi=8.0)
+    assert strata_problems(strata) == ["strata life_expectancy 53077 white: -1.0 negative"]
+
+
+def test_validate_strata_groups_mismatch_catalog() -> None:
+    strata = valid_strata()
+    stays = strata.indicators["preventable_hospital_stays"]
+    stays.groups = [*stays.groups, "nhopi"]
+    for groups in stays.counties.values():
+        groups["nhopi"] = None
+    assert strata_problems(strata) == [
+        "strata preventable_hospital_stays: groups ['aian', 'asian', 'black', 'hispanic', "
+        "'white', 'nhopi'] do not match the catalog's race_groups "
+        "['aian', 'asian', 'black', 'hispanic', 'white']"
+    ]
+
+
+def test_validate_strata_labels_mismatch_catalog() -> None:
+    strata = valid_strata()
+    strata.indicators["preventable_hospital_stays"].labels = {}
+    assert strata_problems(strata) == [
+        "strata preventable_hospital_stays: labels {} do not match the catalog's race_labels "
+        "{'asian': 'Asian and Pacific Islander'}"
+    ]
+
+
+def test_validate_strata_county_missing_a_group() -> None:
+    strata = valid_strata()
+    del strata.indicators["injury_deaths"].counties["53001"]["asian"]
+    assert strata_problems(strata) == [
+        "strata injury_deaths: counties whose groups do not match its groups: 53001"
+    ]
+
+
+def test_validate_strata_missing_fips() -> None:
+    strata = valid_strata()
+    del strata.indicators["life_expectancy"].counties["02013"]
+    strata.indicators["life_expectancy"].counties["06037"] = {
+        g: None for g in strata.indicators["life_expectancy"].groups
+    }
+    assert strata_problems(strata) == [
+        "strata life_expectancy: missing counties: 02013",
+        "strata life_expectancy: counties outside the display set: 06037",
+    ]
+
+
+def test_validate_strata_indicator_sets_match_catalog() -> None:
+    strata = valid_strata()
+    del strata.indicators["injury_deaths"]
+    catalog = strata_catalog()
+    assert strata_problems(strata, catalog) == [
+        "strata is missing catalog indicator(s) with race_groups: injury_deaths"
+    ]
+    full = valid_strata()
+    no_injury = [i for i in catalog if i.id != "injury_deaths"]
+    assert strata_problems(full, no_injury) == [
+        "strata has indicator(s) without catalog race_groups: injury_deaths"
+    ]
+
+
+def test_validate_strata_indicator_with_no_pnw_value() -> None:
+    strata = valid_strata()
+    strata.indicators["injury_deaths"].counties["53001"]["white"] = None
+    assert strata_problems(strata) == ["strata injury_deaths: no non-null values"]
+
+
+def test_validate_strata_groups_and_labels_fixed() -> None:
+    strata = valid_strata()
+    strata.groups = strata.groups[::-1]
+    assert strata_problems(strata) == [
+        "strata groups do not match RACE_GROUP_LABELS in display order"
     ]

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from pnw_health.contract import Direction
+from pnw_health.contract import TargetDirection
 from pnw_health.model.config import Z_75, Z_90
 from pnw_health.model.features import ModelDataError
 
@@ -46,7 +46,7 @@ def classify(
     se: pd.Series,
     sigma_sq: float,
     mean_se_sq: float,
-    direction: Direction,
+    direction: TargetDirection,
 ) -> Flags:
     """Assign tiers; `mean_se_sq` stands in for counties with no CI."""
     se_sq = (se**2).fillna(mean_se_sq)

@@ -12,10 +12,14 @@ from pnw_health.contract import (
     ModelFile,
     ShapEntry,
     SourceVintage,
+    StrataFile,
+    StrataGroup,
+    StrataIndicator,
+    StratumEntry,
     TargetModel,
     ValuesFile,
 )
-from pnw_health.export import build_values_file, finalize_model, write_exports
+from pnw_health.export import build_values_file, finalize_model, finalize_strata, write_exports
 from pnw_health.harmonize import LEGACY_COLUMNS
 from pnw_health.ranks import add_ranks
 from tests.helpers import (
@@ -117,6 +121,25 @@ def make_manifest() -> Manifest:
 
 
 TOPOLOGY = {"type": "Topology", "objects": {"counties": {"geometries": []}}, "arcs": []}
+FIVE_FILES = ["counties.topojson", "manifest.json", "model.json", "strata.json", "values.json"]
+
+
+def make_strata(v: float = 78.123456) -> StrataFile:
+    return StrataFile(
+        dimension="race",
+        source="chr",
+        year=2025,
+        groups=[StrataGroup(id="white", label="White")],
+        indicators={
+            "x": StrataIndicator(
+                groups=["white"],
+                counties={
+                    "53001": {"white": StratumEntry(v=v, lo=77.0, hi=None, unreliable=True)},
+                    "53003": {"white": None},
+                },
+            )
+        },
+    )
 
 
 def test_write_exports_round_trip(tmp_path: Path) -> None:
@@ -125,13 +148,11 @@ def test_write_exports_round_trip(tmp_path: Path) -> None:
     )
     manifest = make_manifest()
     model = make_model_file({"53001": make_county_model()})
-    paths = write_exports(tmp_path / "out", manifest, vf, TOPOLOGY, model, staging=tmp_path / "s")
-    assert sorted(p.name for p in paths) == [
-        "counties.topojson",
-        "manifest.json",
-        "model.json",
-        "values.json",
-    ]
+    strata = make_strata()
+    paths = write_exports(
+        tmp_path / "out", manifest, vf, TOPOLOGY, model, strata, staging=tmp_path / "s"
+    )
+    assert sorted(p.name for p in paths) == FIVE_FILES
     for p in paths:
         text = p.read_text()
         assert "NaN" not in text
@@ -142,6 +163,7 @@ def test_write_exports_round_trip(tmp_path: Path) -> None:
         Manifest.model_validate_json((tmp_path / "out" / "manifest.json").read_text()) == manifest
     )
     assert ModelFile.model_validate_json((tmp_path / "out" / "model.json").read_text()) == model
+    assert StrataFile.model_validate_json((tmp_path / "out" / "strata.json").read_text()) == strata
 
 
 def test_legacy_exported_with_year() -> None:
@@ -213,27 +235,52 @@ def test_finalize_leaves_input_full_precision() -> None:
     assert le(model).counties["53001"].predicted == 77.123456
 
 
+def test_finalize_strata_rounds_to_four_decimals() -> None:
+    strata = make_strata(v=78.123456)
+    final = finalize_strata(strata)
+    entry = final.indicators["x"].counties["53001"]["white"]
+    assert entry is not None
+    assert (entry.v, entry.lo, entry.hi, entry.unreliable) == (78.1235, 77.0, None, True)
+    assert final.indicators["x"].counties["53003"]["white"] is None
+    assert strata.indicators["x"].counties["53001"]["white"].v == 78.123456  # type: ignore[union-attr]
+
+
 def test_null_fields_serialize_as_json_null(tmp_path: Path) -> None:
     vf = build_values_file(ranked([("53001", 1.0, None, None)]), no_legacy(), COUNTIES, CATALOG)
     model = make_model_file({"02063": make_null_county_model()})
     out = tmp_path / "out"
-    write_exports(out, make_manifest(), vf, TOPOLOGY, finalize_model(model), staging=tmp_path / "s")
+    write_exports(
+        out,
+        make_manifest(),
+        vf,
+        TOPOLOGY,
+        finalize_model(model),
+        make_strata(),
+        staging=tmp_path / "s",
+    )
     text = (out / "model.json").read_text()
     assert "NaN" not in text
     assert json.loads(text)["targets"]["life_expectancy"]["counties"]["02063"]["predicted"] is None
 
 
-def _export_args() -> tuple[Manifest, ValuesFile, ModelFile]:
+def _export_args() -> tuple[Manifest, ValuesFile, ModelFile, StrataFile]:
     vf = build_values_file(ranked([("53001", 1.0, None, None)]), no_legacy(), COUNTIES, CATALOG)
-    return make_manifest(), vf, make_model_file({"53001": make_county_model()})
+    return make_manifest(), vf, make_model_file({"53001": make_county_model()}), make_strata()
 
 
+def _args() -> tuple[Manifest, ValuesFile, dict[str, object], ModelFile, StrataFile]:
+    """Positional arguments to write_exports after the output folder."""
+    manifest, vf, model, strata = _export_args()
+    return manifest, vf, TOPOLOGY, model, strata
+
+
+@pytest.mark.parametrize("failing_write", [2, 5], ids=["values", "strata"])
 def test_write_exports_failure_keeps_previous_export(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failing_write: int
 ) -> None:
     out = tmp_path / "data"
-    manifest, vf, model = _export_args()
-    write_exports(out, manifest, vf, TOPOLOGY, model, staging=tmp_path / "s")
+    manifest, vf, model, strata = _export_args()
+    write_exports(out, manifest, vf, TOPOLOGY, model, strata, staging=tmp_path / "s")
     before = {p.name: p.read_bytes() for p in out.iterdir()}
 
     real = export._write_json
@@ -242,27 +289,22 @@ def test_write_exports_failure_keeps_previous_export(
     def flaky(path: Path, data: object) -> Path:
         nonlocal calls
         calls += 1
-        if calls == 2:
+        if calls == failing_write:
             raise OSError("disk full")
         return real(path, data)
 
     monkeypatch.setattr(export, "_write_json", flaky)
     changed = manifest.model_copy(update={"schema_version": "9.9.9"})
     with pytest.raises(OSError, match="disk full"):
-        write_exports(out, changed, vf, TOPOLOGY, model, staging=tmp_path / "s")
+        write_exports(out, changed, vf, TOPOLOGY, model, strata, staging=tmp_path / "s")
     assert {p.name: p.read_bytes() for p in out.iterdir()} == before
     assert list((tmp_path / "s").iterdir()) == []
 
 
-def test_write_exports_leaves_only_the_four_files(tmp_path: Path) -> None:
+def test_write_exports_leaves_only_the_five_files(tmp_path: Path) -> None:
     out = tmp_path / "data"
-    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
-    assert sorted(p.name for p in out.iterdir()) == [
-        "counties.topojson",
-        "manifest.json",
-        "model.json",
-        "values.json",
-    ]
+    write_exports(out, *_args(), staging=tmp_path / "s")
+    assert sorted(p.name for p in out.iterdir()) == FIVE_FILES
     assert list((tmp_path / "s").iterdir()) == []
 
 
@@ -283,16 +325,13 @@ def _cross_device_replace(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_write_exports_moves_across_filesystems(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    args = _export_args()
     expected = {
         p.name: p.read_bytes()
-        for p in write_exports(
-            tmp_path / "ref", args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "rs"
-        )
+        for p in write_exports(tmp_path / "ref", *_args(), staging=tmp_path / "rs")
     }
     _cross_device_replace(monkeypatch)
     out = tmp_path / "data"
-    write_exports(out, args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+    write_exports(out, *_args(), staging=tmp_path / "s")
     assert {p.name: p.read_bytes() for p in out.iterdir()} == expected
     assert list((tmp_path / "s").iterdir()) == []
 
@@ -311,9 +350,9 @@ def test_cross_device_copy_never_writes_the_final_name_directly(
 
     monkeypatch.setattr(export.shutil, "copyfile", spy)
     out = tmp_path / "data"
-    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
-    finals = {out / n for n in ("manifest.json", "values.json", "counties.topojson", "model.json")}
-    assert len(copied_to) == 4
+    write_exports(out, *_args(), staging=tmp_path / "s")
+    finals = {out / n for n in FIVE_FILES}
+    assert len(copied_to) == 5
     assert all(p.parent == out and p not in finals for p in copied_to)
     assert sorted(p.name for p in out.iterdir()) == sorted(p.name for p in finals)
 
@@ -329,7 +368,7 @@ def test_partial_move_names_replaced_files(tmp_path: Path, monkeypatch: pytest.M
     monkeypatch.setattr(export.os, "replace", flaky)
     out = tmp_path / "data"
     with pytest.raises(export.ExportError) as err:
-        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+        write_exports(out, *_args(), staging=tmp_path / "s")
     message = str(err.value)
     assert "manifest.json, values.json" in message
     assert "pnw-health run --stage export" in message
@@ -344,7 +383,7 @@ def test_copy_failure_leaves_no_partial_and_keeps_untouched_files(
 
     out = tmp_path / "data"
     args = _export_args()
-    write_exports(out, args[0], args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+    write_exports(out, args[0], args[1], TOPOLOGY, args[2], args[3], staging=tmp_path / "s")
     before = {p.name: p.read_bytes() for p in out.iterdir()}
 
     _cross_device_replace(monkeypatch)
@@ -359,16 +398,16 @@ def test_copy_failure_leaves_no_partial_and_keeps_untouched_files(
     monkeypatch.setattr(export.shutil, "copyfile", full_on_values)
     changed = args[0].model_copy(update={"schema_version": "9.9.9"})
     with pytest.raises(export.ExportError, match="already replaced: manifest.json"):
-        write_exports(out, changed, args[1], TOPOLOGY, args[2], staging=tmp_path / "s")
+        write_exports(out, changed, args[1], TOPOLOGY, args[2], args[3], staging=tmp_path / "s")
     assert not list(out.glob(".*.partial"))
-    for name in ("values.json", "counties.topojson", "model.json"):
+    for name in ("values.json", "counties.topojson", "model.json", "strata.json"):
         assert (out / name).read_bytes() == before[name]
 
 
 def test_staging_inside_out_dir_rejected(tmp_path: Path) -> None:
     out = tmp_path / "data"
     with pytest.raises(ValueError, match="staging"):
-        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=out / "s")
+        write_exports(out, *_args(), staging=out / "s")
 
 
 def test_cleanup_failure_warns(
@@ -379,7 +418,7 @@ def test_cleanup_failure_warns(
 
     monkeypatch.setattr(export.shutil, "rmtree", broken)
     out = tmp_path / "data"
-    write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+    write_exports(out, *_args(), staging=tmp_path / "s")
     err = capsys.readouterr().err
     assert "could not remove" in err
     assert "busy" in err
@@ -405,7 +444,7 @@ def test_failed_cleanup_of_partial_keeps_the_copy_error(
     monkeypatch.setattr(Path, "unlink", stuck)
     out = tmp_path / "data"
     with pytest.raises(export.ExportError, match="disk full"):
-        write_exports(out, *_export_args()[:2], TOPOLOGY, _export_args()[2], staging=tmp_path / "s")
+        write_exports(out, *_args(), staging=tmp_path / "s")
 
 
 def test_first_move_failure_says_nothing_was_replaced(
@@ -418,9 +457,7 @@ def test_first_move_failure_says_nothing_was_replaced(
     with pytest.raises(export.ExportError) as err:
         write_exports(
             tmp_path / "data",
-            *_export_args()[:2],
-            TOPOLOGY,
-            _export_args()[2],
+            *_args(),
             staging=tmp_path / "s",
         )
     message = str(err.value)

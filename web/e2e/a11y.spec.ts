@@ -46,6 +46,22 @@ test("explorer: county panel open", async ({ page }, testInfo) => {
   await audit(page, testInfo);
 });
 
+test("explorer: county panel with race breakdown", async ({ page }, testInfo) => {
+  await explorer(page, "?i=life_expectancy&c=53077");
+  const panel = page.getByRole("complementary", { name: "County details" });
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+  await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+  await audit(page, testInfo);
+});
+
+test("explorer: model mode county panel", async ({ page }, testInfo) => {
+  await explorer(page, "?mode=model&c=53077");
+  const panel = page.getByRole("complementary", { name: "County details" });
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+  await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+  await audit(page, testInfo);
+});
+
 test("explorer: picker disclosure open", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "the picker is a disclosure on phones only");
   await explorer(page, "?i=poverty_rate");

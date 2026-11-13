@@ -82,7 +82,7 @@ cd web && npm ci && npm test && npm run lint && npm run typecheck
 
 ## Dependency overrides
 
-`web/package.json` has `"overrides"` entries that pin a transitive dependency outside its parents' ranges. Each one has a removal condition. When it's met, delete the override, run `npm install`, and check that `npm audit` and `npm run lint` still pass.
+`web/package.json` has `"overrides"` entries that pin a transitive dependency outside its parents' ranges. Each pins an exact version, not a range, so a fresh `npm install` can't pull in a release nobody has audited, and each has a removal condition. When it's met, delete the override, run `npm install`, and check that `npm audit` and `npm run lint` still pass.
 
 | Override | Why | Remove when |
 |---|---|---|

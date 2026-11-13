@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from pnw_health.contract import Legacy, Manifest, ModelFile, ValueEntry, ValuesFile
+from pnw_health.contract import Legacy, Manifest, ModelFile, StrataFile, ValueEntry, ValuesFile
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import TOP_N
@@ -107,6 +107,11 @@ def finalize_model(model: ModelFile) -> ModelFile:
     return ModelFile.model_validate(_rounded(trimmed.model_dump()))
 
 
+def finalize_strata(strata: StrataFile) -> StrataFile:
+    """Round every float the same way as the model (``_rounded``)."""
+    return StrataFile.model_validate(_rounded(strata.model_dump()))
+
+
 def write_model(path: Path, model: ModelFile) -> Path:
     return _write_json(path, model.model_dump(mode="json"))
 
@@ -151,10 +156,11 @@ def write_exports(
     values: ValuesFile,
     topology: dict[str, Any],
     model: ModelFile,
+    strata: StrataFile,
     *,
     staging: Path,
 ) -> list[Path]:
-    """Write the four web files, replacing the previous export only once all four are written.
+    """Write the five web files, replacing the previous export only once all five are written.
 
     Each file is written to a temporary directory under ``staging``. ``staging`` must be
     outside the site's public folder (the CLI uses ``data/interim``): Vite copies
@@ -163,7 +169,7 @@ def write_exports(
 
     The files are then moved into place one at a time. On one filesystem each move is a
     rename; across filesystems it is a copy beside the target and then a rename, so no
-    file is ever seen half-written. The moves are still four steps, so a crash, or an
+    file is ever seen half-written. The moves are still five steps, so a crash, or an
     error such as a full disk on the copy path, between two of them leaves a mix of old
     and new files. An error raises ExportError naming the files already replaced.
     """
@@ -178,6 +184,7 @@ def write_exports(
             _write_json(tmp / "values.json", values.model_dump(mode="json")),
             _write_json(tmp / "counties.topojson", topology),
             write_model(tmp / "model.json", model),
+            _write_json(tmp / "strata.json", strata.model_dump(mode="json")),
         ]
         final: list[Path] = []
         for path in written:

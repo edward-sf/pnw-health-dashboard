@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { HATCH_FILL } from "../color/makeColorScale";
+import { HATCH_BACKGROUND, HATCH_FILL } from "../color/makeColorScale";
 import { lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import {
   countyModel,
@@ -37,7 +37,7 @@ test("labels", () => {
 test("fills are distinct, differ from the hatch base, and insufficient_data is the hatch", () => {
   const fills = TIERS.map(tierFill);
   expect(new Set(fills).size).toBe(5);
-  for (const f of fills) expect(f).not.toBe("#f2f2f2");
+  for (const f of fills) expect(f).not.toBe(HATCH_BACKGROUND);
   expect(tierFill("notably_better")).toBe("#0571b0");
   expect(tierFill("insufficient_data")).toBe(HATCH_FILL);
 });

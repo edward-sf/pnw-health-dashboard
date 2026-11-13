@@ -234,6 +234,7 @@
   category: Outcomes
   direction: higher_is_better
   description: Average number of years a person can expect to live.
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: premature_death
   label: Premature death (years lost)
@@ -246,6 +247,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Years of potential life lost before age 75 per 100,000 population (age-adjusted).
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: low_birth_weight
   label: Low birth weight
@@ -259,6 +261,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Percent of live births with low birth weight (under 2,500 grams).
+  race_groups: [aian, asian, black, hispanic, nhopi, white, tom]
 
 - id: injury_deaths
   label: Injury deaths
@@ -271,6 +274,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Number of deaths due to injury per 100,000 population.
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: primary_care_physicians
   label: Primary care physicians
@@ -322,6 +326,8 @@
   category: Access
   direction: higher_is_worse
   description: Hospital stays for ambulatory-care sensitive conditions per 100,000 Medicare enrollees.
+  race_groups: [aian, asian, black, hispanic, white]
+  race_labels: {asian: Asian and Pacific Islander}
 
 - id: food_insecurity
   label: Food insecurity
@@ -362,6 +368,32 @@
   direction: neutral
   description: Percent of the population living in a rural area.
 
+- id: total_population
+  label: Total population
+  unit: count
+  source: acs
+  source_field: DP05_0001E
+  moe_field: DP05_0001M
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Total number of residents.
+  profile: population
+
+- id: age_under_18
+  label: Under 18
+  unit: percent
+  source: acs
+  source_field: DP05_0019PE
+  moe_field: DP05_0019PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is under age 18.
+  profile: age_sex
+
 - id: age_65_plus
   label: Age 65 and older
   unit: percent
@@ -373,6 +405,20 @@
   category: Social & Economic
   direction: neutral
   description: Percent of the total population that is age 65 or older.
+  profile: age_sex
+
+- id: pct_female
+  label: Female
+  unit: percent
+  source: acs
+  source_field: DP05_0003PE
+  moe_field: DP05_0003PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population that is female.
+  profile: age_sex
 
 - id: pct_hispanic
   label: Hispanic or Latino (any race)
@@ -385,6 +431,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is Hispanic or Latino, of any race.
+  profile: race
 
 - id: pct_white
   label: White, not Hispanic
@@ -397,6 +444,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports White alone.
+  profile: race
 
 - id: pct_black
   label: Black, not Hispanic
@@ -409,6 +457,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports Black or African American alone.
+  profile: race
 
 - id: pct_aian
   label: American Indian and Alaska Native, not Hispanic
@@ -421,6 +470,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports American Indian and Alaska Native alone.
+  profile: race
 
 - id: pct_asian
   label: Asian, not Hispanic
@@ -433,6 +483,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports Asian alone.
+  profile: race
 
 - id: pct_nhpi
   label: Native Hawaiian and Pacific Islander, not Hispanic
@@ -445,6 +496,7 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports Native Hawaiian and Other Pacific Islander alone.
+  profile: race
 
 - id: pct_two_or_more
   label: Two or more races, not Hispanic
@@ -457,3 +509,59 @@
   category: Demographics
   direction: neutral
   description: Percent of the total population that is not Hispanic or Latino and reports two or more races.
+  profile: race
+
+- id: pct_disability
+  label: With a disability
+  unit: percent
+  source: acs
+  source_field: DP02_0072PE
+  moe_field: DP02_0072PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the civilian noninstitutionalized population with a disability.
+  profile: other
+  universe: Civilian noninstitutionalized population
+
+- id: pct_veterans
+  label: Veterans
+  unit: percent
+  source: acs
+  source_field: DP02_0070PE
+  moe_field: DP02_0070PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the civilian population 18 and over who are veterans.
+  profile: other
+  universe: Civilian population 18 and over
+
+- id: pct_foreign_born
+  label: Born outside the US
+  unit: percent
+  source: acs
+  source_field: DP02_0094PE
+  moe_field: DP02_0094PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the total population born outside the United States.
+  profile: other
+
+- id: pct_limited_english
+  label: Speaks English less than "very well"
+  unit: percent
+  source: acs
+  source_field: DP02_0115PE
+  moe_field: DP02_0115PM
+  ci_level: 0.9
+  year: 2024
+  category: Demographics
+  direction: neutral
+  description: Percent of the population 5 and over who speak English less than very well.
+  profile: other
+  universe: Population 5 and over

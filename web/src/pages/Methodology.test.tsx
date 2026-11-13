@@ -3,12 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, test, vi } from "vitest";
 import type { DataState } from "../data/useData";
-import { manifest, model, topology, values } from "../test/fixtures";
+import { manifest, model, strata, topology, values } from "../test/fixtures";
 import { Methodology } from "./Methodology";
 
 const ready: DataState = {
   status: "ready",
-  data: { manifest, model, topology, values },
+  data: { manifest, model, strata, topology, values },
 };
 
 const ANCHORS = [
@@ -19,6 +19,7 @@ const ANCHORS = [
   "missing-data",
   "suppression",
   "unreliable",
+  "race-breakdown",
   "model",
   "exclusions",
   "similar-counties",
@@ -136,7 +137,7 @@ test("falls back to the first target when life_expectancy is absent", () => {
   );
   const without: DataState = {
     status: "ready",
-    data: { manifest, topology, values, model: { ...model, targets: rest } },
+    data: { manifest, topology, values, strata, model: { ...model, targets: rest } },
   };
   at(without);
   expect(screen.getByRole("heading", { name: "Methodology" })).toBeInTheDocument();

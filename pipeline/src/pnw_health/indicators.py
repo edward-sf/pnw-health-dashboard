@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 from pnw_health.errors import InputError
@@ -15,7 +15,10 @@ from pnw_health.errors import InputError
 Unit = Literal["percent", "dollars", "years", "rate_per_100k", "count"]
 Category = Literal["Outcomes", "Behaviors", "Access", "Social & Economic", "Demographics"]
 Direction = Literal["higher_is_better", "higher_is_worse", "neutral"]
+Profile = Literal["population", "age_sex", "race", "other"]
 Source = Literal["acs", "places", "chr"]
+# CHR race and ethnicity groups (M10 spec §2), in display order.
+RaceGroup = Literal["aian", "asian", "black", "hispanic", "nhopi", "white", "tom"]
 
 DEFAULT_CATALOG = Path(__file__).with_name("indicators.yaml")
 
@@ -35,6 +38,28 @@ class Indicator(BaseModel):
     category: Category
     direction: Direction
     description: str
+    profile: Profile | None = None
+    universe: str | None = None
+    # The groups CHR breaks this measure down by; pipeline-only, exported in strata.json.
+    race_groups: SkipJsonSchema[tuple[RaceGroup, ...] | None] = Field(default=None, exclude=True)
+    # Per-measure label overrides for some of those groups (CMS's "Asian" is Asian and
+    # Pacific Islander); pipeline-only, exported as the strata indicator's ``labels``.
+    race_labels: SkipJsonSchema[dict[RaceGroup, str] | None] = Field(default=None, exclude=True)
+
+    @model_validator(mode="after")
+    def _race_groups_only_on_chr(self) -> Self:
+        if self.race_groups is not None:
+            if self.source != "chr":
+                raise ValueError(f"{self.id}: race_groups is only allowed on source chr")
+            if len(set(self.race_groups)) != len(self.race_groups):
+                raise ValueError(f"{self.id}: race_groups has duplicates")
+        if self.race_labels:
+            unlisted = sorted(set(self.race_labels) - set(self.race_groups or ()))
+            if unlisted:
+                raise ValueError(
+                    f"{self.id}: race_labels for groups not in race_groups: {', '.join(unlisted)}"
+                )
+        return self
 
 
 def load_catalog(path: Path | None = None) -> list[Indicator]:

@@ -1,14 +1,16 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 import { countyModel } from "../model/modelView";
-import { manifest, lifeExpectancy as model, values } from "../test/fixtures";
+import { manifest, lifeExpectancy as model, prematureDeath, strata, values } from "../test/fixtures";
 import { model as modelFile } from "../test/fixtures/model";
-import type { Peers } from "../types";
+import type { Peers, StrataFile, ValuesFile } from "../types";
 import { mockMatchMedia } from "../test/matchMedia";
 import type { County, Indicator } from "../types";
 import { CountyPanel } from "./CountyPanel";
+
+const targetIndicator = manifest.indicators.find((i) => i.id === "life_expectancy") as Indicator;
 
 const counties: County[] = [
   { fips: "53033", name: "King", state: "WA" },
@@ -30,6 +32,8 @@ function setup(fips: string, indicatorId: string, modelMode = false, peers: Peer
         target={model}
         manifest={manifest}
         values={values}
+        strata={strata}
+        targetIndicator={targetIndicator}
         modelMode={modelMode}
         peers={peers}
         onSelectCounty={() => {}}
@@ -82,6 +86,8 @@ test("suppressed county", () => {
         target={model}
         manifest={manifest}
         values={values}
+        strata={strata}
+        targetIndicator={targetIndicator}
         modelMode={false}
         peers={modelFile.peers}
         onSelectCounty={() => {}}
@@ -147,6 +153,8 @@ test("strip plot summary omitted for a null selection", () => {
         target={model}
         manifest={manifest}
         values={values}
+        strata={strata}
+        targetIndicator={targetIndicator}
         modelMode={false}
         peers={modelFile.peers}
         onSelectCounty={() => {}}
@@ -196,6 +204,8 @@ describe("phone sheet", () => {
         target={model}
         manifest={manifest}
         values={values}
+        strata={strata}
+        targetIndicator={targetIndicator}
         modelMode={false}
         peers={modelFile.peers}
         onSelectCounty={() => {}}
@@ -322,4 +332,153 @@ describe("similar counties", () => {
     expect(screen.getByText("Not enough data to find similar counties.")).toBeInTheDocument();
     expect(screen.queryByRole("table", { name: /Similar counties/ })).not.toBeInTheDocument();
   });
+});
+
+describe("race breakdown", () => {
+  const lifeEntries = {
+    "53033": { v: 80.4, lo: 80.1, hi: 80.7, rank: 1, state_rank: 1 },
+  };
+  const prematureIndicator: Indicator = {
+    ...targetIndicator,
+    id: "premature_death",
+    label: "Premature death",
+    unit: "rate_per_100k",
+    source_field: "v001_rawvalue",
+    direction: "higher_is_worse",
+  };
+  const prematureEntries = {
+    "53033": { v: 5200, lo: 5100, hi: 5300, rank: 1, state_rank: 1 },
+  };
+  const withValues: ValuesFile = { ...values, life_expectancy: lifeEntries, premature_death: prematureEntries };
+  const withStrata: StrataFile = {
+    ...strata,
+    indicators: {
+      ...strata.indicators,
+      premature_death: {
+        groups: ["white", "black", "hispanic"],
+        counties: {
+          "53033": {
+            white: { v: 5000, lo: 4900, hi: 5100 },
+            black: { v: 8100, lo: 7400, hi: 8800 },
+            hispanic: null,
+          },
+        },
+      },
+    },
+  };
+  const panel = (opts: {
+    indicatorId: string;
+    modelMode: boolean;
+    target?: Indicator | undefined;
+    targetModel?: typeof model;
+    fips?: string;
+  }) => {
+    const indicator =
+      opts.indicatorId === "premature_death"
+        ? prematureIndicator
+        : (manifest.indicators.find((i) => i.id === opts.indicatorId) as Indicator);
+    const tm = opts.targetModel ?? model;
+    const fips = opts.fips ?? "53033";
+    return (
+      <MemoryRouter>
+        <CountyPanel
+          county={counties.find((c) => c.fips === fips)!}
+          indicator={indicator}
+          entries={withValues[opts.indicatorId]!}
+          counties={counties}
+          modelEntry={countyModel(tm, fips)}
+          target={tm}
+          manifest={manifest}
+          values={withValues}
+          strata={withStrata}
+          targetIndicator={"target" in opts ? opts.target : targetIndicator}
+          modelMode={opts.modelMode}
+          peers={modelFile.peers}
+          onSelectCounty={() => {}}
+          focusRequested={false}
+          onFocusHandled={() => {}}
+          onClose={() => {}}
+        />
+      </MemoryRouter>
+    );
+  };
+  const breakdowns = () => screen.queryAllByRole("region", { name: /^By race and ethnicity/ });
+
+  test("explore mode: breakdown for the selected indicator, under its value", () => {
+    render(panel({ indicatorId: "life_expectancy", modelMode: false }));
+    const [section] = breakdowns();
+    expect(breakdowns()).toHaveLength(1);
+    expect(section).toHaveTextContent(/County overall\s*80\.4 years/);
+    const value = document.querySelector(".panel-value")!;
+    const ci = document.querySelector(".panel-ci")!;
+    const ranks = document.querySelector(".panel-ranks")!;
+    expect(precedes(value, section!)).toBe(true);
+    expect(precedes(ci, section!)).toBe(true);
+    expect(precedes(ranks, section!)).toBe(true);
+    expect(ranks.nextElementSibling).toBe(section);
+    const strip = screen.getByRole("region", { name: "Distribution across counties" });
+    expect(precedes(section!, strip)).toBe(true);
+  });
+
+  test("explore mode: no breakdown for an indicator without strata", () => {
+    render(panel({ indicatorId: "poverty_rate", modelMode: false }));
+    expect(breakdowns()).toHaveLength(0);
+  });
+
+  test("model mode: breakdown for the target, right after the model card, and none in the indicator section", () => {
+    render(panel({ indicatorId: "life_expectancy", modelMode: true }));
+    expect(breakdowns()).toHaveLength(1);
+    const [section] = breakdowns();
+    const card = screen.getByRole("heading", { level: 3, name: "Life expectancy model" });
+    const cardSection = card.closest("section")!;
+    expect(cardSection.nextElementSibling).toBe(section);
+    const measure = document.querySelector(".panel-measure")!;
+    expect(precedes(section!, measure)).toBe(true);
+    // The overall row repeats the target's value from values.json.
+    expect(section).toHaveTextContent(/County overall\s*80\.4 years/);
+  });
+
+  test("model mode: the breakdown follows the target, not the explore indicator", () => {
+    render(panel({ indicatorId: "poverty_rate", modelMode: true }));
+    expect(breakdowns()).toHaveLength(1);
+    expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
+  });
+
+  test("model mode with a different target re-renders for that target", () => {
+    const { rerender } = render(panel({ indicatorId: "poverty_rate", modelMode: true }));
+    expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
+    rerender(
+      panel({
+        indicatorId: "poverty_rate",
+        modelMode: true,
+        target: prematureIndicator,
+        targetModel: prematureDeath,
+      }),
+    );
+    expect(breakdowns()).toHaveLength(1);
+    const section = breakdowns()[0]!;
+    expect(section).toHaveTextContent(/County overall\s*5,200\.0 per 100k/);
+    expect(section).toHaveTextContent(/Black\s*8,100\.0 per 100k/);
+    expect(section).toHaveTextContent("Not reported: Hispanic.");
+    expect(section).not.toHaveTextContent("years");
+  });
+
+  test("model mode without a target indicator shows no breakdown", () => {
+    render(panel({ indicatorId: "life_expectancy", modelMode: true, target: undefined }));
+    expect(breakdowns()).toHaveLength(0);
+  });
+
+  // Chugach has no strata entries, so every group is unreported, as in the real data.
+  test.each([false, true])(
+    "all groups unreported: only the not-reported note (model mode %s)",
+    (modelMode) => {
+      render(panel({ indicatorId: "life_expectancy", modelMode, fips: "02063" }));
+      expect(breakdowns()).toHaveLength(1);
+      const section = breakdowns()[0]!;
+      expect(within(section).queryAllByRole("listitem")).toHaveLength(0);
+      expect(section).not.toHaveTextContent("County overall");
+      expect(section).toHaveTextContent("Not reported: White, Black, Hispanic.");
+      expect(section).toHaveTextContent(/too few cases to give a stable figure/);
+    },
+  );
 });

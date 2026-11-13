@@ -1,5 +1,8 @@
 const HEX = /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/;
 
+/** True for a `#rrggbb` colour, the only form `contrastRatio` accepts. */
+export const isHexColor = (color: string): boolean => HEX.test(color);
+
 function luminance(color: string): number {
   const m = HEX.exec(color);
   if (!m) throw new Error(`expected a #rrggbb colour, got "${color}"`);

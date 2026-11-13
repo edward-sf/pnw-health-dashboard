@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "StrataGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "aian",
+            "asian",
+            "black",
+            "hispanic",
+            "nhopi",
+            "white",
+            "tom"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "StrataGroup",
+      "type": "object"
+    },
+    "StrataIndicator": {
+      "additionalProperties": false,
+      "description": "``counties`` is ``{fips: {group: entry, or None where CHR reports no value}}``.\n\n``labels`` holds only this measure's overrides of the file-level group labels.",
+      "properties": {
+        "counties": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/StratumEntry"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "aian",
+                "asian",
+                "black",
+                "hispanic",
+                "nhopi",
+                "white",
+                "tom"
+              ]
+            },
+            "type": "object"
+          },
+          "title": "Counties",
+          "type": "object"
+        },
+        "groups": {
+          "items": {
+            "enum": [
+              "aian",
+              "asian",
+              "black",
+              "hispanic",
+              "nhopi",
+              "white",
+              "tom"
+            ],
+            "type": "string"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "propertyNames": {
+            "enum": [
+              "aian",
+              "asian",
+              "black",
+              "hispanic",
+              "nhopi",
+              "white",
+              "tom"
+            ]
+          },
+          "title": "Labels",
+          "type": "object"
+        }
+      },
+      "required": [
+        "groups",
+        "counties"
+      ],
+      "title": "StrataIndicator",
+      "type": "object"
+    },
+    "StratumEntry": {
+      "additionalProperties": false,
+      "description": "One race group's value for one county. Never ranked, never mapped (M10 spec \u00a71).",
+      "properties": {
+        "hi": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hi"
+        },
+        "lo": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Lo"
+        },
+        "unreliable": {
+          "default": false,
+          "title": "Unreliable",
+          "type": "boolean"
+        },
+        "v": {
+          "title": "V",
+          "type": "number"
+        }
+      },
+      "required": [
+        "v",
+        "lo",
+        "hi"
+      ],
+      "title": "StratumEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "``strata.json``: CHR outcomes by race and ethnicity for the display counties.",
+  "properties": {
+    "dimension": {
+      "const": "race",
+      "title": "Dimension",
+      "type": "string"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/StrataGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "indicators": {
+      "additionalProperties": {
+        "$ref": "#/$defs/StrataIndicator"
+      },
+      "title": "Indicators",
+      "type": "object"
+    },
+    "source": {
+      "const": "chr",
+      "title": "Source",
+      "type": "string"
+    },
+    "year": {
+      "title": "Year",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "dimension",
+    "source",
+    "year",
+    "groups",
+    "indicators"
+  ],
+  "title": "StrataFile",
+  "type": "object"
+}

@@ -3,12 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { expect, test } from "vitest";
 import { HATCH_FILL } from "../color/makeColorScale";
-import { manifest, model, prematureDeath, topology, values } from "../test/fixtures";
+import { manifest, model, prematureDeath, strata, topology, values } from "../test/fixtures";
 import { tierFill } from "../model/modelView";
 import { mockMatchMedia } from "../test/matchMedia";
 import { Explorer } from "./Explorer";
 
-function setup(url = "/", data = { manifest, values, topology, model }) {
+function setup(url = "/", data = { manifest, values, topology, model, strata }) {
   const router = createMemoryRouter(
     [
       {
@@ -249,7 +249,7 @@ const twoTargets = {
 
 function setupTwo(url: string) {
   const router = createMemoryRouter(
-    [{ path: "/", element: <Explorer data={{ manifest, values, topology, model: twoTargets }} /> }],
+    [{ path: "/", element: <Explorer data={{ manifest, values, topology, model: twoTargets, strata }} /> }],
     { initialEntries: [url] },
   );
   render(<RouterProvider router={router} />);
@@ -388,6 +388,14 @@ test("the skip link works in model table view with a county open, and keeps c", 
   expect(router.state.location.hash).toBe("");
 });
 
+test("the skip link falls back to the plain anchor when the search isn't there", () => {
+  setup("/?i=poverty_rate");
+  // Stand-in for a render without the search: its id no longer matches the link's target.
+  screen.getByRole("combobox", { name: "Search counties" }).id = "elsewhere";
+  // fireEvent.click returns false only when a handler called preventDefault().
+  expect(fireEvent.click(screen.getByRole("link", { name: "Skip to county search" }))).toBe(true);
+});
+
 test("switching to model mode with a county open puts the card first and keeps focus", async () => {
   const router = setup("/?c=53033");
   const user = userEvent.setup();
@@ -428,7 +436,7 @@ test.each([
 ])("the model subtitle for %s reads without parentheses", (id, name) => {
   const injury = { ...prematureDeath, label: "Injury deaths" };
   const withInjury = { ...model, targets: { ...model.targets, injury_deaths: injury } };
-  setup(`/?mode=model&t=${id}`, { manifest, values, topology, model: withInjury });
+  setup(`/?mode=model&t=${id}`, { manifest, values, topology, model: withInjury, strata });
   const text = document.querySelector(".indicator-description")!.textContent!;
   expect(text).toContain(`How each county compares on ${name} with what the model expects`);
   expect(text).not.toContain("(");

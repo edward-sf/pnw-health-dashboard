@@ -1,6 +1,6 @@
 # PNW Health Dashboard
 
-Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county's life expectancy, premature death or injury deaths compares with what a model expects from its social and economic profile.
+Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county compares with what a model expects on life expectancy, premature death or injury deaths, given its social and economic profile.
 
 [![CI](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml)
 [![Build and deploy](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml)
@@ -15,6 +15,8 @@ Explore public health data for the 149 counties of Washington, Oregon, Idaho and
 - **Explorer.** A county map and sortable table of health, access and social indicators, with confidence intervals and state and regional ranks. Selecting a county opens a panel with its values and a comparison against the other counties.
 - **Model mode.** A model trained on all US counties estimates each county's value for one of three County Health Rankings outcomes (life expectancy by default, premature death, injury deaths) from social and economic factors. The map shows how far the actual value sits above or below the estimate, and the county panel lists the factors associated with the estimate.
 - **Similar counties.** The county panel lists the nearest Pacific Northwest counties on social and economic factors, with their values side by side.
+- **Race breakdown.** For five County Health Rankings outcomes (life expectancy, premature death, injury deaths, low birth weight, preventable hospital stays), the county panel shows the value for each race and ethnicity group CHR reports, with its confidence interval, and names the groups it does not. The breakdown is never mapped or ranked.
+- **Who lives here.** The county panel also profiles who lives in the county from Census ACS estimates: total population, age and sex, race and ethnicity, disability, veterans, birthplace and English ability. These Demographics indicators describe the population and are never model features.
 - **Methodology.** The [methodology page](https://edward-sf.github.io/pnw-health-dashboard/methodology) covers data sources and vintages, harmonization rules, the model and its card, and the caveats. Read it before drawing conclusions: the factors are associated with the estimate, not shown to cause it.
 
 ## Architecture
@@ -26,7 +28,7 @@ flowchart LR
     raw[("data/raw/ cache")]
     harmonize["harmonize"]
     model["model"]
-    export["export: 4 files in web/public/data/"]
+    export["export: 5 files in web/public/data/"]
     build["Vite build"]
     pages["GitHub Pages"]
     src --> fetch --> raw --> harmonize --> model --> export --> build --> pages
@@ -35,8 +37,8 @@ flowchart LR
 - **fetch** downloads each source nationally and caches it in `data/raw/`, so reruns skip the network.
 - **harmonize** puts every source on one set of county FIPS codes, handles the Alaska county split, and produces a tidy table. Validation aborts the run if the counts or value ranges are wrong.
 - **model** trains ridge and LightGBM models with 5-fold cross-validation grouped by state, then computes out-of-fold residuals, flags and SHAP contributions.
-- **export** writes `manifest.json`, `values.json`, `counties.topojson` and `model.json`. The three JSON files are checked against JSON Schemas in `schema/`.
-- **Vite build and GitHub Pages** produce a static site that reads only those four files. The web app knows nothing about the sources.
+- **export** writes `manifest.json`, `values.json`, `counties.topojson`, `model.json` and `strata.json` (the CHR race breakdown, never mapped or ranked). The four JSON files are checked against JSON Schemas in `schema/`.
+- **Vite build and GitHub Pages** produce a static site that reads only those five files. The web app knows nothing about the sources.
 
 ## Repo layout
 
@@ -44,7 +46,7 @@ flowchart LR
 |---|---|
 | `pipeline/` | Python 3.12 package (managed with uv): sources, harmonization, model, export, tests |
 | `web/` | React and Vite site, unit tests (Vitest) and end-to-end tests (Playwright) |
-| `schema/` | JSON Schemas for the three exported JSON files |
+| `schema/` | JSON Schemas for the four exported JSON files (manifest, values, model, strata) |
 | `docs/` | Design specs, plans and review templates |
 | `data/raw/` | Cached source downloads (git-ignored) |
 | `.github/workflows/` | `ci.yml` (CI) and `build-deploy.yml` (Build and deploy) |

@@ -1,14 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { manifest, model, topology, values } from "../test/fixtures";
-import { loadData, SUPPORTED_SCHEMA_MAJOR } from "./loadData";
+import { manifest, model, strata, topology, values } from "../test/fixtures";
+import { LOAD_TIMEOUT_MS, loadData, SUPPORTED_SCHEMA_MAJOR } from "./loadData";
 
 const bodies: Record<string, unknown> = {
   "manifest.json": manifest,
   "values.json": values,
   "counties.topojson": topology,
   "model.json": model,
+  "strata.json": strata,
 };
 
 let fetched: string[];
@@ -46,6 +47,21 @@ describe("loadData", () => {
     const data = await loadData("/pnw-health-dashboard/");
     expect(fetched).toContain("/pnw-health-dashboard/data/model.json");
     expect(data.model).toEqual(model);
+  });
+
+  it("returns strata with the other files", async () => {
+    const data = await loadData("/pnw-health-dashboard/");
+    expect(fetched).toContain("/pnw-health-dashboard/data/strata.json");
+    expect(data.strata).toEqual(strata);
+  });
+
+  it.each([
+    ["no indicators", { ...strata, indicators: undefined }],
+    ["no groups", { ...strata, groups: undefined }],
+    ["an empty object", {}],
+  ])("rejects a strata.json with %s", async (_name, body) => {
+    stubFetch({ "strata.json": body });
+    await expect(loadData("/")).rejects.toThrow(/strata\.json/);
   });
 
   it("rejects when model.json fails", async () => {
@@ -103,5 +119,45 @@ describe("loadData", () => {
 
   it("uses a fixture manifest of the supported major", () => {
     expect(manifest.schema_version.split(".")[0]).toBe(String(SUPPORTED_SCHEMA_MAJOR));
+  });
+
+  describe("when the fetches never settle", () => {
+    let signals: AbortSignal[];
+    beforeEach(() => {
+      vi.useFakeTimers();
+      signals = [];
+      // A fetch that never resolves or rejects, even when aborted.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_url: string, init?: RequestInit) => {
+          signals.push(init?.signal as AbortSignal);
+          return new Promise<Response>(() => {});
+        }),
+      );
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it("gives up after LOAD_TIMEOUT_MS with a clear message, and aborts the fetches", async () => {
+      expect(LOAD_TIMEOUT_MS).toBe(30_000);
+      const result = loadData("/");
+      const settled = vi.fn();
+      result.catch(settled);
+      await vi.advanceTimersByTimeAsync(LOAD_TIMEOUT_MS - 1);
+      expect(settled).not.toHaveBeenCalled();
+      expect(signals.some((s) => s.aborted)).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(result).rejects.toThrow(
+        "Loading the data took too long. Reload the page to try again.",
+      );
+      expect(signals).toHaveLength(5);
+      expect(signals.every((s) => s.aborted)).toBe(true);
+    });
+
+    it("passes the caller's abort on to the fetches", async () => {
+      const controller = new AbortController();
+      void loadData("/", controller.signal).catch(() => {});
+      controller.abort();
+      expect(signals.every((s) => s.aborted)).toBe(true);
+    });
   });
 });

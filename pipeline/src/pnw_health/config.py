@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pnw_health.errors import InputError
+from pnw_health.indicators import RaceGroup
 
 STATES: dict[str, str] = {"53": "WA", "41": "OR", "16": "ID", "02": "AK"}
 EXPECTED_COUNTY_COUNTS: dict[str, int] = {"WA": 39, "OR": 36, "ID": 44, "AK": 30}
@@ -21,7 +22,17 @@ CHR_FILES: dict[int, str] = {2025: "analytic_data2025_v3.csv", 2023: "analytic_d
 GEO_YEAR = 2024
 # Valdez-Cordova Census Area, split in 2019 into Chugach (02063) and Copper River (02066).
 VALDEZ_CORDOVA_FIPS = "02261"
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
+# strata.json group labels, in display order (M10 spec §4.3).
+RACE_GROUP_LABELS: dict[RaceGroup, str] = {
+    "aian": "American Indian and Alaska Native",
+    "asian": "Asian",
+    "black": "Black",
+    "hispanic": "Hispanic or Latino",
+    "nhopi": "Native Hawaiian and Pacific Islander",
+    "white": "White",
+    "tom": "Two or more races",
+}
 
 
 @dataclass(frozen=True)
