@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { manifest, model, topology, values } from "../test/fixtures";
+import { manifest, model, strata, topology, values } from "../test/fixtures";
 import { loadData, SUPPORTED_SCHEMA_MAJOR } from "./loadData";
 
 const bodies: Record<string, unknown> = {
@@ -9,6 +9,7 @@ const bodies: Record<string, unknown> = {
   "values.json": values,
   "counties.topojson": topology,
   "model.json": model,
+  "strata.json": strata,
 };
 
 let fetched: string[];
@@ -46,6 +47,21 @@ describe("loadData", () => {
     const data = await loadData("/pnw-health-dashboard/");
     expect(fetched).toContain("/pnw-health-dashboard/data/model.json");
     expect(data.model).toEqual(model);
+  });
+
+  it("returns strata with the other files", async () => {
+    const data = await loadData("/pnw-health-dashboard/");
+    expect(fetched).toContain("/pnw-health-dashboard/data/strata.json");
+    expect(data.strata).toEqual(strata);
+  });
+
+  it.each([
+    ["no indicators", { ...strata, indicators: undefined }],
+    ["no groups", { ...strata, groups: undefined }],
+    ["an empty object", {}],
+  ])("rejects a strata.json with %s", async (_name, body) => {
+    stubFetch({ "strata.json": body });
+    await expect(loadData("/")).rejects.toThrow(/strata\.json/);
   });
 
   it("rejects when model.json fails", async () => {

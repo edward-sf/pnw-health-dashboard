@@ -8,7 +8,7 @@ const schemaDir = resolve(here, "../../schema");
 const outDir = resolve(here, "../src/types/generated");
 
 await mkdir(outDir, { recursive: true });
-for (const name of ["manifest", "model", "values"]) {
+for (const name of ["manifest", "model", "strata", "values"]) {
   const ts = await compileFromFile(resolve(schemaDir, `${name}.schema.json`), {
     cwd: schemaDir,
     additionalProperties: false,

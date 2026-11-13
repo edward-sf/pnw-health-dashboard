@@ -4,12 +4,13 @@ import {
   lifeExpectancy as target,
   manifest,
   model,
+  strata,
   topology,
   values,
 } from "../../test/fixtures";
 import { AtAGlance } from "./AtAGlance";
 
-const data = { manifest, model, topology, values };
+const data = { manifest, model, strata, topology, values };
 
 test("summarizes coverage, accuracy and the top factors", () => {
   render(<AtAGlance data={data} />);
