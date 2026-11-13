@@ -43,7 +43,7 @@ CHR splits five of the indicators we already show by race:
 | Injury deaths (`injury_deaths`) | `v135` | 47 | 16 | 20 | 62 | 7 | 126 | — |
 | Preventable hospital stays (`preventable_hospital_stays`) | `v005` | 43 | 18 | 22 | 46 | — | 125 | — |
 
-Counts are PNW counties with a value. "—" means CHR publishes no column for that group and measure. NHPI has no Idaho values for any measure.
+Counts are PNW counties with a value. "—" means CHR publishes no column for that group and measure. NHPI has one Idaho value: Ada County (16001), low birth weight.
 
 Column shape: `{stem}_race_{group}` with `_cilow` / `_cihigh` beside it, group ∈ `aian, asian, black, hispanic, nhopi, white, tom`. Only `v001` also has `{stem}_race_{group}_flag` (`1` = unreliable, `2` = suppressed, blank = no flag). For the other four, a blank value can't be told apart from "not computed"; the UI treats both as "not reported" (§5.2).
 
@@ -55,7 +55,7 @@ Column shape: `{stem}_race_{group}` with `_cilow` / `_cihigh` beside it, group �
 |---|---|---|
 | **A (chosen)** | A fifth export file, `strata.json`, holding only the race breakdown | One more file and schema. Existing files and consumers are untouched, and "never mapped, never ranked" is enforced by where the data lives. |
 | B | An optional `by_race` block on each `values.json` entry | No new file, but changes the shape every part of the site reads, and mixes ranked and never-ranked values in one record. |
-| C | Each group as its own catalog indicator (`life_expectancy_aian`, …) | Map, ranks and picker would work for free, which is exactly what §1 rules out. About 30 new picker entries, and the per-state coverage check fails (no NHPI in Idaho). |
+| C | Each group as its own catalog indicator (`life_expectancy_aian`, …) | Map, ranks and picker would work for free, which is exactly what §1 rules out. About 30 new picker entries, and the per-state coverage check fails (NHPI has almost no Idaho values). |
 
 The author picked A.
 

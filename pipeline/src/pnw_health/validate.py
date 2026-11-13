@@ -6,8 +6,8 @@ from collections import Counter
 
 import pandas as pd
 
-from pnw_health.config import EXPECTED_COUNTY_COUNTS, STATES, state_abbr
-from pnw_health.contract import CountyModel, ModelFile, Peers, TargetModel
+from pnw_health.config import EXPECTED_COUNTY_COUNTS, RACE_GROUP_LABELS, STATES, state_abbr
+from pnw_health.contract import CountyModel, ModelFile, Peers, StrataFile, TargetModel
 from pnw_health.errors import PipelineError
 from pnw_health.indicators import Indicator
 from pnw_health.model.config import (
@@ -292,5 +292,92 @@ def validate_model(
         for problem in _validate_target(target_id, target, values, county_fips, catalog)
     ]
     problems.extend(_peer_problems(model.peers, county_fips))
+    if problems:
+        raise DataValidationError(problems)
+
+
+def _strata_range(ind: Indicator) -> tuple[float, float | None, str] | None:
+    """Valid range for a strata value or CI bound (M10 spec §4.5).
+
+    Unlike display values, years have no upper bound: a small group's life expectancy
+    interval can pass 120 (CHR 2025 has PNW upper bounds near 161).
+    """
+    if ind.unit == "percent":
+        return 0.0, 100.0, "outside [0, 100]"
+    if ind.unit == "years" or ind.unit in NON_NEGATIVE_UNITS:
+        return 0.0, None, "negative"
+    return None
+
+
+def _strata_entry_problems(strata: StrataFile, by_id: dict[str, Indicator]) -> list[str]:
+    """Interval and unit-range problems, one per offending entry value."""
+    problems: list[str] = []
+    for ind_id, entry in strata.indicators.items():
+        ind = by_id.get(ind_id)
+        limits = _strata_range(ind) if ind is not None else None
+        for fips, groups in sorted(entry.counties.items()):
+            for group, s in groups.items():
+                if s is None:
+                    continue
+                where = f"strata {ind_id} {fips} {group}"
+                if (s.lo is not None and s.lo > s.v) or (s.hi is not None and s.v > s.hi):
+                    problems.append(f"{where}: v {s.v} is outside its interval [{s.lo}, {s.hi}]")
+                if limits is None:
+                    continue
+                low, high, limit = limits
+                for x in (s.v, s.lo, s.hi):
+                    if x is not None and (x < low or (high is not None and x > high)):
+                        problems.append(f"{where}: {x} {limit}")
+    return problems
+
+
+def validate_strata(strata: StrataFile, county_fips: set[str], catalog: list[Indicator]) -> None:
+    """Check ``strata.json`` against the catalog and display counties (M10 spec §4.5).
+
+    No per-state coverage rule: partial coverage is the nature of this data. Collects
+    every problem, then raises DataValidationError once.
+    """
+    problems: list[str] = []
+    expected_groups = [(g, label) for g, label in RACE_GROUP_LABELS.items()]
+    if [(g.id, g.label) for g in strata.groups] != expected_groups:
+        problems.append("strata groups do not match RACE_GROUP_LABELS in display order")
+
+    by_id = {ind.id: ind for ind in catalog if ind.race_groups}
+    missing_ids = [i for i in by_id if i not in strata.indicators]
+    if missing_ids:
+        problems.append(
+            f"strata is missing catalog indicator(s) with race_groups: {', '.join(missing_ids)}"
+        )
+    extra_ids = [i for i in strata.indicators if i not in by_id]
+    if extra_ids:
+        problems.append(
+            f"strata has indicator(s) without catalog race_groups: {', '.join(extra_ids)}"
+        )
+
+    for ind_id, entry in strata.indicators.items():
+        name = f"strata {ind_id}"
+        ind = by_id.get(ind_id)
+        if ind is not None and entry.groups != list(ind.race_groups or ()):
+            problems.append(
+                f"{name}: groups {list(entry.groups)} do not match the catalog's race_groups "
+                f"{list(ind.race_groups or ())}"
+            )
+        missing = sorted(county_fips - set(entry.counties))
+        if missing:
+            problems.append(f"{name}: missing counties: {', '.join(missing)}")
+        outside = sorted(set(entry.counties) - county_fips)
+        if outside:
+            problems.append(f"{name}: counties outside the display set: {', '.join(outside)}")
+        mismatched = sorted(
+            f for f, groups in entry.counties.items() if list(groups) != list(entry.groups)
+        )
+        if mismatched:
+            problems.append(
+                f"{name}: counties whose groups do not match its groups: {', '.join(mismatched)}"
+            )
+        if not any(s is not None for groups in entry.counties.values() for s in groups.values()):
+            problems.append(f"{name}: no non-null values")
+
+    problems += _strata_entry_problems(strata, by_id)
     if problems:
         raise DataValidationError(problems)

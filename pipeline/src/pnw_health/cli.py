@@ -30,6 +30,7 @@ from pnw_health.errors import PipelineError
 from pnw_health.export import (
     build_values_file,
     finalize_model,
+    finalize_strata,
     write_exports,
     write_model,
 )
@@ -45,6 +46,7 @@ from pnw_health.sources.chr import (
     fetch_chr,
     parse_chr,
     parse_chr_legacy,
+    parse_chr_strata,
 )
 from pnw_health.sources.geo import (
     boundaries_cache_path,
@@ -54,7 +56,8 @@ from pnw_health.sources.geo import (
     to_topojson,
 )
 from pnw_health.sources.places import fetch_places, parse_places, places_cache_path, places_url
-from pnw_health.validate import validate_display, validate_model
+from pnw_health.strata import build_strata_file
+from pnw_health.validate import validate_display, validate_model, validate_strata
 
 app = typer.Typer(add_completion=False, help=__doc__)
 
@@ -102,7 +105,10 @@ def _harmonize(paths: Paths) -> None:
     catalog = load_catalog()
     acs = parse_acs(_require(acs_cache_path(paths.raw, catalog), "fetch"), catalog)
     places = parse_places(_require(places_cache_path(paths.raw, catalog), "fetch"), catalog)
-    chr_ = parse_chr(_require(chr_cache_path(paths.raw, CHR_YEAR), "fetch"), catalog)
+    chr_path = _require(chr_cache_path(paths.raw, CHR_YEAR), "fetch")
+    chr_ = parse_chr(chr_path, catalog)
+    # Strata bypass harmonize: no legacy values, never in long, ranks or the model.
+    strata = parse_chr_strata(chr_path, catalog)
     legacy = parse_chr_legacy(
         _require(chr_cache_path(paths.raw, CHR_LEGACY_YEAR), "fetch"), catalog
     )
@@ -110,6 +116,7 @@ def _harmonize(paths: Paths) -> None:
     paths.interim.mkdir(parents=True, exist_ok=True)
     result.values.to_parquet(paths.interim / "long.parquet", index=False)
     result.legacy.to_parquet(paths.interim / "legacy.parquet", index=False)
+    strata.to_parquet(paths.interim / "strata.parquet", index=False)
     warnings_path = paths.interim / "warnings.txt"
     warnings_path.write_text("".join(f"{w}\n" for w in result.warnings))
     typer.echo(f"harmonize: {len(result.warnings)} warning(s), see {warnings_path}", err=True)
@@ -156,6 +163,9 @@ def _export(paths: Paths) -> None:
             "error(s)); run `pnw-health run --stage model` first"
         ) from err
     validate_model(model, values, county_fips, catalog)
+    strata_rows = pnw_only(pd.read_parquet(_require(paths.interim / "strata.parquet", "harmonize")))
+    strata = build_strata_file(strata_rows, county_fips, catalog)
+    validate_strata(strata, county_fips, catalog)
 
     manifest = Manifest(
         schema_version=SCHEMA_VERSION,
@@ -173,7 +183,13 @@ def _export(paths: Paths) -> None:
     topology = to_topojson(counties)
     # Only after validation passed, and rounded only now: validation needs full precision.
     write_exports(
-        paths.out, manifest, values_file, topology, finalize_model(model), staging=paths.interim
+        paths.out,
+        manifest,
+        values_file,
+        topology,
+        finalize_model(model),
+        finalize_strata(strata),
+        staging=paths.interim,
     )
 
 

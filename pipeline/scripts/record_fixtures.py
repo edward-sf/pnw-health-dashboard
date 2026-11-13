@@ -101,8 +101,13 @@ def record_places_sample(client: httpx.Client | None = None) -> Path:
 
 
 def _record_chr_file(
-    c: httpx.Client, year: int, wanted: list[str], keep: Callable[[str], bool]
+    c: httpx.Client,
+    year: int,
+    wanted: list[str],
+    keep: Callable[[str], bool],
+    optional: list[str] | None = None,
 ) -> Path:
+    """Copy ``wanted`` columns (blank if absent) and the ``optional`` ones the file has."""
     catalog = load_catalog()
     with tempfile.TemporaryDirectory() as tmp:
         src = fetch_chr(c, Path(tmp), catalog, year)
@@ -110,6 +115,7 @@ def _record_chr_file(
             reader = csv.reader(fh)
             labels = next(reader)
             names = next(reader)
+            wanted = [*wanted, *(o for o in optional or [] if o in names)]
             index = [names.index(w) if w in names else None for w in wanted]
             fips_at = names.index("fipscode")
             rows = [
@@ -128,20 +134,25 @@ def _record_chr_file(
 def record_chr_sample(client: httpx.Client | None = None) -> list[Path]:
     """Save the CHR header rows and the catalog's columns for the current and legacy files.
 
-    The current file keeps PNW and sample counties; the 2023 file keeps only the retired
+    The current file keeps PNW and sample counties, plus the race-group columns it has
+    for each indicator with ``race_groups``; the 2023 file keeps only the retired
     Valdez-Cordova row (02261), the Alaska state row and one Washington county.
     """
     wanted = ["statecode", "countycode", "fipscode", "state", "county", "year"]
+    race: list[str] = []
     for ind in load_catalog():
         if ind.source == "chr":
             stem = ind.source_field.removesuffix("_rawvalue")
             wanted += [ind.source_field, f"{stem}_cilow", f"{stem}_cihigh", f"{stem}_flag"]
+            for g in ind.race_groups or ():
+                col = f"{stem}_race_{g}"
+                race += [col, f"{col}_cilow", f"{col}_cihigh", f"{col}_flag"]
     keep_states = {"53", "41", "16", "02"}
     keep_fips = {"06037", "36061", "53000", "00000"}
     c = client or make_client()
     try:
         current = _record_chr_file(
-            c, CHR_YEAR, wanted, lambda f: f[:2] in keep_states or f in keep_fips
+            c, CHR_YEAR, wanted, lambda f: f[:2] in keep_states or f in keep_fips, race
         )
         legacy = _record_chr_file(
             c, CHR_LEGACY_YEAR, wanted, lambda f: f in {VALDEZ_CORDOVA_FIPS, "02000", "53033"}

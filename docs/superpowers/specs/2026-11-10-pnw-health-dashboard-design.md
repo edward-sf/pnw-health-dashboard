@@ -17,7 +17,7 @@ A portfolio project demonstrating balanced full-stack data work — data enginee
 
 **Assumptions:** Python pipeline; desktop-first but usable on mobile; no accounts, no backend, no user data.
 
-**Out of scope for v1:** state health-department portals, CDC WONDER, forecasting, clustering/typologies, race-stratified outcomes, sub-county geography (tracts), live model serving. These are deliberate deferrals; see §10 Future work.
+**Out of scope for v1:** state health-department portals, CDC WONDER, forecasting, clustering/typologies, sub-county geography (tracts), live model serving. These are deliberate deferrals; see §10 Future work. (Race-stratified outcomes were deferred here and are now in v1: see `2026-11-12-m10-race-outcomes-who-lives-here-design.md`.)
 
 ## 2. Architecture
 
@@ -68,7 +68,7 @@ CDC WONDER is excluded: its API does not support sub-national queries.
 Display covers the **149 county-equivalents** in the four states (WA 39, OR 36, ID 44, AK 30). Sources are fetched **nationally** (~3,100 counties) because the model trains on all US counties (§5).
 
 ### Indicator catalog
-A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic / Demographics), `direction` (`higher_is_better` | `higher_is_worse` | `neutral`), `description`, and optionally `profile` (population / age_sex / race / other, which places Demographics indicators in the "Who lives here" section) and `universe` (the population a measure is a share of, when that would otherwise mislead).
+A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `unit`, `source`, `source_field`, `year`, `category` (Outcomes / Behaviors / Access / Social & Economic / Demographics), `direction` (`higher_is_better` | `higher_is_worse` | `neutral`), `description`, optionally `profile` (population / age_sex / race / other, which places Demographics indicators in the "Who lives here" section), `universe` (the population a measure is a share of, when that would otherwise mislead), and, on CHR entries only, `race_groups` (the race and ethnicity groups CHR breaks the measure down by; pipeline-only, feeds `strata.json`).
 
 **Demographics category:** the ACS population profile: total population, age and sex shares, race/ethnicity shares (AI/AN, Hispanic, Black, Asian, NHPI, White, two or more races), and disability, veteran, foreign-born and limited-English shares. (`age_65_plus` stays in Social & Economic because it is a model feature, but carries the age/sex `profile`.) These are descriptive context only — `direction: neutral` (no ranks, neutral sequential color scale) and never used as model features (§5).
 
@@ -90,7 +90,7 @@ A curated `indicators.yaml` of ~30–40 indicators. Each entry: `id`, `label`, `
 
 Defined once as Pydantic models in `contract.py`. JSON Schema generated from those models is committed in `schema/`, and a pipeline test fails if it drifts from them; the web build generates TypeScript types from it, so contract drift breaks the build.
 
-The four files are written as a set: into a temporary directory under `data/interim/` (never under `web/public/`, which Vite copies into the site), then moved into place only after all four writes succeed, so a failed export leaves the previous one untouched (M8 spec §3.1).
+The five files are written as a set: into a temporary directory under `data/interim/` (never under `web/public/`, which Vite copies into the site), then moved into place only after all five writes succeed, so a failed export leaves the previous one untouched (M8 spec §3.1).
 
 | File | Contents |
 |---|---|
@@ -98,6 +98,7 @@ The four files are written as a set: into a temporary directory under `data/inte
 | `counties.topojson` | Simplified boundaries; properties `fips`, `name`, `state` |
 | `values.json` | `{indicator_id: {fips: {v, lo, hi, rank, state_rank, legacy?}}}` — nulls allowed for `v/lo/hi`; ranks direction-aware, null when `v` is null or indicator is `neutral`; optional `legacy` (including its `year`) per §3; optional `unreliable`, present only when the source marks the value unreliable |
 | `model.json` | One entry per target under `targets` (M9 spec §2.4), each holding the target's `label`, `unit` and `direction` and: metrics (national + PNW subset) for ridge and LightGBM; `behaviors_comparison` metrics for the main and behaviors-included models on shared counties; global feature importance; flag thresholds (`sigma_model`, `z` per tier); `model_card` data; and per PNW county: `actual`, `predicted`, `residual`, `se`, `threshold_75`, `threshold_90`, `flag`, top-5 SHAP `{feature, value, contribution}`, `base_value`. A top-level `peers` block (M9 spec §3.2) holds `method` `{features, k, min_features}` and `counties`: for each PNW county, its `k` nearest PNW counties on the model features, nearest first, or `[]` when it has too few features |
+| `strata.json` | CHR outcomes by race and ethnicity (M10 spec §4.3): `dimension` (`race`), `source` (`chr`), `year`, `groups` `[{id, label}]` in display order, and `indicators` `{indicator_id: {groups, counties: {fips: {group: {v, lo, hi, unreliable?} or null}}}}` for each catalog indicator with `race_groups`. Every display county and listed group is present; `null` where CHR reports no value. No ranks: these values are never ranked, mapped or used by the model |
 
 `flag` ∈ `notably_better` | `somewhat_better` | `none` | `somewhat_worse` | `notably_worse` | `insufficient_data`.
 
@@ -195,6 +196,7 @@ URL params plus a single `useData()` hook that fetches the four files once. No g
 
 ## 10. Future work (deliberately deferred)
 
-- **Race-stratified outcomes** ("which groups are impacted"): CHR county measures by race/ethnicity, displayed only where not suppressed; needs its own design for suppression-heavy AK/ID counties.
+Race-stratified outcomes, once listed here, are part of v1 (M10): see `2026-11-12-m10-race-outcomes-who-lives-here-design.md`.
+
 - **State health-department datasets** (WA DOH, OHA, IDHW, AK DOH) as state-specific spotlight indicators.
 - **Forecasting** from time series (pending a credible approach for small counties).

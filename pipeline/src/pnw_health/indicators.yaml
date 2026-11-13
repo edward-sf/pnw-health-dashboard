@@ -234,6 +234,7 @@
   category: Outcomes
   direction: higher_is_better
   description: Average number of years a person can expect to live.
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: premature_death
   label: Premature death (years lost)
@@ -246,6 +247,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Years of potential life lost before age 75 per 100,000 population (age-adjusted).
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: low_birth_weight
   label: Low birth weight
@@ -259,6 +261,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Percent of live births with low birth weight (under 2,500 grams).
+  race_groups: [aian, asian, black, hispanic, nhopi, white, tom]
 
 - id: injury_deaths
   label: Injury deaths
@@ -271,6 +274,7 @@
   category: Outcomes
   direction: higher_is_worse
   description: Number of deaths due to injury per 100,000 population.
+  race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: primary_care_physicians
   label: Primary care physicians
@@ -322,6 +326,7 @@
   category: Access
   direction: higher_is_worse
   description: Hospital stays for ambulatory-care sensitive conditions per 100,000 Medicare enrollees.
+  race_groups: [aian, asian, black, hispanic, white]
 
 - id: food_insecurity
   label: Food insecurity
