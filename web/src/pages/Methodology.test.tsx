@@ -19,6 +19,7 @@ const ANCHORS = [
   "missing-data",
   "suppression",
   "unreliable",
+  "race-breakdown",
   "model",
   "exclusions",
   "similar-counties",
