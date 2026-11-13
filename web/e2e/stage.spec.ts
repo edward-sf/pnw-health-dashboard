@@ -28,13 +28,45 @@ for (const size of SIZES) {
     const king = page.locator('path.county[data-fips="53033"]');
     if (isPhone(size)) await king.tap();
     else await king.click();
-    await expect(page.getByRole("complementary", { name: "County details" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "County details" })).toBeVisible();
     const after = (await svg.boundingBox())!;
     for (const k of ["x", "y", "width", "height"] as const) {
       expect(Math.abs(after[k] - before[k]), k).toBeLessThanOrEqual(0.5);
     }
   });
 }
+
+test("at 900×800 the open panel is inside the viewport", async ({ page }, testInfo) => {
+  onlyIn("chromium", testInfo.project.name);
+  await open(page, { width: 900, height: 800 });
+  await page.locator('path.county[data-fips="53033"]').click();
+  const panel = page.getByRole("dialog", { name: "County details" });
+  await expect(panel).toBeVisible();
+  const box = (await panel.boundingBox())!;
+  const stage = (await page.locator(".map-stage").boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(stage.x);
+  expect(box.x + box.width).toBeLessThanOrEqual(Math.min(900, stage.x + stage.width));
+  expect(box.y).toBeGreaterThanOrEqual(stage.y);
+  expect(box.y + box.height).toBeLessThanOrEqual(stage.y + stage.height);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(panel).toBeInViewport({ ratio: 1 });
+  // No page-level horizontal scroll.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(900);
+});
+
+test("in table view the open panel sits beside the table, not over it", async ({ page }, testInfo) => {
+  onlyIn("chromium", testInfo.project.name);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("./?i=poverty_rate&view=table&c=53033");
+  const panel = page.getByRole("dialog", { name: "County details" });
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  const table = (await page.locator(".county-table-wrap").boundingBox())!;
+  const box = (await panel.boundingBox())!;
+  expect(table.x + table.width).toBeLessThanOrEqual(box.x);
+  expect(box.y).toBeGreaterThanOrEqual(table.y);
+  expect(box.y + box.height).toBeLessThanOrEqual(table.y + table.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
+});
 
 test("at 1440×900 the map is at least 1000px wide and fully in view; Alaska's frame is at least 181,760 px²", async ({
   page,

@@ -43,7 +43,7 @@ export function Explorer({ data }: { data: AppData }) {
       ),
     [topology],
   );
-  const { params, setIndicator, setCounty, setView, setShow } = useExplorerParams(
+  const { params, setIndicator, setCounty, setTarget, setView, setShow } = useExplorerParams(
     manifest,
     fipsSet,
     targetIds,
@@ -51,6 +51,10 @@ export function Explorer({ data }: { data: AppData }) {
   const model = useMemo(
     () => targetModel(data.model, params.target),
     [data.model, params.target],
+  );
+  const targetOptions = useMemo(
+    () => targetIds.map((id) => ({ id, label: targetModel(data.model, id).label })),
+    [data.model, targetIds],
   );
 
   const counties = useMemo<County[]>(
@@ -139,6 +143,7 @@ export function Explorer({ data }: { data: AppData }) {
   );
   if (!indicator || !scale) return null;
   const compared = params.show === "expected";
+  const isTarget = targetIds.includes(indicator.id);
   const targetIndicator = manifest.indicators.find((x) => x.id === params.target);
   const description = compared
     ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
@@ -220,7 +225,7 @@ export function Explorer({ data }: { data: AppData }) {
               </PopoverContent>
             </Popover>
           )}
-          {targetIds.includes(indicator.id) && (
+          {isTarget && (
             <ToggleGroup
               type="single"
               className="show-toggle"
@@ -248,71 +253,78 @@ export function Explorer({ data }: { data: AppData }) {
           <p className="indicator-source">{sourceLine(indicator)}</p>
         )}
       </div>
-      {params.view === "table" ? (
-        compared ? (
-          <ModelTable
-            rows={modelRows}
-            selected={params.county}
-            onSelect={onSelectWithOpener}
-            target={model}
-          />
-        ) : (
-          <CountyTable
-            key={indicator.id}
-            rows={rows}
-            indicator={indicator}
-            selected={params.county}
-            onSelect={onSelectWithOpener}
-          />
-        )
-      ) : (
-        <div ref={stageRef} className="map-stage">
-          <CountyMap
-            paths={paths}
-            fillFor={(fips) =>
-              compared
-                ? tierFill(countyModel(model, fips).flag)
-                : scale.fill(entries?.[fips]?.v ?? null)
-            }
-            tooltipFor={(fips) => {
-              const p = paths.find((x) => x.fips === fips);
-              if (compared) {
-                return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
-              }
-              return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
-            }}
-            selected={params.county}
-            onSelect={onSelectFromMap}
-            stateBorders={stateBorders}
-          />
-          {compared ? (
-            <ModelLegend counts={counts} />
+      {/* The panel floats over this area from 721px, so opening it never resizes the map. */}
+      <div
+        className={`explorer-view explorer-view--${params.view}${selectedCounty ? " explorer-view--panel-open" : ""}`}
+      >
+        {params.view === "table" ? (
+          compared ? (
+            <ModelTable
+              rows={modelRows}
+              selected={params.county}
+              onSelect={onSelectWithOpener}
+              target={model}
+            />
           ) : (
-            <Legend scale={scale} unit={indicator.unit} />
-          )}
-          {!selectedCounty && <p className="stage-hint">Select a county for its details</p>}
-        </div>
-      )}
-      {selectedCounty && (
-        <CountyPanel
-          county={selectedCounty}
-          indicator={indicator}
-          entries={entries ?? {}}
-          counties={counties}
-          modelEntry={countyModel(model, selectedCounty.fips)}
-          target={model}
-          manifest={manifest}
-          values={values}
-          strata={data.strata}
-          targetIndicator={targetIndicator}
-          modelMode={compared}
-          peers={data.model.peers}
-          onSelectCounty={onSelectPeer}
-          focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
-          onFocusHandled={onFocusHandled}
-          onClose={onClosePanel}
-        />
-      )}
+            <CountyTable
+              key={indicator.id}
+              rows={rows}
+              indicator={indicator}
+              selected={params.county}
+              onSelect={onSelectWithOpener}
+            />
+          )
+        ) : (
+          <div ref={stageRef} className="map-stage">
+            <CountyMap
+              paths={paths}
+              fillFor={(fips) =>
+                compared
+                  ? tierFill(countyModel(model, fips).flag)
+                  : scale.fill(entries?.[fips]?.v ?? null)
+              }
+              tooltipFor={(fips) => {
+                const p = paths.find((x) => x.fips === fips);
+                if (compared) {
+                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
+                }
+                return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
+              }}
+              selected={params.county}
+              onSelect={onSelectFromMap}
+              stateBorders={stateBorders}
+            />
+            {compared ? (
+              <ModelLegend counts={counts} />
+            ) : (
+              <Legend scale={scale} unit={indicator.unit} />
+            )}
+            {!selectedCounty && <p className="stage-hint">Select a county for its details</p>}
+          </div>
+        )}
+        {selectedCounty && (
+          <CountyPanel
+            county={selectedCounty}
+            indicator={indicator}
+            entries={entries ?? {}}
+            counties={counties}
+            modelEntry={countyModel(model, selectedCounty.fips)}
+            target={model}
+            manifest={manifest}
+            values={values}
+            strata={data.strata}
+            targetIndicator={targetIndicator}
+            modelMode={compared}
+            peers={data.model.peers}
+            onSelectCounty={onSelectPeer}
+            focusRequested={focusFips !== null && focusFips === selectedCounty.fips}
+            onFocusHandled={onFocusHandled}
+            onClose={onClosePanel}
+            targets={isTarget ? undefined : targetOptions}
+            onTargetChange={isTarget ? undefined : setTarget}
+          />
+        )}
+      </div>
     </div>
   );
 }
