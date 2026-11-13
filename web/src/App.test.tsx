@@ -147,7 +147,7 @@ describe("App", () => {
     );
     expect(search).toBe("");
     await user.click(screen.getByRole("link", { name: "Explorer" }));
-    expect(search).toBe("?i=poverty_rate&c=53033&mode=model&view=table");
+    expect(search).toBe("?c=53033&view=table&i=life_expectancy&show=expected");
   });
 
   it("nav links reach each route", async () => {

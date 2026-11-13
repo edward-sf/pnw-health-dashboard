@@ -13,7 +13,7 @@ export function useExplorerParams(
   setCounty: (fips: string | null) => void;
   setTarget: (id: string) => void;
   setView: (view: "map" | "table") => void;
-  setMode: (mode: "values" | "model") => void;
+  setShow: (show: "observed" | "expected") => void;
 } {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.toString();
@@ -22,18 +22,11 @@ export function useExplorerParams(
     [search, manifest, fipsSet, targetIds],
   );
 
-  const hasInvalid = params.invalid.length > 0;
+  const { canonical } = params;
   useEffect(() => {
-    if (!hasInvalid) return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        for (const k of params.invalid) next.delete(k);
-        return next;
-      },
-      { replace: true },
-    );
-  }, [hasInvalid, params.invalid, setSearchParams]);
+    if (canonical === null) return;
+    setSearchParams(new URLSearchParams(canonical), { replace: true });
+  }, [canonical, setSearchParams]);
 
   const setIndicator = useCallback(
     (id: string) => {
@@ -41,10 +34,12 @@ export function useExplorerParams(
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.set("i", id);
+        // A model target is its own outcome; any other measure has no model to compare with.
+        next.delete(targetIds.includes(id) ? "t" : "show");
         return next;
       });
     },
-    [setSearchParams, params.indicator],
+    [setSearchParams, params.indicator, targetIds],
   );
   const setCounty = useCallback(
     (fips: string | null) => {
@@ -85,18 +80,18 @@ export function useExplorerParams(
     [setSearchParams, params.view],
   );
 
-  const setMode = useCallback(
-    (mode: "values" | "model") => {
-      if (mode === params.mode) return;
+  const setShow = useCallback(
+    (show: "observed" | "expected") => {
+      if (show === params.show) return;
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        if (mode === "values") next.delete("mode");
-        else next.set("mode", mode);
+        if (show === "observed") next.delete("show");
+        else next.set("show", show);
         return next;
       });
     },
-    [setSearchParams, params.mode],
+    [setSearchParams, params.show],
   );
 
-  return { params, setIndicator, setCounty, setTarget, setView, setMode };
+  return { params, setIndicator, setCounty, setTarget, setView, setShow };
 }

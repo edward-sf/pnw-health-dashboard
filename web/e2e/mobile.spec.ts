@@ -39,7 +39,7 @@ test("the indicator picker opens, chooses and closes", async ({ page }) => {
 
 test("the sheet header stays in view while the sheet scrolls", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("./?i=poverty_rate&c=53033&mode=model");
+  await page.goto("./?i=life_expectancy&show=expected&c=53033");
   const sheet = page.locator(".county-panel--sheet");
   await sheet.getByRole("button", { name: "Expand" }).tap();
   await expect(sheet).toHaveClass(/county-panel--expanded/);

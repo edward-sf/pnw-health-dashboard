@@ -20,7 +20,6 @@ import { ModelTable } from "../table/ModelTable";
 import type { ModelRow } from "../table/sortModelRows";
 import type { Row } from "../table/sortRows";
 import { IndicatorPicker } from "./IndicatorPicker";
-import { OutcomePicker } from "./OutcomePicker";
 import { sourceLine } from "./sourceLine";
 import { useExplorerParams } from "./useExplorerParams";
 
@@ -29,10 +28,6 @@ const SEARCH_INPUT_ID = "county-search";
 export function Explorer({ data }: { data: AppData }) {
   const { manifest, values, topology } = data;
   const targetIds = useMemo(() => Object.keys(data.model.targets), [data.model]);
-  const targetOptions = useMemo(
-    () => targetIds.map((id) => ({ id, label: targetModel(data.model, id).label })),
-    [targetIds, data.model],
-  );
   const paths = useMemo(() => buildMapPaths(topology), [topology]);
   const stateBorders = useMemo(() => buildStateBorders(topology), [topology]);
   const fipsSet = useMemo(
@@ -44,7 +39,7 @@ export function Explorer({ data }: { data: AppData }) {
       ),
     [topology],
   );
-  const { params, setIndicator, setCounty, setTarget, setView, setMode } = useExplorerParams(
+  const { params, setIndicator, setCounty, setView, setShow } = useExplorerParams(
     manifest,
     fipsSet,
     targetIds,
@@ -122,7 +117,7 @@ export function Explorer({ data }: { data: AppData }) {
     [model, counties],
   );
   if (!indicator || !scale) return null;
-  const modelMode = params.mode === "model";
+  const compared = params.show === "expected";
   const targetIndicator = manifest.indicators.find((x) => x.id === params.target);
 
   return (
@@ -148,38 +143,36 @@ export function Explorer({ data }: { data: AppData }) {
         Skip to county search
       </a>
       <aside className="explorer-picker">
-        <div className="view-toggle view-toggle--full" role="group" aria-label="Mode">
-          <Button
-            type="button"
-            variant="segment"
-            size="sm"
-            aria-pressed={!modelMode}
-            onClick={() => setMode("values")}
-          >
-            <ChartNoAxesColumn aria-hidden="true" />
-            Values
-          </Button>
-          <Button
-            type="button"
-            variant="segment"
-            size="sm"
-            aria-pressed={modelMode}
-            onClick={() => setMode("model")}
-          >
-            <Scale aria-hidden="true" />
-            Model
-          </Button>
-        </div>
-        {modelMode ? (
-          <OutcomePicker targets={targetOptions} value={params.target} onChange={setTarget} />
-        ) : (
-          <IndicatorPicker
-            indicators={manifest.indicators}
-            selectedId={indicator.id}
-            onSelect={setIndicator}
-            collapsible={isPhone}
-          />
+        {targetIds.includes(indicator.id) && (
+          <div className="view-toggle view-toggle--full" role="group" aria-label="Show">
+            <Button
+              type="button"
+              variant="segment"
+              size="sm"
+              aria-pressed={!compared}
+              onClick={() => setShow("observed")}
+            >
+              <ChartNoAxesColumn aria-hidden="true" />
+              Observed
+            </Button>
+            <Button
+              type="button"
+              variant="segment"
+              size="sm"
+              aria-pressed={compared}
+              onClick={() => setShow("expected")}
+            >
+              <Scale aria-hidden="true" />
+              Compared with expected
+            </Button>
+          </div>
         )}
+        <IndicatorPicker
+          indicators={manifest.indicators}
+          selectedId={indicator.id}
+          onSelect={setIndicator}
+          collapsible={isPhone}
+        />
       </aside>
       <section className="explorer-main">
         <div className="explorer-toolbar">
@@ -212,20 +205,20 @@ export function Explorer({ data }: { data: AppData }) {
           </div>
         </div>
         <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
-          {modelMode ? `${model.label}: compared with expected` : indicator.label}
+          {compared ? `${model.label}: compared with expected` : indicator.label}
         </h2>
         <p className="indicator-description">
-          {modelMode
+          {compared
             ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
             : indicator.description}
         </p>
-        {modelMode ? (
+        {compared ? (
           targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>
         ) : (
           <p className="indicator-source">{sourceLine(indicator)}</p>
         )}
         {params.view === "table" ? (
-          modelMode ? (
+          compared ? (
             <ModelTable
               rows={modelRows}
               selected={params.county}
@@ -246,13 +239,13 @@ export function Explorer({ data }: { data: AppData }) {
             <CountyMap
               paths={paths}
               fillFor={(fips) =>
-                modelMode
+                compared
                   ? tierFill(countyModel(model, fips).flag)
                   : scale.fill(entries?.[fips]?.v ?? null)
               }
               tooltipFor={(fips) => {
                 const p = paths.find((x) => x.fips === fips);
-                if (modelMode) {
+                if (compared) {
                   return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
                 }
                 return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
@@ -261,7 +254,7 @@ export function Explorer({ data }: { data: AppData }) {
               onSelect={onSelectFromMap}
               stateBorders={stateBorders}
             />
-            {modelMode ? (
+            {compared ? (
               <ModelLegend counts={counts} />
             ) : (
               <Legend scale={scale} unit={indicator.unit} />
@@ -281,7 +274,7 @@ export function Explorer({ data }: { data: AppData }) {
           values={values}
           strata={data.strata}
           targetIndicator={targetIndicator}
-          modelMode={modelMode}
+          modelMode={compared}
           peers={data.model.peers}
           onSelectCounty={onSelectPeer}
           focusRequested={focusFips !== null && focusFips === selectedCounty.fips}

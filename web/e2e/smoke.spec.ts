@@ -68,11 +68,11 @@ test("strip plot axis text does not overlap", async ({ page }) => {
 });
 
 test("model mode: map, card, table and back", async ({ page }) => {
-  await page.goto("./?i=poverty_rate");
+  await page.goto("./?i=life_expectancy");
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Model", exact: true }).click();
-  await expect(page).toHaveURL(/[?&]mode=model/);
-  await expect(page).toHaveURL(/[?&]i=poverty_rate/);
+  await page.getByRole("button", { name: "Compared with expected", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]show=expected/);
+  await expect(page).toHaveURL(/[?&]i=life_expectancy/);
   await expect(page.locator(".legend li")).toHaveCount(6);
   await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
@@ -91,24 +91,29 @@ test("model mode: map, card, table and back", async ({ page }) => {
   await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.goBack();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page.locator(".legend li")).toHaveCount(6);
   await page.goBack();
-  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(panel).toBeHidden();
   await page.goBack();
-  await expect(page.locator(".legend")).toContainText("%");
-  expect(new URL(page.url()).search).toBe("?i=poverty_rate");
+  await expect(page.locator(".legend")).toContainText("years");
+  expect(new URL(page.url()).search).toBe("?i=life_expectancy");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
 });
 
-test("model mode: change the outcome", async ({ page }) => {
+test("an old model link is rewritten in place", async ({ page }) => {
   await page.goto("./?mode=model&c=53033");
+  await expect(page).toHaveURL(/[?&]show=expected/);
+  expect(new URL(page.url()).search).toBe("?c=53033&i=life_expectancy&show=expected");
+});
+
+test("model mode: change the outcome", async ({ page }) => {
+  await page.goto("./?i=life_expectancy&show=expected&c=53033");
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await page
-    .getByRole("combobox", { name: "Outcome" })
-    .selectOption({ label: "Premature death (years lost)" });
-  await expect(page).toHaveURL(/[?&]t=premature_death/);
+  await page.getByRole("button", { name: /^Premature death/ }).click();
+  await expect(page).toHaveURL(/[?&]i=premature_death/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(
     page.getByText("Premature death (years lost): compared with expected").first(),
@@ -145,7 +150,7 @@ test("methodology and about pages render", async ({ page }) => {
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
   // King County (53033) has a model result, so its model card has no Methodology link. Chugach
   // doesn't, so its card links to #no-result (the panel's Similar counties link is a different one).
-  await page.goto("./?i=poverty_rate&c=02063&mode=model");
+  await page.goto("./?i=life_expectancy&show=expected&c=02063");
   const panel = page.getByRole("complementary", { name: "County details" });
   await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
@@ -166,7 +171,7 @@ test("race breakdown follows the indicator and the outcome", async ({ page }) =>
   await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
   await expect(section()).toHaveCount(0);
 
-  await page.goto("./?mode=model&c=53077&t=premature_death");
+  await page.goto("./?i=premature_death&show=expected&c=53077");
   await expect(section()).toHaveCount(1);
   await expect(section()).toBeVisible();
   // The region never names the outcome, so assert it sits directly after the model card.

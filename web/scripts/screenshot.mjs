@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const webDir = resolve(here, "..");
 const out = resolve(webDir, "../docs/images/explorer.png");
 const origin = "http://localhost:4174";
-const url = `${origin}/pnw-health-dashboard/?mode=model&c=53033`;
+const url = `${origin}/pnw-health-dashboard/?i=life_expectancy&show=expected&c=53033`;
 
 async function isUp() {
   try {
