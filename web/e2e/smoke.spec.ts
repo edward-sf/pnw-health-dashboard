@@ -162,14 +162,27 @@ test("race breakdown follows the indicator and the outcome", async ({ page }) =>
   await expect(section().getByText("County overall")).toBeVisible();
 
   await page.goto("./?c=53077&i=diabetes");
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  // Wait for county-specific content so the absence check can't pass before the panel renders.
+  await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
   await expect(section()).toHaveCount(0);
 
   await page.goto("./?mode=model&c=53077&t=premature_death");
   await expect(section()).toHaveCount(1);
   await expect(section()).toBeVisible();
-  await expect(page.getByText("Premature death (years lost) model")).toBeVisible();
+  // The region never names the outcome, so assert it sits directly after the model card.
+  const card = page.getByRole("heading", { level: 3, name: "Premature death (years lost) model" });
+  await expect(card).toBeVisible();
   await expect(section().getByText("County overall")).toBeVisible();
+  const follows = await page.evaluate(() => {
+    const h = [...document.querySelectorAll("h3")].find((e) =>
+      e.textContent?.includes("Premature death (years lost) model"),
+    );
+    const r = document.querySelector(".race-breakdown");
+    const who = document.querySelector(".who-lives-here");
+    const F = Node.DOCUMENT_POSITION_FOLLOWING;
+    return !!(h && r && who && h.compareDocumentPosition(r) & F && r.compareDocumentPosition(who) & F);
+  });
+  expect(follows).toBe(true);
 });
 
 test("who lives here shows population and groups", async ({ page }) => {
