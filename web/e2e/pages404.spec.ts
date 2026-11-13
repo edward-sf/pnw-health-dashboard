@@ -76,6 +76,8 @@ test("origin() names the project when baseURL is missing", () => {
 });
 
 test("a file the server can't stat gets a 500, not the 404 page", async ({ page }) => {
+  // Root ignores file permissions, so the locked directory would stat fine.
+  test.skip(process.getuid?.() === 0, "running as root, which ignores file permissions");
   // The pages server serves web/dist; a directory with no permissions makes stat fail with
   // EACCES, which must not be mistaken for a missing file.
   const locked = fileURLToPath(new URL("../dist/locked-for-e2e/", import.meta.url));
