@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+import pytest
 
+from pnw_health.model.features import ModelDataError
 from pnw_health.model.peers import find_peers
 
 
@@ -100,3 +102,12 @@ def test_deterministic() -> None:
     )
     shuffled = table.sample(frac=1.0, random_state=3)
     assert find_peers(table, k=4, min_features=1) == find_peers(shuffled, k=4, min_features=1)
+
+
+def test_find_peers_rejects_feature_null_for_every_eligible_county() -> None:
+    table = pd.DataFrame(
+        {"x": [0.0, 1.0, 2.0, 3.0], "dead": [np.nan] * 4, "z": [3.0, 1.0, 2.0, 0.0]},
+        index=list("ABCD"),
+    )
+    with pytest.raises(ModelDataError, match="dead"):
+        find_peers(table, k=2, min_features=1)
