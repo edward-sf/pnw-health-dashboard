@@ -153,3 +153,44 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport();
 });
+
+test("race breakdown follows the indicator and the outcome", async ({ page }) => {
+  const section = () => page.getByRole("region", { name: "By race and ethnicity (CHR 2025)" });
+
+  await page.goto("./?c=53077&i=life_expectancy");
+  await expect(section()).toBeVisible();
+  await expect(section().getByText("County overall")).toBeVisible();
+
+  await page.goto("./?c=53077&i=diabetes");
+  // Wait for county-specific content so the absence check can't pass before the panel renders.
+  await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
+  await expect(section()).toHaveCount(0);
+
+  await page.goto("./?mode=model&c=53077&t=premature_death");
+  await expect(section()).toHaveCount(1);
+  await expect(section()).toBeVisible();
+  // The region never names the outcome, so assert it sits directly after the model card.
+  const card = page.getByRole("heading", { level: 3, name: "Premature death (years lost) model" });
+  await expect(card).toBeVisible();
+  await expect(section().getByText("County overall")).toBeVisible();
+  const follows = await page.evaluate(() => {
+    const h = [...document.querySelectorAll("h3")].find((e) =>
+      e.textContent?.includes("Premature death (years lost) model"),
+    );
+    const r = document.querySelector(".race-breakdown");
+    const who = document.querySelector(".who-lives-here");
+    const F = Node.DOCUMENT_POSITION_FOLLOWING;
+    return !!(h && r && who && h.compareDocumentPosition(r) & F && r.compareDocumentPosition(who) & F);
+  });
+  expect(follows).toBe(true);
+});
+
+test("who lives here shows population and groups", async ({ page }) => {
+  await page.goto("./?c=53077");
+  const who = page.getByRole("region", { name: "Who lives here" });
+  await expect(who).toBeVisible();
+  await expect(who.getByText("Total population")).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Age and sex" })).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Race and ethnicity" })).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Other" })).toBeVisible();
+});
