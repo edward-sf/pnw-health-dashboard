@@ -11,13 +11,18 @@ type Props = {
   pageHeading?: boolean;
 };
 
+/**
+ * Only the message is a live region. Route focus and "Try again" move focus to the heading,
+ * which announces it; with the heading inside `role="alert"` too, screen readers could read
+ * the error twice.
+ */
 export default function ErrorPage({ message, onRetry, pageHeading = false }: Props) {
   return (
-    <div role="alert">
+    <div>
       <h2 {...(pageHeading ? { "data-page-heading": "", tabIndex: -1 } : {})}>
         Couldn't load the data
       </h2>
-      <p>{message}</p>
+      <p role="alert">{message}</p>
       <button
         type="button"
         onClick={(e) => {
