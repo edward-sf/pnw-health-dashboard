@@ -1,6 +1,6 @@
 # PNW Health Dashboard
 
-Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county's life expectancy, premature death or injury deaths compares with what a model expects from its social and economic profile.
+Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county compares with what a model expects on life expectancy, premature death or injury deaths, given its social and economic profile.
 
 [![CI](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/ci.yml)
 [![Build and deploy](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/edward-sf/pnw-health-dashboard/actions/workflows/build-deploy.yml)
