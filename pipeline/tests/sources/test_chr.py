@@ -261,16 +261,19 @@ def test_strata_drops_state_and_national_rows(strata: pd.DataFrame) -> None:
     assert {"53033", "06037"} <= set(strata.fips)
 
 
-def test_fetch_check_requires_race_value_columns(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "column", ["v147_race_white", "v147_race_white_cilow", "v001_race_aian_flag"]
+)
+def test_fetch_check_requires_race_columns(tmp_path: Path, column: str) -> None:
     rows = list(csv.reader(CHR_SAMPLE.read_text(encoding="latin-1").splitlines()))
-    drop = rows[1].index("v147_race_white")
+    drop = rows[1].index(column)
     out = io.StringIO()
     csv.writer(out, lineterminator="\n").writerows(r[:drop] + r[drop + 1 :] for r in rows)
     body = out.getvalue().encode("latin-1")
     handler = lambda r: httpx.Response(200, content=body)  # noqa: E731
     with (
         make_client(httpx.MockTransport(handler)) as client,
-        pytest.raises(FetchError, match="v147_race_white"),
+        pytest.raises(FetchError, match=column),
     ):
         fetch_chr(client, tmp_path, load_catalog())
 

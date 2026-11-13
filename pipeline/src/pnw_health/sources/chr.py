@@ -18,6 +18,9 @@ CHR_BASE_URL = "https://www.countyhealthrankings.org/sites/default/files/media/d
 ID_COLUMNS = ("countycode", "fipscode")
 ENCODING = "latin-1"
 STRATA_COLUMNS = ["fips", "indicator_id", "group", "value", "ci_low", "ci_high", "unreliable"]
+# Stems whose ``_flag`` column, overall and per race group, the fetch check requires. CHR
+# publishes race flags only for premature death (``v001``).
+FLAGGED_STEMS = frozenset({"v001"})
 
 
 def chr_url(year: int) -> str:
@@ -74,17 +77,26 @@ def fetch_chr(
     """Download the CHR analytic file for ``year``, checking it holds the catalog's columns.
 
     Only the current ``CHR_YEAR`` file is checked against the catalog; other vintages are
-    fetched for specific legacy indicators, so only the id columns are required. The
-    check covers each race group's value column, but not its CI or flag columns: some
-    measures (``v005``) have no race CIs, and only ``v001`` has race flags.
+    fetched for specific legacy indicators, so only the id columns are required. Each
+    race group needs its value column, its CI columns when the indicator has a
+    ``ci_level`` (``v005`` has none, and no race CIs), and its flag column when the stem
+    is in ``FLAGGED_STEMS``.
     """
     needed = list(ID_COLUMNS)
     if year == CHR_YEAR:
         for ind in _fields(catalog):
+            stem = _stem(ind.source_field)
             needed.append(ind.source_field)
             if ind.ci_level is not None:
                 needed += _ci_columns(ind.source_field)
-            needed += [column for _, column in _race_fields(ind)]
+            if stem in FLAGGED_STEMS:
+                needed.append(f"{stem}_flag")
+            for _, column in _race_fields(ind):
+                needed.append(column)
+                if ind.ci_level is not None:
+                    needed += [f"{column}_cilow", f"{column}_cihigh"]
+                if stem in FLAGGED_STEMS:
+                    needed.append(f"{column}_flag")
 
     return cached_get(
         client,
