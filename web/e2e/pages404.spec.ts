@@ -1,4 +1,6 @@
+import { chmod, mkdir, rm } from "node:fs/promises";
 import { connect } from "node:net";
+import { fileURLToPath } from "node:url";
 import { expect, test, type TestInfo } from "@playwright/test";
 
 // Runs on the `pages` project against e2e/pages-server.mjs, which answers unknown paths the way
@@ -6,18 +8,24 @@ import { expect, test, type TestInfo } from "@playwright/test";
 // index.html instead, so the other projects never exercise this path.
 
 // The `pages` project's server, from its baseURL in playwright.config.ts.
-const origin = (testInfo: TestInfo) => new URL(testInfo.project.use.baseURL ?? "").origin;
+function origin(testInfo: TestInfo): string {
+  const { baseURL } = testInfo.project.use;
+  if (!baseURL) {
+    throw new Error(`pages404.spec.ts needs a baseURL; project "${testInfo.project.name}" has none`);
+  }
+  return new URL(baseURL).origin;
+}
 
-// Sends one raw request line and returns the response's status line. Raw, because clients
-// refuse to send the malformed targets this needs.
-function rawStatusLine(port: number, requestLine: string): Promise<string> {
+// Sends one raw request line and returns the whole response. Raw, because clients refuse to
+// send the malformed targets this needs.
+function rawResponse(port: number, requestLine: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const socket = connect(port, "127.0.0.1", () =>
       socket.write(`${requestLine}\r\nHost: localhost\r\nConnection: close\r\n\r\n`),
     );
     let data = "";
     socket.on("data", (chunk) => (data += chunk));
-    socket.on("close", () => resolve(data.split("\r\n")[0] ?? ""));
+    socket.on("close", () => resolve(data));
     socket.on("error", reject);
   });
 }
@@ -48,6 +56,35 @@ test("a malformed request target gets an error response and the server keeps ser
   page,
 }, testInfo) => {
   const port = Number(new URL(origin(testInfo)).port);
-  expect(await rawStatusLine(port, "GET http://[::1 HTTP/1.1")).toMatch(/^HTTP\/1\.1 4\d\d /);
+  const res = await rawResponse(port, "GET http://[::1 HTTP/1.1");
+  expect(res).toMatch(/^HTTP\/1\.1 400 /);
+  // The body comes chunked, so look for the text rather than match the whole body.
+  expect(res.slice(res.indexOf("\r\n\r\n"))).toContain("Bad request target");
   expect((await page.request.get("./")).status()).toBe(200);
+});
+
+test("a bad percent-escape in the path gets a 400, not the 404 page", async ({ page }) => {
+  const res = await page.request.get("./%E0%A4%A");
+  expect(res.status()).toBe(400);
+  expect(await res.text()).toBe("Bad request target");
+});
+
+test("origin() names the project when baseURL is missing", () => {
+  const testInfo = test.info();
+  const noBase = { ...testInfo, project: { ...testInfo.project, name: "x", use: {} } } as TestInfo;
+  expect(() => origin(noBase)).toThrow('pages404.spec.ts needs a baseURL; project "x" has none');
+});
+
+test("a file the server can't stat gets a 500, not the 404 page", async ({ page }) => {
+  // The pages server serves web/dist; a directory with no permissions makes stat fail with
+  // EACCES, which must not be mistaken for a missing file.
+  const locked = fileURLToPath(new URL("../dist/locked-for-e2e/", import.meta.url));
+  await mkdir(locked, { recursive: true });
+  await chmod(locked, 0o000);
+  try {
+    expect((await page.request.get("./locked-for-e2e/index.html")).status()).toBe(500);
+  } finally {
+    await chmod(locked, 0o700);
+    await rm(locked, { recursive: true, force: true });
+  }
 });
