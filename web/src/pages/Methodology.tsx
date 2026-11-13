@@ -11,6 +11,7 @@ import { IndicatorCatalog } from "./methodology/IndicatorCatalog";
 import { MissingDataSection } from "./methodology/MissingDataSection";
 import { ModelSection } from "./methodology/ModelSection";
 import { PeersSection } from "./methodology/PeersSection";
+import { RaceBreakdownSection } from "./methodology/RaceBreakdownSection";
 import { ReproducibilitySection } from "./methodology/ReproducibilitySection";
 import { SourcesSection } from "./methodology/SourcesSection";
 import { useHashFocus } from "./methodology/useHashFocus";
@@ -20,6 +21,7 @@ const CONTENTS = [
   ["indicators", "Indicators"],
   ["harmonization", "Geography"],
   ["missing-data", "Missing and uncertain values"],
+  ["race-breakdown", "Outcomes by race and ethnicity"],
   ["model", "The model"],
   ["exclusions", "What the model leaves out"],
   ["similar-counties", "Similar counties"],
@@ -56,6 +58,10 @@ export function Methodology({ state }: { state: DataState }) {
           <IndicatorCatalog indicators={state.data.manifest.indicators} />
           <HarmonizationSection sources={state.data.manifest.sources} />
           <MissingDataSection indicators={state.data.manifest.indicators} />
+          <RaceBreakdownSection
+            strata={state.data.strata}
+            indicators={state.data.manifest.indicators}
+          />
           <ModelSection
             model={state.data.model}
             targetId={targetId}
