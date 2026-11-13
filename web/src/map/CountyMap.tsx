@@ -64,6 +64,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
     <div className="county-map">
       <svg
         viewBox={`0 0 ${MAP_LAYOUT.width} ${MAP_LAYOUT.height}`}
+        preserveAspectRatio="xMinYMid meet"
         role="group"
         aria-label="County map"
       >

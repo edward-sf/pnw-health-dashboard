@@ -62,13 +62,18 @@ test("explorer: model mode county panel", async ({ page }, testInfo) => {
   await audit(page, testInfo);
 });
 
-test("explorer: picker disclosure open", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "the picker is a disclosure on phones only");
+test("explorer: measure list open", async ({ page }, testInfo) => {
   await explorer(page, "?i=poverty_rate");
-  const toggle = page.getByRole("button", { name: /^Indicator: / });
+  const toggle = page.getByRole("button", { name: "Measure: Poverty rate" });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByLabel("Filter indicators")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Filter measures" })).toBeVisible();
+  await audit(page, testInfo);
+});
+
+test("explorer: show switch on a modelled outcome", async ({ page }, testInfo) => {
+  await explorer(page, "?i=life_expectancy");
+  await expect(page.getByRole("radiogroup", { name: "Show" })).toBeVisible();
   await audit(page, testInfo);
 });
 

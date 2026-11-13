@@ -12,9 +12,6 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         outline: "border border-input bg-card text-foreground hover:bg-muted",
         ghost: "text-foreground hover:bg-muted",
-        // One option of a segmented control; aria-pressed marks the chosen one.
-        segment:
-          "text-muted-foreground hover:text-foreground aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[0_0_0_1px_var(--color-input)]",
       },
       size: {
         default: "h-9 px-4",

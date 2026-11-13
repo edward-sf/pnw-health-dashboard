@@ -188,7 +188,7 @@
   }
 
   /* Off-screen until focused, then laid over the Explorer's top-left corner. It stays out of
-     the grid flow either way, so focusing it never shifts the picker or the map. */
+     the grid flow either way, so focusing it never shifts the toolbar or the map. */
   .skip-link {
     position: absolute;
     left: -10000px;
@@ -219,78 +219,52 @@
 
   /* ---------- Explorer layout ---------- */
 
+  /* One column: toolbar, title block, then the map stage, which takes the rest of the viewport. */
   .explorer {
     position: relative;
-    display: grid;
-    grid-template-columns: 264px minmax(0, 1fr);
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  .explorer-picker {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
-    min-width: 0;
-  }
-
-  .explorer-main {
     min-width: 0;
   }
 
   .explorer-toolbar {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
-  @media (min-width: 721px) {
-    .explorer-picker {
-      position: sticky;
-      top: 1rem;
-      max-height: calc(100dvh - 2rem);
-    }
-
-    .picker {
-      min-height: 0;
-      overflow-y: auto;
-      /* Room for the focus outline of the controls at the scroll container's edge. */
-      margin: -4px;
-      padding: 4px;
-    }
+  .measure-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    min-width: 0;
   }
 
-  @media (min-width: 1100px) {
-    .explorer--panel {
-      grid-template-columns: 264px minmax(0, 1fr) 384px;
-    }
-
-    .explorer--panel .county-panel {
-      position: sticky;
-      top: 1rem;
-      max-height: calc(100dvh - 2rem);
-      overflow-y: auto;
-    }
-
-    .explorer--panel .panel-header {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
+  .measure-trigger {
+    min-width: 16rem;
+    max-width: 100%;
   }
 
-  @media (min-width: 721px) and (max-width: 1099px) {
-    .explorer--panel .county-panel {
-      grid-column: 2;
-    }
+  .measure-trigger-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* ---------- Segmented controls (mode, view) ---------- */
+  .toolbar-end {
+    display: flex;
+    flex: 1 1 22rem;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    min-width: 0;
+  }
 
-  .view-toggle {
+  /* Segmented controls (ToggleGroup): a tray with the chosen option raised onto the surface. */
+  .toggle-group {
     display: inline-flex;
     gap: 2px;
     padding: 3px;
@@ -298,73 +272,26 @@
     background: var(--wash);
   }
 
-  .view-toggle--full {
+  /* ---------- Title block ---------- */
+
+  .title-block {
+    margin-bottom: 0.75rem;
+  }
+
+  .title-row {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.25rem;
   }
 
-  .view-toggle--full > button {
-    flex: 1;
-  }
-
-  /* ---------- Indicator and outcome pickers ---------- */
-
-  .picker {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .picker-label {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--ink-muted);
-  }
-
-  .picker-toggle {
-    min-height: 2.75rem;
-  }
-
-  .picker-empty {
-    margin: 0.25rem 0;
-    font-size: 0.875rem;
-    color: var(--ink-muted);
-  }
-
-  .picker h2 {
-    margin: 0.875rem 0 0.25rem;
-    padding: 0 0.5rem;
-    font-size: 0.8125rem;
-    font-stretch: 100%;
-    font-weight: 600;
-    color: var(--ink-muted);
-  }
-
-  .picker ul {
+  .title-row .indicator-title {
     margin: 0;
-    padding: 0;
-    list-style: none;
   }
 
-  .picker-item {
-    display: block;
-    width: 100%;
-    padding: 0.375rem 0.5rem 0.375rem 0.625rem;
-    border-left: 2px solid transparent;
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    font-size: 0.9375rem;
-    line-height: 1.3;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .picker-item:hover {
-    background: var(--wash);
-  }
-
-  .picker-item[aria-pressed="true"] {
-    border-left-color: var(--fir);
-    background: var(--fir-soft);
-    font-weight: 650;
+  .show-toggle {
+    margin-left: auto;
   }
 
   /* ---------- County search ---------- */
@@ -425,8 +352,6 @@
     color: var(--ink-muted);
   }
 
-  /* ---------- Title block ---------- */
-
   .indicator-title {
     margin: 0 0 0.375rem;
     font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
@@ -449,8 +374,9 @@
   /* The white stage the map and its legend sit on. County outlines and legend swatches are
      checked for contrast against white, so this must stay white. */
   .map-stage {
-    margin-top: 1rem;
-    padding: 1rem;
+    position: relative;
+    box-sizing: border-box;
+    padding: 0.75rem;
     border: 1px solid var(--line);
     border-radius: var(--radius-xl);
     background: #fff;
@@ -458,14 +384,79 @@
 
   .county-map {
     position: relative;
-    max-width: 960px;
-    margin: 0 auto;
   }
 
   .county-map svg {
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  .stage-hint {
+    margin: 0.75rem 0 0;
+    color: var(--ink-muted);
+    font-size: 0.875rem;
+  }
+
+  /* The stage fills the viewport under the title block (--stage-top is its measured page offset)
+     and never resizes on selection. The map is drawn left-aligned inside it, and the legend and
+     hint sit in its empty corners, so neither moves the map. */
+  @media (min-width: 721px) {
+    .map-stage {
+      height: max(480px, calc(100dvh - var(--stage-top, 0px)));
+      container-type: size;
+    }
+
+    .county-map,
+    .county-map svg {
+      height: 100%;
+    }
+
+    .map-stage .legend {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      /* No wider than the Alaska frame (544 of the canvas's 1280 units), so it stays clear of
+         Washington. The drawn width is the stage's width or its height times 1280/680. */
+      max-width: min(34rem, calc(min(100cqw, 188.2cqh) * 0.425));
+      margin: 0;
+      padding: 0;
+      border: 0;
+      gap: 0.25rem 1rem;
+    }
+
+    .map-stage .legend-bins {
+      gap: 0.25rem 0.75rem;
+    }
+
+    /* A narrow stage leaves a small corner; a smaller legend keeps it clear of Alaska's frame. */
+    @container (max-width: 800px) {
+      .map-stage :is(.legend li, .legend-null, .legend-end) {
+        font-size: 0.75rem;
+      }
+
+      .map-stage .legend-swatch {
+        width: 12px;
+        height: 12px;
+      }
+    }
+
+    /* The title block's description already says this from 721px; it would crowd the corner. */
+    .map-stage .legend-note {
+      display: none;
+    }
+
+    .stage-hint {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    .explorer .county-panel {
+      margin-top: 1rem;
+    }
   }
 
   /* Each path sets --county-stroke from its fill (outlineFor), so the outline is at least 3:1
@@ -1051,14 +1042,75 @@
       margin-left: -0.75rem;
     }
 
-    .explorer {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 1rem;
+    /* The phone toolbar is three rows; keep the map's top within the first screen. */
+    main:has(> .explorer) {
+      padding-top: 0.5rem;
+    }
+
+    /* Category switch and measure button full width; search and Map/Table share a row. */
+    .explorer-toolbar,
+    .measure-picker {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.375rem;
+    }
+
+    .explorer-toolbar {
+      margin-bottom: 0.5rem;
+    }
+
+    .toggle-group {
+      padding: 2px;
+    }
+
+    .measure-category,
+    .show-toggle {
+      display: flex;
+      width: 100%;
+    }
+
+    .measure-category > button,
+    .show-toggle > button {
+      flex: 1;
+    }
+
+    .measure-trigger {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .toolbar-end {
+      flex: none;
+      gap: 0.5rem;
     }
 
     .county-search {
-      flex-basis: 100%;
+      flex: 1 1 auto;
       max-width: none;
+    }
+
+    .title-block {
+      margin-bottom: 0.5rem;
+    }
+
+    /* The title shares its row with the About button however long it is; Show wraps below. */
+    .title-row .indicator-title {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    /* A 44px target that does not make the title row taller than the title. */
+    .about-measure {
+      margin-block: -5px;
+    }
+
+    .title-row {
+      gap: 0.25rem 0.5rem;
+      margin-bottom: 0.125rem;
+    }
+
+    .show-toggle {
+      margin-left: 0;
     }
 
     .county-search-icon {
@@ -1066,7 +1118,6 @@
     }
 
     .county-search input,
-    .picker input,
     select {
       min-height: 2.75rem;
     }
@@ -1077,11 +1128,11 @@
     }
 
     .map-stage {
-      padding: 0.5rem;
+      padding: 0.25rem 0.5rem 0.5rem;
     }
 
     /* Keeps counties at the bottom of the map tappable above the peek sheet. */
-    .explorer--sheet-open .explorer-main {
+    .explorer--sheet-open {
       padding-bottom: 40dvh;
     }
 
@@ -1129,7 +1180,6 @@
 
     /* Touch targets: buttons, view toggles and table sort buttons. */
     button,
-    .view-toggle button,
     .sort-button {
       min-width: 44px;
       min-height: 44px;

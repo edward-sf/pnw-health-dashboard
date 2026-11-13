@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Poverty rate", exact: true }).click();
+  await page.getByRole("button", { name: /^Measure: / }).click();
+  await page.getByRole("option", { name: "Poverty rate", exact: true }).click();
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
   await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
@@ -15,7 +16,7 @@ test("load, pick an indicator, select a county", async ({ page }) => {
 
 test("table view and county search", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.getByRole("combobox", { name: "Search counties" }).fill("Multnomah");
@@ -70,7 +71,7 @@ test("strip plot axis text does not overlap", async ({ page }) => {
 test("model mode: map, card, table and back", async ({ page }) => {
   await page.goto("./?i=life_expectancy");
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Compared with expected", exact: true }).click();
+  await page.getByRole("radio", { name: "Compared with expected", exact: true }).click();
   await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page).toHaveURL(/[?&]i=life_expectancy/);
   await expect(page.locator(".legend li")).toHaveCount(6);
@@ -85,7 +86,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
       name: "Factors associated with the expected value",
     }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
   await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
@@ -111,7 +112,8 @@ test("an old model link is rewritten in place", async ({ page }) => {
 test("model mode: change the outcome", async ({ page }) => {
   await page.goto("./?i=life_expectancy&show=expected&c=53033");
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: /^Premature death/ }).click();
+  await page.getByRole("button", { name: "Measure: Life expectancy" }).click();
+  await page.getByRole("option", { name: /^Premature death/ }).click();
   await expect(page).toHaveURL(/[?&]i=premature_death/);
   await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page).toHaveURL(/[?&]c=53033/);
