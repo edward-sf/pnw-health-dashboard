@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, test, vi } from "vitest";
 import type { ModelPeerData, ModelPeerRow, ValuesPeerData } from "./buildPeerRows";
+import type { Indicator } from "../types/generated/manifest";
 import { SimilarCounties } from "./SimilarCounties";
 
 const rows: ModelPeerRow[] = [
@@ -33,6 +34,21 @@ const modelData: ModelPeerData = {
   median: { kind: "model", value: 76, expected: 78 },
 };
 
+const LABELS: Record<string, string> = {
+  median_household_income: "Median household income",
+  poverty_rate: "Poverty rate",
+  uninsured_rate: "Uninsured rate",
+  bachelors_or_higher: "Bachelor's degree or higher",
+  unemployment_rate: "Unemployment rate",
+  age_65_plus: "Age 65 and older",
+  percent_rural: "Percent rural",
+  severe_housing_cost_burden: "Severe housing cost burden",
+  broadband_households: "Households with broadband",
+  copd: "COPD",
+};
+const INDICATORS = Object.entries(LABELS).map(([id, label]) => ({ id, label })) as never as Indicator[];
+const FEATURES = Object.keys(LABELS).slice(0, 9);
+
 function setup(
   props: Partial<React.ComponentProps<typeof SimilarCounties>> = {},
 ) {
@@ -42,7 +58,8 @@ function setup(
       <SimilarCounties
         data={modelData}
         unit="years"
-        factorCount={9}
+        features={FEATURES}
+        indicators={INDICATORS}
         onSelect={onSelect}
         {...props}
       />
@@ -95,7 +112,7 @@ test("shows the basis sentence with a link to /methodology#similar-counties", ()
   setup();
   expect(
     screen.getByText(
-      /Most similar PNW counties on income, poverty, education and six other social and economic measures\./,
+      /Most similar PNW counties on median household income, poverty rate, uninsured rate and six other social and economic measures\./,
     ),
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute(
@@ -117,38 +134,53 @@ test("shows the state for every row, including the selected county", () => {
 });
 
 test.each([
-  [9, "six other"],
   [10, "seven other"],
-  [14, "11 other"],
-])("derives the other-measure count from %i factors", (factorCount, words) => {
-  setup({ factorCount });
+  [12, "nine other"],
+])("derives the other-measure count from %i features", (n, words) => {
+  const features = [...FEATURES, "copd", "x1", "x2"].slice(0, n);
+  setup({ features });
   expect(
     screen.getByText(
-      new RegExp(`income, poverty, education and ${words} social and economic measures\\.`),
+      new RegExp(`uninsured rate and ${words} social and economic measures\\.`),
     ),
   ).toBeInTheDocument();
 });
 
-test("with three factors names them all and counts none", () => {
-  setup({ factorCount: 3 });
+test("with three features names them all and counts none", () => {
+  setup({ features: FEATURES.slice(0, 3) });
   expect(
-    screen.getByText(/Most similar PNW counties on income, poverty and education\./),
+    screen.getByText(
+      "Most similar PNW counties on median household income, poverty rate and uninsured rate.",
+      { exact: false },
+    ),
   ).toBeInTheDocument();
   expect(screen.queryByText(/other social and economic/)).not.toBeInTheDocument();
 });
 
-test("with fewer than three factors never counts a negative remainder", () => {
-  setup({ factorCount: 2 });
+test("with two features joins them with 'and'", () => {
+  setup({ features: FEATURES.slice(0, 2) });
   expect(
-    screen.getByText(/Most similar PNW counties on income, poverty and education\./),
+    screen.getByText(/on median household income and poverty rate\./),
   ).toBeInTheDocument();
 });
 
-test("with four factors the one other measure is singular", () => {
-  setup({ factorCount: 4 });
+test("with one feature names just it", () => {
+  setup({ features: ["poverty_rate"] });
+  expect(screen.getByText(/on poverty rate\./)).toBeInTheDocument();
+});
+
+test("with four features the one other measure is singular", () => {
+  setup({ features: FEATURES.slice(0, 4) });
+  expect(
+    screen.getByText(/uninsured rate and one other social and economic measure\./),
+  ).toBeInTheDocument();
+});
+
+test("keeps acronyms and proper nouns capitalised and falls back to the id", () => {
+  setup({ features: ["copd", "bachelors_or_higher", "mystery_id"] });
   expect(
     screen.getByText(
-      /income, poverty, education and one other social and economic measure\./,
+      /on COPD, bachelor's degree or higher and mystery_id\./,
     ),
   ).toBeInTheDocument();
 });
