@@ -312,44 +312,8 @@
     pointer-events: none;
   }
 
-  .county-search-list,
-  .county-search-empty {
-    position: absolute;
-    z-index: 10;
-    top: calc(2.25rem + 4px);
-    left: 0;
-    right: 0;
-    margin: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    box-shadow: 0 8px 24px rgb(23 37 42 / 14%);
-    font-size: 0.9375rem;
-  }
-
-  .county-search-list {
-    padding: 4px;
-    list-style: none;
-  }
-
-  .county-search-list li {
-    padding: 0.4rem 0.5rem;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-
-  .county-search-list li.is-active,
-  .county-search-list li:hover {
-    background: var(--fir-soft);
-  }
-
   .county-search-status {
     margin: 0;
-  }
-
-  .county-search-empty {
-    padding: 0.5rem 0.75rem;
-    color: var(--ink-muted);
   }
 
   .indicator-title {
@@ -1123,11 +1087,6 @@
     .county-search input,
     select {
       min-height: 2.75rem;
-    }
-
-    .county-search-list,
-    .county-search-empty {
-      top: calc(2.75rem + 4px);
     }
 
     .map-stage {
