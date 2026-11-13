@@ -153,3 +153,31 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport();
 });
+
+test("race breakdown follows the indicator and the outcome", async ({ page }) => {
+  const section = () => page.getByRole("region", { name: "By race and ethnicity (CHR 2025)" });
+
+  await page.goto("./?c=53077&i=life_expectancy");
+  await expect(section()).toBeVisible();
+  await expect(section().getByText("County overall")).toBeVisible();
+
+  await page.goto("./?c=53077&i=diabetes");
+  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  await expect(section()).toHaveCount(0);
+
+  await page.goto("./?mode=model&c=53077&t=premature_death");
+  await expect(section()).toHaveCount(1);
+  await expect(section()).toBeVisible();
+  await expect(page.getByText("Premature death (years lost) model")).toBeVisible();
+  await expect(section().getByText("County overall")).toBeVisible();
+});
+
+test("who lives here shows population and groups", async ({ page }) => {
+  await page.goto("./?c=53077");
+  const who = page.getByRole("region", { name: "Who lives here" });
+  await expect(who).toBeVisible();
+  await expect(who.getByText("Total population")).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Age and sex" })).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Race and ethnicity" })).toBeVisible();
+  await expect(who.getByRole("heading", { level: 4, name: "Other" })).toBeVisible();
+});
