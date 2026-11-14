@@ -61,7 +61,7 @@ def test_outcomes_table():
     t = render_outcomes([f("C1", "critical"), f("M2", "minor"), f("I3", "important")],
                         {"C1": "fixed in #410", "M2": "deferred to #411"})  # fmt: skip
     assert "| C1 |" in t and "fixed in #410" in t and "deferred to #411" in t
-    assert "| I3 | important | title I3 | ask author |" in t
+    assert "| I3 | important | title I3 | no outcome recorded |" in t  # never a guess
 
 
 def test_posts_use_comment_and_ready_but_never_merge_or_approve():
