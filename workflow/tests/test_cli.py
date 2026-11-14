@@ -564,3 +564,13 @@ def test_cli_usage_total_with_no_readings(tmp_path, capsys):
     capsys.readouterr()
     assert run(tmp_path, "usage-total", "--milestone", "13") == 0
     assert json.loads(capsys.readouterr().out)["pct_used"] is None
+
+
+def test_cli_gates_budget_refuses_the_fourth_round(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    for _ in range(3):
+        assert run(tmp_path, "start", "T1.gates", "--milestone", "13") == 0
+        run(tmp_path, "finish", "T1.gates", "--milestone", "13", "--status", "failed")
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.gates", "--milestone", "13") == 2
+    assert "budget of 3 rounds" in capsys.readouterr().err

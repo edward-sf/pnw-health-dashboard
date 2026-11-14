@@ -64,7 +64,7 @@ Gates the author owns: spec approval, plan approval, escalations, and the milest
 
 ## Changing budgets, tiers and pacing
 
-- **Budgets:** `budget` on each node in `workflow/graph.toml` (implement 3 rounds, task-review 2, deploy-watch 1, final-review 1, batched-fix 2).
+- **Budgets:** `budget` on each node in `workflow/graph.toml` (implement 3 rounds, gates 3, task-review 2, deploy-watch 1, final-review 1, batched-fix 2).
 - **Model tiers:** `[tiers]` in `workflow/graph.toml` (`strongest = "opus"`, `mid = "sonnet"`) and each node's `tier`. The skill passes the decision's model to the Agent tool, so a change here takes effect on the next dispatch.
 - **Pacing:** `[pacing]` in `workflow/project.toml`:
   - `margin = 1.5`: a node fits if its estimate times this fits in what is left of the 5-hour window (the weekly window is checked the same way).
