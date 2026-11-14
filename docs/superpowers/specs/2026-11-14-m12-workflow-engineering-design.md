@@ -1,6 +1,6 @@
 # M12 Workflow Engineering — design
 
-**Date:** 2026-11-14 · **Milestone:** M12 - Workflow Engineering · **Status:** draft, awaiting author approval
+**Date:** 2026-11-14 · **Milestone:** M12 - Workflow Engineering · **Status:** built in M12; see §11 for deviations
 
 ## 1. Intent
 
@@ -112,7 +112,7 @@ The retro runs **before** the merge gate. Its summary lands on the milestone bra
 | gates | script | — | branch | pass/fail record per check, keyed to head SHA | 3 implement↔gates rounds per task |
 | task-review | agent | mid-tier | review package (§5.4) | `pass` or findings list (blocking / minor) | 2 review rounds per task |
 | merge | script | — | passing gate + review record for head SHA | squash-merged PR, stacked PRs retargeted | — |
-| deploy-watch | script | — | milestone branch push | `build-deploy` result | 1 fix round per red run, then escalate |
+| deploy-watch | script | — | milestone branch push | `build-deploy` result | 1 fix round per red run, then escalate (as built: a red run escalates at once; see §11) |
 | final-review | agent | strongest | final package (§5.4) | findings report, committed to `docs/reviews/` and **posted as a comment on the milestone PR** | 1 |
 | triage | agent | mid-tier | findings | each finding marked must-fix / defer / ask-author | — |
 | batched-fix | agent | mid-tier | must-fix list | one fix PR | 2 rounds |
@@ -153,7 +153,7 @@ PR `ci` also gains a Playwright job. It runs the e2e suite against a production 
   - the run state has a passing local gate record
   - the run state has a passing review record
   - GitHub's `ci` check is green This extends `guard-merge.sh`, which keeps its `milestone/*`-only rule.
-- **The walker is a script, not the skill.** `workflow/scripts/state` is the only writer of run state. The skill asks it which node comes next and reports results through it. The script refuses to advance a node past its budget and records an escalation instead.
+- **The walker is a script, not the skill.** `wf` (`workflow/src/wf/`) is the only writer of run state. The skill asks it which node comes next and reports results through it. The script refuses to advance a node past its budget and records an escalation instead.
 - **Run state is protected.** A PreToolUse hook blocks Edit, Write and Bash writes under `.workflow/runs/` that don't come from the state script.
 - **Verdicts come from the reviewers themselves.** Each reviewer writes a structured verdict file, and the state script ingests it. The orchestrating session never writes a verdict itself.
 - **The hooks are committed.** They move into the committed `.claude/settings.json`, so they travel with the repo. The `gh pr merge` allow rule stays local if needed for auto mode.
@@ -200,7 +200,8 @@ The 1.5 margin, the default estimate and the sample threshold are configured in 
 
 - `workflow/graph.toml`: nodes, edges, budgets, model tiers. Generic.
 - `workflow/project.toml`: this repo's commands, paths, labels and branch patterns.
-- `workflow/scripts/`: `setup`, `gates`, `package`, `merge`, `deploy-watch`, `milestone-pr`, `state`.
+- `workflow/src/wf/`: the `wf` CLI. Its commands are `init`, `check-plan`, `setup`, `status`, `gate`, `start`, `finish`, `resume`, `escalate`, `next`, `package`, `ingest`, `check-merge`, `merge`, `deploy-watch`, `milestone-pr`, `post-final-review`, `post-outcomes` and `usage`.
+- `workflow/prompts/`: one prompt per agent node.
 - `.claude/skills/run-milestone/SKILL.md`: walks the graph, dispatches agent nodes with their packages and models, and calls the scripts.
 - `.claude/hooks/`: the merge-record guard.
 - CONTRIBUTING gains an "Agent workflow" section that points at the graph.
@@ -231,7 +232,7 @@ M12 itself is built with the current workflow.
 ## 7. My calls (the author can overturn them)
 
 - The specific gates (§5.3), budgets (§5.2) and model tiers.
-- Scripts in Python using the standard library only (`tomllib`, `json`, `subprocess`, `gh`), so they need no install and are portable. The graph is in TOML for the same reason.
+- Scripts in Python with no runtime dependencies: the standard library at runtime (`tomllib`, `json`, `subprocess`, `gh`), run through `uv` on Python 3.12 (`uv run --project workflow wf <command>`). The original call was "standard library only, so no install". `uv` is already a project tool, and it gives a pinned interpreter, a lockfile and dev-only tooling (`ruff`, `mypy`, `pytest`) for the engine, so the scripts are tested to the same standard as the pipeline. The graph is in TOML for the same reason.
 - Run state is git-ignored, and only the retro summary is committed.
 - Tasks run in sequence.
 - The pilot is M13.
@@ -253,3 +254,34 @@ M12 itself is built with the current workflow.
 
 - Bring `docs/milestone-review-template.md` up to date: its milestone-specific checks stop at M6.
 - Move the lessons in the machine-local memory notes into repo docs, where the graph and its scripts can use them.
+
+## 11. As built
+
+Where M12's build differs from the design above, and why. The rulings were made during the build; the author can overturn them in the milestone review.
+
+**Runtime and layout**
+- **Python 3.12 through `uv`**, with no runtime dependencies (§7). The CLI is `uv run --project workflow wf <command>`, one entry point instead of separate scripts. Prompts live in `workflow/prompts/`.
+- **Verdict files are under `.workflow/work/m<N>/verdicts/`**, not under the protected `.workflow/runs/`. A reviewer subagent has to write its own verdict, and the state hook blocks writes under the runs directory. `wf ingest` still validates each verdict against the head SHA and records it in run state, so only `wf` writes records.
+- **The state hook is a drift guard, not a security boundary.** It matches Bash commands by pattern, so a determined command can get around it.
+
+**Scheduling (§5.8)**
+- **A `waiting` decision.** When a node is still running (a background deploy-watch) and nothing else is ready, `wf next` returns `waiting`, not a dispatch or a pause. A task in the graph but missing from run state is an error.
+- **Same-window tolerance.** `resetsAt` jitters by a few hundred milliseconds between `get_usage` calls for the same window, so two windows are the same when their reset times differ by less than 5 minutes. Without it every call would look like a fresh window.
+- **Oversized estimates.** A node is blocked outright only when its estimate times the margin exceeds a whole window. One that merely does not fit what is left pauses until the reset.
+- **Unavailable usage.** When `get_usage` is unavailable or not applicable, the walker dispatches the earliest ready node without a fit check and records `pacing: off` for that decision.
+
+**Loops and budgets (§5.2)**
+- **Red deploys escalate.** The design gave deploy-watch one fix round per red run. As built, a red or timed-out `build-deploy` escalates to the author, who decides the fix.
+- **One late round on review budget.** The task-review budget is checked when the next review starts, so after the last allowed review round finds problems, one more implement and gates round runs before `wf start` refuses the review and escalates.
+- **The fix PR is merged by the graph.** `wf start batched-fix --branch <b>` records the fix branch. `wf merge` maps that branch to a `batched-fix` gate record and a `delta-review` record, so the fix PR merges under the same record rules as an issue PR.
+- **Merge hardening.** `wf merge` passes `--match-head-commit`, so a push between the record check and the merge is refused. The merge hook resolves the PR number and base with one `gh pr view` and blocks if that lookup fails. `wf check-merge` finds the task by matching the PR's head branch to the task graph.
+
+**Setup (§5.2)**
+- **Re-runs.** If the plan PR's branch already has an open PR, `wf setup` builds on it; if that branch has a merged or closed PR, it uses `docs/m<N>-plan-<k>` for the next free `k`. A closed, unmerged milestone PR is an error, never a duplicate. The plan PR is merged with `--delete-branch`.
+- **`reviews_dir`** is `docs/reviews`, where reviews already live.
+
+**CI and e2e (§5.5)**
+- **The e2e job is in PR `ci`** (#295), and `ci` needs it. New or changed specs are repeated 3 times at 4x CPU throttle (`E2E_CPU_THROTTLE`), in the gate and in CI. e2e also still runs on milestone pushes in `build-deploy`, and the job runs on pushes too, which duplicates that.
+- **A `workflow` job** runs `ruff`, `mypy` and `pytest` for the engine, and is in `ci`'s `needs`.
+
+**Known minors, left to the final review's triage.** Run state has no file locking (the walker is serial). The merge hook fires on any command whose text merely mentions the merge phrase, and the state hook can false-positive on a heredoc that names the runs path with `>` (use a body file). The replay and the pilot in §5.10 are task T11 and M13.

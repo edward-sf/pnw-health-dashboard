@@ -20,6 +20,7 @@ Each issue PR was already checked against its plan task. This review is about th
 - [ ] Every exit criterion in the roadmap for this milestone is met, with evidence in the PR (not just a ticked box)
 - [ ] The "Issue PRs" list matches the milestone's issues on the board, and every issue has a `Closes #` line
 - [ ] Nothing out of scope slipped in (later-milestone work, spec §10 Future work, unrelated refactors)
+- [ ] The final-review comment and the outcome comment are on the PR, and every must-fix is fixed or explicitly deferred
 
 Notes:
 
@@ -88,7 +89,22 @@ Findings (file:line — what — severity):
 Deferrals I'm pulling back in:
 
 ### 8. Milestone-specific checks
-*Delete the sections that don't apply.*
+Copy this milestone's Review Focus from its plan and check each line.
+
+- [ ] …
+
+### 9. Verdict
+- [ ] **Approve.** Merge with a **merge commit** (not squash).
+- [ ] **Approve with follow-ups.** Merge now; follow-up issues filed: #…
+- [ ] **Request changes.** Blocking items: …
+
+Summary (2–3 sentences, for the PR record):
+
+---
+
+## Appendix: Historical milestone checks
+
+The milestone-specific checks that this template carried for M2 to M6, kept for reference. New milestones use their plan's Review Focus instead (section 8).
 
 **M2 Map + live site**
 
@@ -127,10 +143,3 @@ Deferrals I'm pulling back in:
 - [ ] The panel's Methodology links land on the right section
 - [ ] axe reports no serious or critical violations; the manual checklist is filled in
 - [ ] The bottom sheet is usable one-handed on a real phone
-
-### 9. Verdict
-- [ ] **Approve.** Merge with a **merge commit** (not squash).
-- [ ] **Approve with follow-ups.** Merge now; follow-up issues filed: #…
-- [ ] **Request changes.** Blocking items: …
-
-Summary (2–3 sentences, for the PR record):
