@@ -76,21 +76,46 @@ class _Fake:
 
 
 class FakeGit(_Fake):
+    """Tracks remote branch heads, so a non-fast-forward push is rejected like the real one."""
+
     def __init__(
         self, branches: set[str] | None = None, canned: dict[str, str] | None = None
     ) -> None:
         super().__init__(canned)
-        self.branches = set(branches or ())
+        self.remote: dict[str, str] = {b: f"tip-{b}" for b in (branches or ())}
+        self._parent: dict[str, str] = {}  # local branch -> remote head it was started from
+        self._tip: dict[str, str] = {}  # local branch -> its own commit, once it has one
+        self._current = ""
+        self._commits = 0
+
+    @property
+    def branches(self) -> set[str]:
+        return set(self.remote)
 
     def _default(self, args: list[str]) -> str:
         if args[:2] == ["ls-remote", "--heads"]:
-            name = args[3]
-            return f"abc123\trefs/heads/{name}\n" if name in self.branches else ""
-        if args[0] == "push":
-            target = args[-1].split(":")[-1].removeprefix("refs/heads/")
-            self.branches.add(target)
-            return ""
-        if args[:2] == ["status", "--porcelain"]:
+            return f"abc123\trefs/heads/{args[3]}\n" if args[3] in self.remote else ""
+        if args[:2] == ["switch", "-C"]:
+            self._current = args[2]
+            origin = args[3].removeprefix("origin/")
+            self._parent[args[2]] = self.remote.get(origin, f"tip-{origin}")
+            self._tip.pop(args[2], None)
+        elif args[0] == "commit":
+            self._commits += 1
+            self._tip[self._current] = f"commit-{self._commits}"
+        elif args[0] == "push" and ":" in args[-1]:
+            source, target = args[-1].split(":")
+            self.remote[target.removeprefix("refs/heads/")] = (
+                f"tip-{source.removeprefix('origin/')}"
+            )
+        elif args[0] == "push":
+            name = args[-1]
+            if name in self.remote and self._parent.get(name) != self.remote[name]:
+                raise CommandError(f"git push failed: ! [rejected] {name} (non-fast-forward)")
+            self.remote[name] = self._tip.get(name, self._parent.get(name, f"tip-{name}"))
+            self._parent[name] = self.remote[name]
+            self._tip.pop(name, None)
+        elif args[:2] == ["status", "--porcelain"]:
             return "A  changed\n"
         return ""
 

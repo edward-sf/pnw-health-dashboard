@@ -5,7 +5,7 @@ import pytest
 
 from wf.cli import main
 from wf.config import load_graph, load_project
-from wf.github import FakeGh, FakeGit
+from wf.github import CommandError, FakeGh, FakeGit
 from wf.schedule import load_task_graph
 from wf.setup import setup_milestone, work_order
 from wf.state import load
@@ -202,7 +202,7 @@ def test_git_and_pr_flow(tmp_path):
     g = [c[:2] for c in git.calls]
     assert ["push", "origin"] in g and ["switch", "-C"] in g and ["commit", "-m"] in g
     assert ["push", "origin", "origin/main:refs/heads/milestone/m13"] in git.calls
-    assert ["pr", "merge", "302", "--repo", PROJECT.repo, "--squash"] in gh.calls
+    assert ["pr", "merge", "302", "--repo", PROJECT.repo, "--squash", "--delete-branch"] in gh.calls
     ms = next(c for c in gh.calls if c[:2] == ["pr", "create"] and "--draft" in c)
     assert "--template" not in ms and ms[ms.index("--base") + 1] == "main"
     assert ms[ms.index("--head") + 1] == "milestone/m13"
@@ -240,3 +240,59 @@ def test_cli_check_plan(tmp_path, capsys):
 
 def test_parse_matches_fixture():
     assert [t.id for t in parse_plan_tasks(GOOD)] == ["T1", "T2"]
+
+
+def pr_creates(gh, head):
+    return [c for c in gh.calls if c[:2] == ["pr", "create"] and c[c.index("--head") + 1] == head]
+
+
+def test_fake_git_rejects_non_fast_forward_push():
+    git = FakeGit(branches={"milestone/m13", "docs/m13-plan"})
+    git.run(["switch", "-C", "docs/m13-plan", "origin/milestone/m13"])
+    git.run(["commit", "-m", "x"])
+    with pytest.raises(CommandError, match="non-fast-forward"):
+        git.run(["push", "-u", "origin", "docs/m13-plan"])
+    git.run(["switch", "-C", "docs/m13-plan", "origin/docs/m13-plan"])
+    git.run(["commit", "-m", "y"])
+    git.run(["push", "-u", "origin", "docs/m13-plan"])
+
+
+def test_rerun_with_changes_after_merged_plan_pr_uses_suffixed_branch(tmp_path):
+    gh, git = FakeGh(next_issue=300), FakeGit()
+    plan = good_plan(tmp_path)
+    run(tmp_path, gh, git, plan)
+    git.remote["docs/m13-plan"] = "commit-old"  # merged, but the branch was not deleted
+    plan.write_text(plan.read_text() + "\n<!-- edited -->\n")
+    r = run(tmp_path, gh, git, plan)
+    assert "docs/m13-plan-2" in git.remote
+    assert len(pr_creates(gh, "docs/m13-plan-2")) == 1
+    assert [
+        "pr",
+        "merge",
+        str(r.plan_pr),
+        "--repo",
+        PROJECT.repo,
+        "--squash",
+        "--delete-branch",
+    ] in gh.calls
+    assert check_plan_file(plan) == []
+
+
+def test_rerun_after_crash_builds_on_remote_branch_with_open_pr(tmp_path):
+    gh = FakeGh(
+        next_issue=400,
+        prs=[{"number": 399, "state": "OPEN", "headRefName": "docs/m13-plan"}],
+    )
+    git = FakeGit(branches={"milestone/m13", "docs/m13-plan"})
+    git.remote["docs/m13-plan"] = "commit-crashed"
+    r = run(tmp_path, gh, git)
+    assert ["switch", "-C", "docs/m13-plan", "origin/docs/m13-plan"] in git.calls
+    assert pr_creates(gh, "docs/m13-plan") == [] and r.plan_pr == 399
+    assert sum(c[:2] == ["pr", "merge"] for c in gh.calls) == 1
+
+
+def test_closed_milestone_pr_is_not_duplicated(tmp_path):
+    gh = FakeGh(prs=[{"number": 77, "state": "CLOSED", "headRefName": "milestone/m13"}])
+    with pytest.raises(PlanError, match=r"milestone PR #77 is closed; reopen it"):
+        run(tmp_path, gh, FakeGit(branches={"milestone/m13"}))
+    assert not any(c[:2] == ["pr", "create"] and "--draft" in c for c in gh.calls)

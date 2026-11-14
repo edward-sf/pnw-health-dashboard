@@ -191,6 +191,28 @@ def _prs_for_head(gh: Gh, repo: str, head: str) -> list[dict[str, object]]:
     )  # fmt: skip
 
 
+def _docs_branch(
+    gh: Gh, git: Git, repo: str, n: int, milestone_branch: str
+) -> tuple[str, str, list[dict[str, object]]]:
+    """Pick the branch for the plan PR: (name, ref to start from, earlier PRs on these names).
+
+    An existing remote branch with an open PR is built on (a crashed run's, or a re-run's);
+    any other existing remote branch is left alone and the next free `-<k>` suffix is used."""
+    base = f"docs/m{n}-plan"
+    earlier: list[dict[str, object]] = []
+    k = 1
+    while True:
+        name = base if k == 1 else f"{base}-{k}"
+        prs = _prs_for_head(gh, repo, name)
+        earlier += prs
+        if not git.run(["ls-remote", "--heads", "origin", name]).strip():
+            return name, f"origin/{milestone_branch}", earlier
+        if any(p["state"] == "OPEN" for p in prs):
+            git.run(["fetch", "origin", name])
+            return name, f"origin/{name}", earlier
+        k += 1
+
+
 def _create_milestone_pr(
     gh: Gh, project: Project, root: Path, n: int, display: str, branch: str
 ) -> int:
@@ -234,7 +256,6 @@ def setup_milestone(
     plan_rel, spec_rel = _rel(root, plan_path), _rel(root, spec_path)
     repo = project.repo
     branch = project.milestone_branch.format(n=n)
-    docs_branch = f"docs/m{n}-plan"
     name = _milestone_name(plan_text, n)
     milestone = f"M{n} - {name}" if name else f"M{n}"
 
@@ -242,7 +263,8 @@ def setup_milestone(
     if not git.run(["ls-remote", "--heads", "origin", branch]).strip():
         git.run(["push", "origin", f"origin/{project.main_branch}:refs/heads/{branch}"])
     git.run(["fetch", "origin", branch])
-    git.run(["switch", "-C", docs_branch, f"origin/{branch}"])
+    docs_branch, start, earlier = _docs_branch(gh, git, repo, n, branch)
+    git.run(["switch", "-C", docs_branch, start])
     for rel, data in ((plan_rel, plan_bytes), (spec_rel, spec_bytes)):
         target = root / rel
         if not target.exists() or target.read_bytes() != data:
@@ -319,16 +341,24 @@ def setup_milestone(
             )  # fmt: skip
         )
     else:
-        plan_pr = max((int(str(p["number"])) for p in prs), default=0)
+        plan_pr = max((int(str(p["number"])) for p in earlier), default=0)
     if live or changed:
-        gh.run(["pr", "merge", str(plan_pr), "--repo", repo, "--squash"])
+        # Leave the docs branch first so `--delete-branch` can remove the local copy too.
+        git.run(["switch", "-C", branch, f"origin/{branch}"])
+        gh.run(["pr", "merge", str(plan_pr), "--repo", repo, "--squash", "--delete-branch"])
 
     git.run(["fetch", "origin", branch])
     git.run(["switch", "-C", branch, f"origin/{branch}"])
 
-    open_ms = [p for p in _prs_for_head(gh, repo, branch) if p["state"] == "OPEN"]
+    ms_prs = _prs_for_head(gh, repo, branch)
+    open_ms = [p for p in ms_prs if p["state"] == "OPEN"]
+    closed_ms = [p for p in ms_prs if p["state"] == "CLOSED"]
     if open_ms:
         milestone_pr = int(str(open_ms[0]["number"]))
+    elif closed_ms:
+        raise PlanError(
+            f"milestone PR #{closed_ms[0]['number']} is closed; reopen it before re-running setup"
+        )
     else:
         milestone_pr = _create_milestone_pr(gh, project, root, n, display, branch)
 
