@@ -6,7 +6,7 @@ milestone_branch = "milestone/m{n}"
 plans_dir = "docs/superpowers/plans"
 specs_dir = "docs/superpowers/specs"
 reviews_dir = "docs/superpowers/reviews"
-roadmap = "docs/superpowers/roadmap.md"
+roadmap = "docs/superpowers/plans/2026-11-10-roadmap.md"
 deploy_workflow = "build-deploy"
 
 [areas.pipeline]
