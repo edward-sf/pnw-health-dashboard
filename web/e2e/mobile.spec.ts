@@ -9,14 +9,40 @@ async function drawerShare(page: Page) {
   });
 }
 
-/** Drags the drawer's handle vertically by `dy` CSS px with the mouse (vaul reads pointer events). */
-async function dragHandle(page: Page, dy: number) {
+/**
+ * Waits until the drawer has come to rest at `share` of the screen: no transition running and
+ * its top edge at the snap point. vaul ignores every drag for 500ms after the drawer opens or
+ * reaches its top snap point, which is as long as its slide, so a drag only takes once the drawer
+ * is still, as a user sees it.
+ */
+async function settledAt(page: Page, share: number) {
+  await expect
+    .poll(async () => {
+      const moving = await page.evaluate(
+        () => document.querySelector(".county-panel[data-vaul-drawer]")?.getAnimations().length ?? 1,
+      );
+      return moving === 0 && Math.abs((await drawerShare(page)) - share) < 0.01;
+    })
+    .toBe(true);
+}
+
+/**
+ * Drags the drawer's handle vertically by `dy` CSS px with the mouse (vaul reads pointer events).
+ * A "drag" moves at a finger's pace, 16 steps 25ms apart, so its speed stays under the 2px/ms
+ * at which vaul flings the drawer to an end however fast the runner is; a "flick" is four quick
+ * steps, fast enough (over 0.4px/ms) for vaul to close the drawer however slow the runner is.
+ */
+async function dragHandle(page: Page, dy: number, pace: "drag" | "flick" = "drag") {
   const handle = (await page.locator(".county-panel [data-vaul-handle]").boundingBox())!;
   const x = handle.x + handle.width / 2;
   const y = handle.y + handle.height / 2;
+  const steps = pace === "drag" ? 16 : 4;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x, y + dy, { steps: 12 });
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(x, y + (dy * i) / steps);
+    if (pace === "drag") await page.waitForTimeout(25);
+  }
   await page.mouse.up();
 }
 
@@ -31,15 +57,13 @@ test("tap a county: the drawer opens at 40%, the handle drags it to 85% and back
   await expect(drawer.getByRole("heading", { level: 2 })).toHaveText("King County");
   await expect(page.locator("[role=tooltip]")).toHaveCount(0);
   await expect(drawer.getByRole("button", { name: "Expand" })).toHaveCount(0);
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
+  await settledAt(page, 0.4);
 
   const height = page.viewportSize()!.height;
   await dragHandle(page, -height * 0.45);
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.85, 1);
-  // vaul ignores drags for 500ms after reaching the top snap point, so content can scroll first.
-  await page.waitForTimeout(600);
+  await settledAt(page, 0.85);
   await dragHandle(page, height * 0.45);
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
+  await settledAt(page, 0.4);
 
   await drawer.getByRole("button", { name: "Close" }).tap();
   await expect(page.getByRole("dialog", { name: "County details" })).toHaveCount(0);
@@ -49,9 +73,9 @@ test("tap a county: the drawer opens at 40%, the handle drags it to 85% and back
 test("a new county reopens the drawer in peek", async ({ page }) => {
   await page.goto("./?i=poverty_rate&c=53033");
   const drawer = page.getByRole("dialog", { name: "County details" });
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
+  await settledAt(page, 0.4);
   await drawer.locator("[data-vaul-handle]").click();
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.85, 1);
+  await settledAt(page, 0.85);
   const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("button").first();
   await peer.scrollIntoViewIfNeeded();
   await peer.tap();
@@ -61,8 +85,8 @@ test("a new county reopens the drawer in peek", async ({ page }) => {
 
 test("dragging the drawer below its lower snap point closes it", async ({ page }) => {
   await page.goto("./?i=poverty_rate&c=53033");
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.4, 1);
-  await dragHandle(page, page.viewportSize()!.height * 0.35);
+  await settledAt(page, 0.4);
+  await dragHandle(page, page.viewportSize()!.height * 0.35, "flick");
   await expect(page.getByRole("dialog", { name: "County details" })).toHaveCount(0);
   await expect(page).not.toHaveURL(/[?&]c=/);
 });
@@ -123,7 +147,7 @@ test("the drawer header stays in view while its content scrolls", async ({ page 
   for (const share of [0.4, 0.85]) {
     // Tapping the handle in peek opens the drawer to the upper snap point.
     if (share === 0.85) await drawer.locator("[data-vaul-handle]").click();
-    await expect.poll(() => drawerShare(page)).toBeCloseTo(share, 1);
+    await settledAt(page, share);
     const scrolled = await body.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
       return el.scrollTop;
@@ -145,7 +169,7 @@ test("Close and the Outcome select are 44px touch targets", async ({ page }) => 
   expect(Math.round(close.width)).toBeGreaterThanOrEqual(44);
   expect(Math.round(close.height)).toBeGreaterThanOrEqual(44);
   await drawer.locator("[data-vaul-handle]").click();
-  await expect.poll(() => drawerShare(page)).toBeCloseTo(0.85, 1);
+  await settledAt(page, 0.85);
   const select = drawer.getByRole("combobox", { name: "Outcome" });
   await select.scrollIntoViewIfNeeded();
   expect(Math.round((await select.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
