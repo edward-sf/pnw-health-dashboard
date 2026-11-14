@@ -1,0 +1,49 @@
+# Project-specific settings for wf (CONTRIBUTING's local commands per area).
+
+repo = "edward-sf/pnw-health-dashboard"
+main_branch = "main"
+milestone_branch = "milestone/m{n}"
+plans_dir = "docs/superpowers/plans"
+specs_dir = "docs/superpowers/specs"
+reviews_dir = "docs/superpowers/reviews"
+roadmap = "docs/superpowers/roadmap.md"
+deploy_workflow = "build-deploy"
+
+[areas.pipeline]
+paths = ["pipeline/", "schema/"]
+cwd = "pipeline"
+commands = [
+    "uv run ruff check",
+    "uv run ruff format --check",
+    "uv run mypy src",
+    "uv run pytest",
+]
+
+[areas.web]
+paths = ["web/"]
+cwd = "web"
+commands = ["npm run lint", "npm run typecheck", "npm test"]
+
+[areas.workflow]
+paths = ["workflow/"]
+cwd = "workflow"
+commands = [
+    "uv run ruff check",
+    "uv run ruff format --check",
+    "uv run mypy src",
+    "uv run pytest",
+]
+
+[e2e]
+paths = ["web/"]
+cwd = "web"
+build = "npm run build"
+run = "CI=1 npx playwright test"
+spec_glob = "e2e/**/*.spec.ts"
+repeat_each = 3
+throttle = 4
+
+[pacing]
+margin = 1.5
+min_samples = 3
+default_pct_per_step = 0.5

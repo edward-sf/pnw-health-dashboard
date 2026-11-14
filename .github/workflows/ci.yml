@@ -41,8 +41,22 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  workflow:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workflow
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run mypy src
+      - run: uv run pytest
+
   ci:
-    needs: [pipeline, web]
+    needs: [pipeline, web, workflow]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -50,3 +64,4 @@ jobs:
         run: |
           test "${{ needs.pipeline.result }}" = "success"
           test "${{ needs.web.result }}" = "success"
+          test "${{ needs.workflow.result }}" = "success"

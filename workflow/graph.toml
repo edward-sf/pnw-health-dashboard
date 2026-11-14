@@ -1,0 +1,80 @@
+# The workflow graph (spec 5.1 / 5.2). `spec` and `plan` are author-gated agent
+# nodes outside the run, so they are not listed here.
+
+[tiers]
+strongest = "opus"
+mid = "sonnet"
+
+# Per-task nodes: implement -> gates -> task-review -> merge -> deploy-watch.
+[nodes.implement]
+kind = "agent"
+per_task = true
+tier = "mid"
+budget = 3
+after = []
+
+[nodes.gates]
+kind = "script"
+per_task = true
+after = ["implement"]
+
+[nodes.task-review]
+kind = "agent"
+per_task = true
+tier = "mid"
+budget = 2
+after = ["gates"]
+
+[nodes.merge]
+kind = "script"
+per_task = true
+after = ["task-review"]
+
+[nodes.deploy-watch]
+kind = "script"
+per_task = true
+budget = 1
+after = ["merge"]
+
+# Milestone nodes.
+[nodes.final-review]
+kind = "agent"
+per_task = false
+tier = "strongest"
+budget = 1
+after = ["deploy-watch"]
+
+[nodes.triage]
+kind = "agent"
+per_task = false
+tier = "mid"
+after = ["final-review"]
+
+[nodes.batched-fix]
+kind = "agent"
+per_task = false
+tier = "mid"
+budget = 2
+after = ["triage"]
+
+[nodes.delta-review]
+kind = "agent"
+per_task = false
+tier = "strongest"
+after = ["batched-fix"]
+
+[nodes.final-gates]
+kind = "script"
+per_task = false
+after = ["delta-review"]
+
+[nodes.milestone-pr]
+kind = "script"
+per_task = false
+after = ["final-gates"]
+
+[nodes.retro]
+kind = "agent"
+per_task = false
+tier = "mid"
+after = ["milestone-pr"]
