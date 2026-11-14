@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // The phone case runs under the `mobile` project (touch, phone user agent); the rest under
 // `chromium`. Each test sets its own viewport.

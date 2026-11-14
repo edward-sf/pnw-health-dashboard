@@ -1,7 +1,8 @@
 import { chmod, mkdir, rm } from "node:fs/promises";
 import { connect } from "node:net";
 import { fileURLToPath } from "node:url";
-import { expect, test, type TestInfo } from "@playwright/test";
+import type { TestInfo } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Runs on the `pages` project against e2e/pages-server.mjs, which answers unknown paths the way
 // GitHub Pages does: status 404 with the body of 404.html. `vite preview` falls back to

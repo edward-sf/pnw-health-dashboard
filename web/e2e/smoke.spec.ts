@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
