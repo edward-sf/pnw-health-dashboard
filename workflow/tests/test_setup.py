@@ -74,7 +74,13 @@ def spec(tmp_path):
     return s
 
 
+TEMPLATE = "<!-- milestone/m<N> -->\n# M<N> — <milestone name>\n\n## Summary\n"
+
+
 def run(tmp_path, gh=None, git=None, plan=None):
+    tpl = tmp_path / ".github/PULL_REQUEST_TEMPLATE/milestone.md"
+    tpl.parent.mkdir(parents=True, exist_ok=True)
+    tpl.write_text(TEMPLATE)
     return setup_milestone(
         PROJECT, tmp_path, 13, plan or good_plan(tmp_path), spec(tmp_path),
         gh or FakeGh(), git or FakeGit(), GRAPH,
@@ -181,7 +187,15 @@ def test_work_order_groups_same_dependencies():
 
 
 def test_git_and_pr_flow(tmp_path):
-    gh, git = FakeGh(next_issue=300), FakeGit()
+    body_files = {}
+
+    class SpyGh(FakeGh):
+        def run(self, args):
+            if args[:2] == ["pr", "create"] and "--draft" in args:
+                body_files["body"] = Path(args[args.index("--body-file") + 1]).read_text()
+            return super().run(args)
+
+    gh, git = SpyGh(next_issue=300), FakeGit()
     r = run(tmp_path, gh, git)
     assert r.branch == "milestone/m13" and r.issues == {"T1": 300, "T2": 301}
     assert (r.plan_pr, r.milestone_pr) == (302, 303)
@@ -190,8 +204,11 @@ def test_git_and_pr_flow(tmp_path):
     assert ["push", "origin", "origin/main:refs/heads/milestone/m13"] in git.calls
     assert ["pr", "merge", "302", "--repo", PROJECT.repo, "--squash"] in gh.calls
     ms = next(c for c in gh.calls if c[:2] == ["pr", "create"] and "--draft" in c)
-    assert ms[ms.index("--template") + 1] == "milestone.md" and "main" in ms
-    assert ms.index("--draft") < ms.index("--template")
+    assert "--template" not in ms and ms[ms.index("--base") + 1] == "main"
+    assert ms[ms.index("--head") + 1] == "milestone/m13"
+    assert ms[ms.index("--title") + 1] == "M13 — Branding"
+    assert "--draft" in ms and "--body-file" in ms
+    assert body_files["body"] == ("<!-- milestone/m13 -->\n# M13 — Branding\n\n## Summary\n")
     assert any(c[0] == "api" and "title=M13 - Branding" in c for c in gh.calls)
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -190,6 +191,27 @@ def _prs_for_head(gh: Gh, repo: str, head: str) -> list[dict[str, object]]:
     )  # fmt: skip
 
 
+def _create_milestone_pr(
+    gh: Gh, project: Project, root: Path, n: int, display: str, branch: str
+) -> int:
+    template = root / ".github/PULL_REQUEST_TEMPLATE/milestone.md"
+    try:
+        text = template.read_text()
+    except OSError as e:
+        raise PlanError(f"cannot read {template}: {e.strerror}") from e
+    body = text.replace("M<N> — <milestone name>", f"M{n} — {display}").replace(
+        "milestone/m<N>", branch
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        body_file = Path(tmp) / "milestone-pr.md"
+        body_file.write_text(body)
+        out = gh.run(
+            ["pr", "create", "--repo", project.repo, "--draft", "--base", project.main_branch,
+             "--head", branch, "--title", f"M{n} — {display}", "--body-file", str(body_file)]
+        )  # fmt: skip
+    return trailing_number(out)
+
+
 def setup_milestone(
     project: Project,
     root: Path,
@@ -308,25 +330,7 @@ def setup_milestone(
     if open_ms:
         milestone_pr = int(str(open_ms[0]["number"]))
     else:
-        milestone_pr = trailing_number(
-            gh.run(
-                [
-                    "pr",
-                    "create",
-                    "--repo",
-                    repo,
-                    "--draft",
-                    "--base",
-                    project.main_branch,
-                    "--head",
-                    branch,
-                    "--title",
-                    f"M{n} — {display}",
-                    "--template",
-                    "milestone.md",
-                ]
-            )  # fmt: skip
-        )
+        milestone_pr = _create_milestone_pr(gh, project, root, n, display, branch)
 
     if not (run_dir(root, n) / "state.json").exists():
         init_run(
