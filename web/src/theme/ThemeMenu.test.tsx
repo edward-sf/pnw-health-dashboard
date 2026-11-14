@@ -71,3 +71,13 @@ test("choosing Light overrides a dark OS setting", async () => {
   await user.click(screen.getByRole("menuitemradio", { name: "Light" }));
   expect(document.documentElement).not.toHaveClass("dark");
 });
+
+test("an open menu leaves the page behind it exposed to assistive technology", async () => {
+  const user = userEvent.setup();
+  const { container } = renderMenu();
+  await user.click(screen.getByRole("button", { name: "Theme" }));
+  expect(screen.getAllByRole("menuitemradio")).toHaveLength(3);
+  // A modal menu aria-hides its siblings while their controls stay tabbable (axe aria-hidden-focus).
+  expect(container).not.toHaveAttribute("aria-hidden");
+  expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
+});
