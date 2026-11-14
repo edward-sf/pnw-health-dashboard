@@ -185,19 +185,17 @@ def test_weekly_window_also_gates():
     assert d == Pause(until="W", reason="no ready node fits the weekly window")
 
 
-def test_parse_usage():
-    raw = {
-        "status": "ok",
-        "plan": {
-            "windows": [
-                {"label": "5-hour limit", "percentUsed": 12.5, "resetsAt": "R"},
-                {"label": "Weekly · all models", "percentUsed": 40, "resetsAt": "W"},
-            ]
-        },
-    }
-    assert parse_usage(raw) == Usage(Window(12.5, "R"), Window(40.0, "W"))
-    assert parse_usage({**raw, "status": "unavailable"}) == Usage(None, None)
-    assert parse_usage({"status": "ok", "plan": {"windows": []}}) == Usage(None, None)
+def test_parse_usage_real_payload():
+    raw = json.loads((Path(__file__).parent / "fixtures/get_usage_ok.json").read_text())
+    assert parse_usage(raw) == Usage(
+        Window(14, "2026-11-14T21:29:59.821Z"), Window(5, "2026-11-19T04:59:59.821Z")
+    )
+
+
+def test_parse_usage_unavailable_or_unknown_shape():
+    assert parse_usage({"plan": {"status": "unavailable"}}) == Usage(None, None)
+    assert parse_usage({"status": "ok"}) == Usage(None, None)
+    assert parse_usage({"plan": {"status": "ok", "windows": []}}) == Usage(None, None)
 
 
 def test_task_graph_round_trips_with_reverse_edges(tmp_path):
@@ -214,8 +212,8 @@ def test_task_graph_round_trips_with_reverse_edges(tmp_path):
 # ---------------------------------------------------------------- CLI
 
 OK = {
-    "status": "ok",
     "plan": {
+        "status": "ok",
         "windows": [{"label": "5-hour limit", "percentUsed": 10, "resetsAt": FUTURE}],
     },
 }

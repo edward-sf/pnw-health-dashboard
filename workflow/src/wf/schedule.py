@@ -28,15 +28,13 @@ class Usage:
 
 
 _LABELS = {"five_hour": "5-hour limit", "weekly": "Weekly · all models"}
-_PCT_KEYS = ("percentUsed", "pctUsed", "percent_used", "pct_used", "usedPercent")
-_RESET_KEYS = ("resetsAt", "resets_at")
 
 
 def _window(raw: Any) -> Window | None:
     if not isinstance(raw, dict):
         return None
-    pct = next((raw[k] for k in _PCT_KEYS if k in raw), None)
-    resets = next((raw[k] for k in _RESET_KEYS if k in raw), None)
+    pct = raw.get("percentUsed")
+    resets = raw.get("resetsAt")
     if isinstance(pct, bool) or not isinstance(pct, (int, float)) or not isinstance(resets, str):
         return None
     return Window(float(pct), resets)
@@ -46,7 +44,7 @@ def parse_usage(get_usage_json: dict[str, Any]) -> Usage:
     """Read the 5-hour and weekly windows; anything but status "ok" means unavailable."""
     plan = get_usage_json.get("plan")
     plan = plan if isinstance(plan, dict) else {}
-    status = plan.get("status", get_usage_json.get("status"))
+    status = plan.get("status")
     if status != "ok":
         return Usage(None, None)
     windows = plan.get("windows")
