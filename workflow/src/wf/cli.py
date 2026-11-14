@@ -12,6 +12,7 @@ from pathlib import Path
 
 from wf import state as st
 from wf.config import ConfigError, Graph, load_graph, load_project
+from wf.gates import LoggedRunner, run_gates
 from wf.github import CommandError, SubprocessGh, SubprocessGit
 from wf.schedule import (
     Blocked,
@@ -74,6 +75,10 @@ def _parser() -> argparse.ArgumentParser:
     setup.add_argument("--plan", type=Path, required=True, help="plan file, repo-relative")
     setup.add_argument("--spec", type=Path, required=True, help="spec file, repo-relative")
     add("status")
+    gate = add("gate", node=True)
+    gate.add_argument(
+        "--base", help="base ref to diff against (default: origin/<milestone branch>)"
+    )
     add("start", node=True)
     fin = add("finish", node=True)
     fin.add_argument("--status", required=True, choices=["done", "failed", "escalated"])
@@ -179,6 +184,14 @@ def _run(args: argparse.Namespace) -> object:
     state = st.load(root, m)
     if cmd == "status":
         return asdict(state)
+    if cmd == "gate":
+        project = load_project(args.project or root / "workflow/project.toml")
+        base = args.base or "origin/" + project.milestone_branch.format(n=m)
+        runner = LoggedRunner(st.run_dir(root, m) / "logs")
+        record = run_gates(project, root, args.node, base, SubprocessGit(root), runner)
+        state.gates.append(record)
+        st.save(root, state)
+        return asdict(record)
     if cmd == "next":
         return _next(root, args, state, now)
     if cmd == "usage":
@@ -222,4 +235,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(json.dumps(result, indent=2))
     problems = result.get("problems") if isinstance(result, dict) else None
+    if isinstance(result, dict) and result.get("passed") is False:
+        return 1
     return 2 if problems else 0
