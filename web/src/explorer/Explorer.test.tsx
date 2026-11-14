@@ -418,12 +418,49 @@ test("phone: the description waits behind About this measure", async () => {
   expect(screen.getByText(text)).toBeInTheDocument();
 });
 
-test("wide viewport: no sheet-open class, and the description shows without a button", () => {
+test("wide viewport: no sheet-open class; the description shows, and in full behind About this measure", async () => {
   mockMatchMedia(false);
   setup("/?i=poverty_rate&c=53033");
   expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
-  expect(screen.queryByRole("button", { name: "About this measure" })).not.toBeInTheDocument();
-  expect(screen.getByText("Share of residents living below the poverty line.")).toBeInTheDocument();
+  const text = "Share of residents living below the poverty line.";
+  expect(screen.getByText(text)).toHaveClass("indicator-description--clamped");
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
+  expect(screen.getAllByText(text)).toHaveLength(2);
+});
+
+test("wide viewport: the Show switch sits in the title block's slot", () => {
+  mockMatchMedia(false);
+  setup("/?i=life_expectancy&show=expected");
+  const show = screen.getByRole("radiogroup", { name: "Show" });
+  expect(show.closest(".show-slot")).not.toBeNull();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Life expectancy: compared with expected" }),
+  ).toBeInTheDocument();
+  cleanup();
+  setup("/?i=poverty_rate");
+  // The slot is there with nothing in it, so the title block keeps its height.
+  expect(document.querySelector(".show-slot")).toBeEmptyDOMElement();
+});
+
+test("phone: the Show switch sits under the map, and Compared with expected keeps the label as the heading", () => {
+  mockMatchMedia(true);
+  setup("/?i=life_expectancy&show=expected");
+  const show = screen.getByRole("radiogroup", { name: "Show" });
+  expect(show.closest(".title-block")).toBeNull();
+  const stage = document.querySelector(".map-stage")!;
+  expect(stage.contains(show)).toBe(true);
+  expect(
+    stage.querySelector(".county-map")!.compareDocumentPosition(show) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2, name: "Life expectancy" })).toBeInTheDocument();
+});
+
+test("phone: in table view the Show switch sits above the table", () => {
+  mockMatchMedia(true);
+  setup("/?i=life_expectancy&show=expected&view=table");
+  const show = screen.getByRole("radiogroup", { name: "Show" });
+  const table = screen.getByRole("table");
+  expect(show.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 test("there is no picker column; the toolbar holds the picker, search and View", () => {

@@ -17,6 +17,33 @@ async function open(page: Page, size: { width: number; height: number }, query =
   await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
 }
 
+/** The drawn map's box in page coordinates: the canvas is fitted inside the SVG, left-aligned. */
+async function drawnMap(page: Page) {
+  return page.locator(".county-map svg").evaluate((svg: SVGSVGElement) => {
+    const box = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const scale = Math.min(box.width / vb.width, box.height / vb.height);
+    const height = vb.height * scale;
+    const top = box.top + (box.height - height) / 2 + window.scrollY;
+    const r = (n: number) => Math.round(n * 2) / 2;
+    return `${r(box.left)},${r(top)} ${r(vb.width * scale)}×${r(height)}`;
+  });
+}
+
+// Shortest and longest label (copd, pct_nhpi), shortest and longest description
+// (total_population, pct_nhpi), Demographics (pct_female, pct_nhpi), a modelled outcome in both
+// Show states, and the longest Compared-with-expected heading (premature_death).
+const MEASURES = [
+  "?i=poverty_rate",
+  "?i=copd",
+  "?i=total_population",
+  "?i=pct_female",
+  "?i=pct_nhpi",
+  "?i=life_expectancy",
+  "?i=life_expectancy&show=expected",
+  "?i=premature_death&show=expected",
+];
+
 for (const size of SIZES) {
   test(`the map keeps its box when a county opens at ${size.width}×${size.height}`, async ({
     page,
@@ -33,6 +60,37 @@ for (const size of SIZES) {
     for (const k of ["x", "y", "width", "height"] as const) {
       expect(Math.abs(after[k] - before[k]), k).toBeLessThanOrEqual(0.5);
     }
+  });
+}
+
+for (const size of SIZES) {
+  test(`the map keeps one box across measures, the Show switch and a county at ${size.width}×${size.height}`, async ({
+    page,
+  }, testInfo) => {
+    onlyIn(isPhone(size) ? "mobile" : "chromium", testInfo.project.name);
+    const boxes = new Map<string, string[]>();
+    const record = async (state: string) => {
+      const box = await drawnMap(page);
+      boxes.set(box, [...(boxes.get(box) ?? []), state]);
+    };
+    for (const query of MEASURES) {
+      await open(page, size, query);
+      await record(query);
+    }
+    // Flip the switch in place, then open a county.
+    await open(page, size, "?i=injury_deaths");
+    await record("injury_deaths");
+    const compared = page.getByRole("radio", { name: "Compared with expected" });
+    if (isPhone(size)) await compared.tap();
+    else await compared.click();
+    await expect(page).toHaveURL(/[?&]show=expected/);
+    await record("injury_deaths, switched to Compared with expected");
+    const king = page.locator('path.county[data-fips="53033"]');
+    if (isPhone(size)) await king.tap();
+    else await king.click();
+    await expect(page.getByRole("dialog", { name: "County details" })).toBeVisible();
+    await record("injury_deaths, Compared with expected, King County open");
+    expect(boxes.size, JSON.stringify(Object.fromEntries(boxes), null, 1)).toBe(1);
   });
 }
 
@@ -91,11 +149,25 @@ test("at 1440×900 the map is at least 1000px wide and fully in view; Alaska's f
   expect(frame.width * frame.height).toBeGreaterThanOrEqual(181_760);
 });
 
-test("at 375×812 the map starts within 330px of the top", async ({ page }, testInfo) => {
-  onlyIn("mobile", testInfo.project.name);
-  await open(page, PHONE);
-  const box = (await page.locator(".county-map svg").boundingBox())!;
-  expect(box.y).toBeLessThanOrEqual(330);
+for (const query of ["?i=poverty_rate", "?i=pct_nhpi", "?i=life_expectancy", "?i=life_expectancy&show=expected"]) {
+  test(`at 375×812 the map starts within 330px of the top on ${query}`, async ({ page }, testInfo) => {
+    onlyIn("mobile", testInfo.project.name);
+    await open(page, PHONE, query);
+    const box = (await page.locator(".county-map svg").boundingBox())!;
+    expect(box.y).toBeLessThanOrEqual(330);
+  });
+}
+
+test("at 1440×900 map view fits the viewport with no page scroll", async ({ page }, testInfo) => {
+  onlyIn("chromium", testInfo.project.name);
+  for (const query of MEASURES) {
+    await open(page, { width: 1440, height: 900 }, query);
+    const { scrollHeight, innerHeight } = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+    }));
+    expect(scrollHeight, query).toBeLessThanOrEqual(innerHeight);
+  }
 });
 
 for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {

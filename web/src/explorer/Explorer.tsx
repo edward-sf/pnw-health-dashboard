@@ -1,5 +1,5 @@
 import { ChartNoAxesColumn, Info, Map as MapIcon, Scale, Table2 } from "lucide-react";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -66,23 +66,6 @@ export function Explorer({ data }: { data: AppData }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const openerRef = useRef<HTMLElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const titleBlockRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  // The stage fills the viewport height left under it, so it needs its own page offset. The
-  // toolbar and title block above it are what can change that offset (wrapping, a longer title).
-  useLayoutEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const measure = () => {
-      const top = stage.getBoundingClientRect().top + window.scrollY;
-      stage.style.setProperty("--stage-top", `${Math.round(top)}px`);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    for (const el of [toolbarRef.current, titleBlockRef.current]) if (el) observer.observe(el);
-    return () => observer.disconnect();
-  }, [params.view]);
   // The county a search or table selection asked to focus. It is bound to that FIPS, so a
   // selection that renders no panel cannot hand its request to a later map selection.
   const [focusFips, setFocusFips] = useState<string | null>(null);
@@ -150,6 +133,33 @@ export function Explorer({ data }: { data: AppData }) {
   const description = compared
     ? `How each county compares on ${outcomeName(model.label)} with what the model expects for counties nationwide with a similar social and economic profile.`
     : indicator.description;
+  // On phones the heading has two lines at most, so Compared with expected keeps the label alone
+  // there; the Show switch under the map says which side is shown.
+  const heading = !compared
+    ? indicator.label
+    : isPhone
+      ? model.label
+      : `${model.label}: compared with expected`;
+  const showToggle = isTarget && (
+    <ToggleGroup
+      type="single"
+      className="show-toggle"
+      aria-label="Show"
+      value={params.show}
+      onValueChange={(v) => {
+        if (v === "observed" || v === "expected") setShow(v);
+      }}
+    >
+      <ToggleGroupItem value="observed" className={SHOW_ITEM}>
+        <ChartNoAxesColumn aria-hidden="true" />
+        Observed
+      </ToggleGroupItem>
+      <ToggleGroupItem value="expected" className={SHOW_ITEM}>
+        <Scale aria-hidden="true" />
+        Compared with expected
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
 
   return (
     <div
@@ -173,7 +183,7 @@ export function Explorer({ data }: { data: AppData }) {
       >
         Skip to county search
       </a>
-      <div ref={toolbarRef} className="explorer-toolbar">
+      <div className="explorer-toolbar">
         <MeasurePicker
           indicators={manifest.indicators}
           selectedId={indicator.id}
@@ -204,61 +214,49 @@ export function Explorer({ data }: { data: AppData }) {
           </ToggleGroup>
         </div>
       </div>
-      <div ref={titleBlockRef} className="title-block">
+      {/* Its height does not depend on the measure, so the map below never moves: the heading
+          fits one line from 721px (two on phones), the description is held to two lines with the
+          full text behind About this measure, and the Show switch has a slot either way. On
+          phones the switch sits under the map instead. */}
+      <div className="title-block">
         <div className="title-row">
           <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
-            {compared ? `${model.label}: compared with expected` : indicator.label}
+            {heading}
           </h2>
-          {isPhone && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="about-measure"
-                  aria-label="About this measure"
-                >
-                  <Info aria-hidden="true" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] text-sm">
-                <p className="indicator-description">{description}</p>
-              </PopoverContent>
-            </Popover>
-          )}
-          {isTarget && (
-            <ToggleGroup
-              type="single"
-              className="show-toggle"
-              aria-label="Show"
-              value={params.show}
-              onValueChange={(v) => {
-                if (v === "observed" || v === "expected") setShow(v);
-              }}
-            >
-              <ToggleGroupItem value="observed" className={SHOW_ITEM}>
-                <ChartNoAxesColumn aria-hidden="true" />
-                Observed
-              </ToggleGroupItem>
-              <ToggleGroupItem value="expected" className={SHOW_ITEM}>
-                <Scale aria-hidden="true" />
-                Compared with expected
-              </ToggleGroupItem>
-            </ToggleGroup>
-          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="about-measure"
+                aria-label="About this measure"
+              >
+                <Info aria-hidden="true" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] text-sm">
+              <p className="indicator-description">{description}</p>
+            </PopoverContent>
+          </Popover>
         </div>
-        {!isPhone && <p className="indicator-description">{description}</p>}
-        {compared ? (
-          targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>
-        ) : (
-          <p className="indicator-source">{sourceLine(indicator)}</p>
+        {!isPhone && (
+          <p className="indicator-description indicator-description--clamped">{description}</p>
         )}
+        <div className="title-meta">
+          {compared ? (
+            targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>
+          ) : (
+            <p className="indicator-source">{sourceLine(indicator)}</p>
+          )}
+          {!isPhone && <div className="show-slot">{showToggle}</div>}
+        </div>
       </div>
       {/* The panel floats over this area from 721px, so opening it never resizes the map. */}
       <div
         className={`explorer-view explorer-view--${params.view}${selectedCounty ? " explorer-view--panel-open" : ""}`}
       >
+        {isPhone && params.view === "table" && showToggle}
         {params.view === "table" ? (
           compared ? (
             <ModelTable
@@ -277,7 +275,7 @@ export function Explorer({ data }: { data: AppData }) {
             />
           )
         ) : (
-          <div ref={stageRef} className="map-stage">
+          <div className="map-stage">
             <CountyMap
               paths={paths}
               fillFor={(fips) =>
@@ -296,6 +294,7 @@ export function Explorer({ data }: { data: AppData }) {
               onSelect={onSelectFromMap}
               stateBorders={stateBorders}
             />
+            {isPhone && showToggle}
             {compared ? (
               <ModelLegend counts={counts} />
             ) : (
