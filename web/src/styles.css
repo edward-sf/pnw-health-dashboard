@@ -541,6 +541,7 @@
   }
 
   .county:hover,
+  .county[data-hover],
   .county:focus-visible {
     stroke: var(--map-hover);
     stroke-width: 1;
@@ -552,8 +553,11 @@
     stroke-width: 2;
   }
 
-  /* Invisible wider strokes that make thin or scattered counties easy to hit. */
-  .county-halo {
+  /* Invisible hit areas: wider strokes under scattered counties, and squares over counties short
+     of the minimum size. A square can lie over its own county, so the hover outline also
+     follows data-hover. */
+  .county-halo,
+  .county-pad {
     pointer-events: all;
     cursor: pointer;
   }

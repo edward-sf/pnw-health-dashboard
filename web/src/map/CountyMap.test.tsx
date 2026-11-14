@@ -77,20 +77,58 @@ describe("CountyMap", () => {
     expect(lowerGroup.lastElementChild).toBe(current[0]);
   });
 
-  test("draws a halo path under the counties for each county that has one", () => {
+  test("a scattered county's halo is drawn under the counties", () => {
     const { container } = setup();
-    const withHalo = paths.filter((p) => p.halo > 0);
-    expect(withHalo.length).toBeGreaterThan(0);
-    const halos = container.querySelectorAll("g.map-halos > path.county-halo[data-fips]");
-    expect(halos).toHaveLength(withHalo.length);
-    const widths = [...halos].map((h) => Number(h.getAttribute("stroke-width")));
-    expect(widths).toEqual([...widths].sort((a, b) => b - a));
+    const under = [...container.querySelectorAll("g.map-halos > path.county-halo")];
+    expect(under.map((h) => h.getAttribute("data-fips"))).toEqual(
+      paths.filter((p) => p.halo > 0).map((p) => p.fips),
+    );
+    expect(under.length).toBeGreaterThan(0);
     const halosGroup = container.querySelector("g.map-halos")!;
-    const main = container.querySelector(".map-main")!;
-    const inset = container.querySelector(".map-inset")!;
-    for (const g of [main, inset]) {
+    for (const g of [container.querySelector(".map-main")!, container.querySelector(".map-inset")!]) {
       expect(halosGroup.compareDocumentPosition(g) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
+  });
+
+  test("pads are drawn transparent over every county, in layer order", () => {
+    const { container } = setup();
+    const rects = [...container.querySelectorAll("g.map-pads > rect.county-pad")];
+    const expected = paths.filter((p) => p.pad).sort((a, b) => a.pad!.layer - b.pad!.layer);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(rects.map((r) => r.getAttribute("data-fips"))).toEqual(expected.map((p) => p.fips));
+    rects.forEach((r, i) => {
+      const [[x0, y0], [x1, y1]] = expected[i]!.pad!.rect;
+      expect([r.getAttribute("x"), r.getAttribute("y")]).toEqual([String(x0), String(y0)]);
+      expect([r.getAttribute("width"), r.getAttribute("height")]).toEqual([
+        String(x1 - x0),
+        String(y1 - y0),
+      ]);
+      expect(r.getAttribute("fill")).toBe("transparent");
+      expect(r.hasAttribute("stroke")).toBe(false);
+    });
+    const group = container.querySelector("g.map-pads")!;
+    for (const g of [container.querySelector(".map-main")!, container.querySelector(".map-inset")!]) {
+      expect(g.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  test("hovering a pad shows its county's tooltip and hover outline", () => {
+    const { container } = setup();
+    const fips = paths.find((p) => p.pad)!.fips;
+    const pad = container.querySelector(`rect.county-pad[data-fips="${fips}"]`)!;
+    fireEvent.pointerEnter(pad, { pointerType: "mouse" });
+    expect(screen.getByText(`tip ${fips}`)).toBeVisible();
+    expect(container.querySelector(`path.county[data-fips="${fips}"]`)).toHaveAttribute("data-hover");
+    expect(container.querySelectorAll("path.county[data-hover]")).toHaveLength(1);
+    fireEvent.pointerLeave(pad, { pointerType: "mouse" });
+    expect(container.querySelectorAll("path.county[data-hover]")).toHaveLength(0);
+  });
+
+  test("a pad click selects its county", async () => {
+    const { container, onSelect } = setup();
+    const fips = paths.find((p) => p.pad)!.fips;
+    await userEvent.click(container.querySelector(`rect.county-pad[data-fips="${fips}"]`)!);
+    expect(onSelect).toHaveBeenCalledWith(fips);
   });
 
   test("a halo click selects its county", async () => {

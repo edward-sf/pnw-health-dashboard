@@ -174,29 +174,33 @@ for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
   test(`every county has a 24px pointer target at 1440×900 on ${query}`, async ({ page }, testInfo) => {
     onlyIn("chromium", testInfo.project.name);
     await open(page, { width: 1440, height: 900 }, query);
-    const small = await page.locator(".county-map svg").evaluate((svg: SVGSVGElement) => {
-      const scale = svg.getScreenCTM()!.a;
-      const out: string[] = [];
-      for (const county of svg.querySelectorAll<SVGPathElement>("path.county[data-fips]")) {
-        const fips = county.dataset.fips!;
-        const b = county.getBBox();
-        let [x0, y0, x1, y1] = [b.x, b.y, b.x + b.width, b.y + b.height];
-        const halo = svg.querySelector<SVGPathElement>(`path.county-halo[data-fips="${fips}"]`);
-        if (halo) {
-          // getBBox leaves out the stroke, which is the halo's whole point; add half its width.
-          const h = halo.getBBox();
-          const pad = Number(halo.getAttribute("stroke-width")) / 2;
-          x0 = Math.min(x0, h.x - pad);
-          y0 = Math.min(y0, h.y - pad);
-          x1 = Math.max(x1, h.x + h.width + pad);
-          y1 = Math.max(y1, h.y + h.height + pad);
+    // Ask the browser what the pointer hits on a half-pixel grid over the map, and take each
+    // county's reachable box as the extent of the points that land on it (or on its halo).
+    const reach = await page.locator(".county-map svg").evaluate((svg: SVGSVGElement) => {
+      const box = svg.getBoundingClientRect();
+      const boxes: Record<string, [number, number, number, number]> = {};
+      for (let y = box.top; y < box.bottom; y += 0.5) {
+        for (let x = box.left; x < box.right; x += 0.5) {
+          const fips = (document.elementFromPoint(x, y) as HTMLElement | null)?.dataset?.fips;
+          if (!fips) continue;
+          const b = boxes[fips];
+          if (!b) boxes[fips] = [x, y, x, y];
+          else {
+            b[0] = Math.min(b[0], x);
+            b[1] = Math.min(b[1], y);
+            b[2] = Math.max(b[2], x);
+            b[3] = Math.max(b[3], y);
+          }
         }
-        const w = (x1 - x0) * scale;
-        const hgt = (y1 - y0) * scale;
-        if (w < 24 || hgt < 24) out.push(`${fips}: ${w.toFixed(1)}×${hgt.toFixed(1)}`);
       }
-      return out;
+      return Object.entries(boxes).map(([f, [x0, y0, x1, y1]]) => ({
+        fips: f,
+        w: x1 - x0 + 0.5,
+        h: y1 - y0 + 0.5,
+      }));
     });
-    expect(small).toEqual([]);
+    expect(reach).toHaveLength(149);
+    const short = reach.filter(({ w, h }) => w < 24 || h < 24).map(({ fips, w, h }) => `${fips}: ${w}×${h}`);
+    expect(short).toEqual([]);
   });
 }

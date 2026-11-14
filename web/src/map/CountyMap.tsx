@@ -19,7 +19,7 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
   const palette = usePalette();
 
   // On touch a tap selects the county and opens the panel, which replaces the tooltip.
-  const place = (e: PointerEvent<SVGPathElement>, fips: string) => {
+  const place = (e: PointerEvent<SVGElement>, fips: string) => {
     if (e.pointerType === "touch") {
       setTip(null);
       return;
@@ -47,6 +47,8 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
           role="img"
           aria-label={`${p.name}, ${p.state}`}
           aria-current={p.fips === selected ? "true" : undefined}
+          // Set while the pointer is on this county or on its pad, which may lie over it.
+          data-hover={tip?.fips === p.fips ? "" : undefined}
           onClick={() => onSelect(p.fips)}
           onPointerEnter={(e) => place(e, p.fips)}
           onPointerMove={(e) => place(e, p.fips)}
@@ -56,8 +58,20 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
     });
   };
 
-  // Widest first, so the smallest county's halo is on top and wins where halos overlap.
-  const halos = paths.filter((p) => p.halo > 0).sort((a, b) => b.halo - a.halo);
+  // A scattered county's halo goes under the counties, where it only reaches open sea. Pads go
+  // over them, in the order buildMapPaths placed them.
+  const halos = paths.filter((p) => p.halo > 0);
+  const pads = paths
+    .flatMap(({ fips, pad }) => (pad ? [{ fips, ...pad }] : []))
+    .sort((a, b) => a.layer - b.layer);
+  const hit = (fips: string) => ({
+    "data-fips": fips,
+    fill: "transparent",
+    onClick: () => onSelect(fips),
+    onPointerEnter: (e: PointerEvent<SVGElement>) => place(e, fips),
+    onPointerMove: (e: PointerEvent<SVGElement>) => place(e, fips),
+    onPointerLeave: () => setTip(null),
+  });
 
   const [[ix0, iy0], [ix1, iy1]] = MAP_LAYOUT.inset;
 
@@ -86,15 +100,10 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
             <path
               key={p.fips}
               className="county-halo"
-              data-fips={p.fips}
               d={p.d}
-              fill="transparent"
               stroke="transparent"
               strokeWidth={p.halo}
-              onClick={() => onSelect(p.fips)}
-              onPointerEnter={(e) => place(e, p.fips)}
-              onPointerMove={(e) => place(e, p.fips)}
-              onPointerLeave={() => setTip(null)}
+              {...hit(p.fips)}
             />
           ))}
         </g>
@@ -112,6 +121,19 @@ export function CountyMap({ paths, fillFor, tooltipFor, selected, onSelect, stat
           Alaska (not to scale)
         </text>
         <g className="map-inset">{renderGroup(paths.filter((p) => p.state === "AK"))}</g>
+        <g className="map-pads" aria-hidden="true">
+          {pads.map(({ fips, rect: [[x0, y0], [x1, y1]] }) => (
+            <rect
+              key={fips}
+              className="county-pad"
+              x={x0}
+              y={y0}
+              width={x1 - x0}
+              height={y1 - y0}
+              {...hit(fips)}
+            />
+          ))}
+        </g>
       </svg>
       {tip && (
         <div
