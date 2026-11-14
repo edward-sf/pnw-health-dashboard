@@ -352,3 +352,12 @@ def test_cli_next_reports_waiting(tmp_path, capsys):
     assert cli(root, "next", "--milestone", "13", "--usage", str(root / "u.json")) == 0
     out = json.loads(capsys.readouterr().out)
     assert out == {"decision": "waiting", "running": ["T1.implement"]}
+
+
+def test_same_window_tolerates_jitter():
+    from wf.schedule import same_window
+
+    assert same_window("2026-11-14T21:29:59.821Z", "2026-11-14T21:30:00.090Z")
+    assert not same_window("2026-11-14T21:00:00Z", "2026-11-14T21:06:00Z")
+    assert not same_window(None, "2026-11-14T21:00:00Z")
+    assert same_window("garbage", "garbage") and not same_window("garbage", "other")
