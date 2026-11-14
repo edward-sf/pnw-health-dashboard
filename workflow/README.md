@@ -58,7 +58,7 @@ Gates the author owns: spec approval, plan approval, escalations, and the milest
 
 **A pause** is not a failure. The walker has no ready node that fits the usage window, so it records why and waits until the window resets (`wf next` returns `pause` with an `until`). Under `/loop` the skill schedules its own wake-up.
 
-**An escalation** stops the run and notifies the author. It happens when a budget is spent, a reviewer finding needs the author, a script hits an unexpected state, or `build-deploy` goes red. `wf status` shows each escalation's node and reason. The run state keeps what was tried. To continue after you have decided, fix the cause and have the skill resume the node (`wf resume <node>`); a budget that was spent stays spent unless you change it (below).
+**An escalation** stops the run and notifies the author. It happens when a budget is spent, a reviewer finding needs the author, a script hits an unexpected state, or `build-deploy` goes red. `wf status` shows each escalation's node and reason. The run state keeps what was tried. To continue after you have decided, fix the cause, then record your decision: `uv run --project workflow wf clear <node> --milestone <N> --note "<decision>"`. `wf clear` works only on an escalated node. It sets the node back to pending, resets its rounds to 0 and adds your note (prefixed `author: `). Then run `/run-milestone <N>` again. The skill never runs `wf clear` itself. (`wf resume` is different: it only returns an interrupted `running` node to pending.)
 
 **Reviewers write their own verdicts** to `.workflow/work/m<N>/verdicts/`; `wf ingest` records them. The orchestrating session never writes a verdict.
 
@@ -72,7 +72,7 @@ Gates the author owns: spec approval, plan approval, escalations, and the milest
   - `default_pct_per_step = 0.5`: percent of the 5-hour window per plan step, until there is history.
 - **Gate commands:** `[areas.*]` and `[e2e]` in `workflow/project.toml`.
 
-Spent budgets recorded in an existing run's state do not reset when the config changes; raise a budget before the run reaches it.
+Rounds already used stay in run state; budgets are read from graph.toml on each `wf start`. Raising one lets a pending or failed node run more rounds; an escalated node needs `wf clear`.
 
 ## Generic and project-specific
 

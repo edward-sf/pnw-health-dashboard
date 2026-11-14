@@ -264,6 +264,12 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **Verdict files are under `.workflow/work/m<N>/verdicts/`**, not under the protected `.workflow/runs/`. A reviewer subagent has to write its own verdict, and the state hook blocks writes under the runs directory. `wf ingest` still validates each verdict against the head SHA and records it in run state, so only `wf` writes records.
 - **The state hook is a drift guard, not a security boundary.** It matches Bash commands by pattern, so a determined command can get around it.
 
+**Escalations**
+- **`wf clear`.** An escalated node stays escalated until the author clears it: `wf clear <node> --note <decision>` sets it back to pending, resets its rounds and records the note. The skill never runs it.
+- **Retries and interruptions.** `start_round` accepts failed nodes, so a failed round can be retried inside its budget. `wf resume` refunds the round the interrupted attempt spent.
+
+**Dry run.** The live agent-dispatch dry run was deferred to the M11 replay (T11) and the M13 pilot. Implementers cannot dispatch subagents, so T9 proved the walker's transitions with a scripted CLI walk instead.
+
 **Scheduling (§5.8)**
 - **A `waiting` decision.** When a node is still running (a background deploy-watch) and nothing else is ready, `wf next` returns `waiting`, not a dispatch or a pause. A task in the graph but missing from run state is an error.
 - **Same-window tolerance.** `resetsAt` jitters by a few hundred milliseconds between `get_usage` calls for the same window, so two windows are the same when their reset times differ by less than 5 minutes. Without it every call would look like a fresh window.
