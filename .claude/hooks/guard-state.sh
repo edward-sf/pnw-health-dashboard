@@ -52,7 +52,10 @@ fi
 
 cmd=$(jq -r '.tool_input.command // ""' <<<"$input")
 [[ "$cmd" == *".workflow/runs"* ]] || exit 0
-[[ "$cmd" == "uv run --project workflow wf "* ]] && exit 0
+# A plain `wf` command writes state itself. With a shell operator (a separator, pipe, redirect
+# or command substitution, newline included) the rest could write too: check the whole command.
+operators=$'[;&|<>`\n]|\\$\\('
+[[ "$cmd" == "uv run --project workflow wf "* && ! "$cmd" =~ $operators ]] && exit 0
 
 write='(>|(^|[^[:alnum:]_-])(tee|rm|mv|cp|truncate|touch)([[:space:]]|$)|sed[[:space:]]+(-[[:alnum:]]*[[:space:]]+)*-i)'
 # Redirects that discard output or merge streams are not writes to a file.

@@ -115,6 +115,36 @@ def test_state_bash_writes_blocked(cmd):
     assert run_hook("guard-state.sh", bash(cmd)).returncode == 2
 
 
+WF = "uv run --project workflow wf status --milestone 13"
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf status --milestone 99 > .workflow/runs/m99/state.json",
+        f"{WF}; rm -rf .workflow/runs/m13",
+        f"{WF} && rm .workflow/runs/m13/state.json",
+        f"{WF} | tee .workflow/runs/m13/state.json",
+        f"{WF}\nrm -rf .workflow/runs/m13",
+        "uv run --project workflow wf status $(rm -rf .workflow/runs/m13)",
+        "uv run --project workflow wf status `rm -rf .workflow/runs/m13`",
+    ],
+)
+def test_state_wf_prefix_does_not_cover_chained_writes(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 2
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf gate T1 --milestone 13 --base .workflow/runs/m13/x",
+        "uv run --project workflow wf gate T1 --milestone 13 --base .workflow/runs/x 2>&1 | tail",
+    ],
+)
+def test_state_wf_commands_naming_the_runs_path_are_allowed(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
+
+
 @pytest.mark.parametrize(
     "cmd",
     [

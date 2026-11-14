@@ -13,7 +13,7 @@ Every `wf` command prints JSON on stdout. Exit 0 is success; anything else is li
 ## Hard rules
 
 - **Never merge a PR whose base is `main`, and never approve any PR.** Milestone PRs and `checkpoint` issues are the author's. Merge issue PRs only through `wf merge`.
-- **Never write under `.workflow/runs/`**: no Edit, Write or shell redirect there. Run every command that names that path from the repo root, starting with `uv run --project workflow wf ` (the state hook blocks anything else). Your own scratch files go in `.workflow/work/m<N>/`.
+- **Never write under `.workflow/runs/`**: no Edit, Write or shell redirect there. Run every command that names that path from the repo root, starting with `uv run --project workflow wf ` and with no `;`, `&&`, pipe, redirect or `$(…)` in it (the state hook checks anything else as a possible write). Your own scratch files go in `.workflow/work/m<N>/`.
 - **Never run `wf clear`.** Clearing an escalation is the author's decision, made in their own terminal. The state hook refuses it here, and `wf finish` refuses an escalated node: notify and stop instead.
 - **`wf finish` closes a node you started.** It refuses a node that is not `running` (a send-back may also fail a node that is `done`). `--status done` also needs the node's record: a passing gate at the branch head for `gates` and `final-gates`, a `pass` review at the reviewed head for `task-review` and `delta-review`, a verdict ingested this round for `final-review`. `merge`, `deploy-watch` and `milestone-pr` are finished only by their own commands. A refusal is an unexpected exit: escalate.
 - **Never write or edit a verdict.** If a reviewer did not write one, re-dispatch it or escalate.
