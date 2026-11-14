@@ -102,6 +102,7 @@ def _parser() -> argparse.ArgumentParser:
     fin = add("finish", node=True)
     fin.add_argument("--status", required=True, choices=["done", "failed", "escalated"])
     fin.add_argument("--note")
+    fin.add_argument("--pr", type=int, help="task-review: PR number (default: from the branch)")
     add("resume", node=True)
     clr = add("clear", node=True)
     clr.add_argument("--note", required=True, help="the author's decision")
@@ -136,7 +137,9 @@ def _parser() -> argparse.ArgumentParser:
     dw.add_argument("--sha", help="merged commit (default: origin/<milestone branch> after fetch)")
     dw.add_argument("--timeout", type=int, default=1800, help="seconds to wait")
     mp = add("milestone-pr")
-    mp.add_argument("--ready", action="store_true", help="mark the PR ready for review")
+    mp.add_argument(
+        "--ready", action="store_true", help="mark the PR ready for review (finishes the node)"
+    )
     pfr = sub.add_parser("post-final-review")
     pfr.add_argument("pr", type=int)
     pfr.add_argument("--report", type=Path, required=True)
@@ -255,6 +258,43 @@ def _head(root: Path, state: st.RunState, node: str, pr: int | None) -> str:
         raise CommandError(f"cannot read the head of PR {pr}") from e
 
 
+def _branch_head(root: Path, branch: str) -> str:
+    return SubprocessGit(root).run(["rev-parse", "--verify", f"{branch}^{{commit}}"]).strip()
+
+
+def _nothing_to_fix(root: Path, state: st.RunState) -> bool:
+    """No fix branch was started and triage's must-fix list is empty."""
+    if state.fix_branch is not None:
+        return False
+    try:
+        return not load_verdict(st.work_dir(root, state.milestone) / "must-fix.json").findings
+    except VerdictError:
+        return False
+
+
+def _check_done(root: Path, args: argparse.Namespace, state: st.RunState) -> None:
+    """Resolve the head the node's record must be for, as `gate` and `ingest` do, and check it."""
+    node: str = args.node
+    st.require_running(state, node)
+    task, _, kind = node.rpartition(".")
+    head: str | None = None
+    nothing = False
+    if kind == "gates":
+        graph = load_task_graph(root / state.task_graph) if state.task_graph else None
+        info = graph.tasks.get(task) if graph else None
+        if info is None or not info.branch:
+            raise st.RunStateError(f"no branch recorded for {task}")
+        head = _branch_head(root, info.branch)
+    elif kind == "final-gates":
+        project = load_project(args.project or root / "workflow/project.toml")
+        head = _branch_head(root, project.milestone_branch.format(n=state.milestone))
+    elif kind == "delta-review" and _nothing_to_fix(root, state):
+        nothing = True
+    elif kind in ("task-review", "delta-review"):
+        head = _head(root, state, node, args.pr)
+    st.check_done(state, node, head, nothing)
+
+
 def _task_of_pr(root: Path, state: st.RunState, gh: SubprocessGh, pr: int) -> str | None:
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
@@ -320,9 +360,11 @@ def _merged_prs(gh: SubprocessGh, graph: TaskGraph) -> dict[str, int]:
     return prs
 
 
-def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
+def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState, now: str) -> object:
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
+    if args.ready:
+        st.require_running(state, "milestone-pr")
     project = load_project(args.project or root / "workflow/project.toml")
     graph = load_task_graph(root / state.task_graph)
     try:
@@ -357,6 +399,8 @@ def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> o
     gh.run(["pr", "edit", str(pr), "--body", new])
     if args.ready:
         mark_ready(gh, pr)
+        st.finish(state, "milestone-pr", "done", now, f"#{pr} ready for review")
+        st.save(root, state)
     return {"pr": pr, "ready": bool(args.ready)}
 
 
@@ -442,7 +486,7 @@ def _run(args: argparse.Namespace) -> object:
     if cmd == "merge":
         return _merge(root, state, args.pr, now)
     if cmd == "milestone-pr":
-        return _milestone_pr(root, args, state)
+        return _milestone_pr(root, args, state, now)
     if cmd == "status":
         return asdict(state)
     if cmd == "gate":
@@ -488,6 +532,8 @@ def _run(args: argparse.Namespace) -> object:
             st.save(root, state)  # keep the escalation record
             raise
     elif cmd == "finish":
+        if args.status == "done":
+            _check_done(root, args, state)
         st.finish(state, args.node, args.status, now, args.note)
     elif cmd == "resume":
         st.resume(state, args.node, now)

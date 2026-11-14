@@ -8,6 +8,7 @@ from wf.state import (
     GateRecord,
     ReviewRecord,
     RunStateError,
+    check_done,
     clear,
     escalate,
     finish,
@@ -238,3 +239,85 @@ def test_clear_refuses_a_node_that_is_not_escalated(tmp_path):
     s = init_run(tmp_path, 13, GRAPH, ["T1"])
     with pytest.raises(RunStateError, match="not escalated"):
         clear(s, "T1.implement", "x")
+
+
+# ---------------------------------------------------------------- done needs a record
+
+
+def _running(tmp_path, node):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, node, None, NOW)
+    return s
+
+
+@pytest.mark.parametrize(("node", "key"), [("T1.gates", "T1"), ("final-gates", "final-gates")])
+def test_gates_done_needs_a_passing_gate_at_the_head(tmp_path, node, key):
+    s = _running(tmp_path, node)
+    with pytest.raises(RunStateError, match="no passing gate record"):
+        check_done(s, node, "aaa")
+    s.gates.append(GateRecord(key, "aaa", {"web": False}, False, NOW))
+    with pytest.raises(RunStateError, match="no passing gate record"):
+        check_done(s, node, "aaa")
+    s.gates.append(GateRecord(key, "old", {"web": True}, True, NOW))
+    with pytest.raises(RunStateError, match="no passing gate record"):
+        check_done(s, node, "aaa")
+    s.gates.append(GateRecord(key, "aaa", {"web": True}, True, NOW))
+    check_done(s, node, "aaa")
+
+
+@pytest.mark.parametrize(
+    ("node", "key"), [("T1.task-review", "T1"), ("delta-review", "delta-review")]
+)
+def test_review_done_needs_a_pass_review_at_the_head(tmp_path, node, key):
+    s = _running(tmp_path, node)
+    with pytest.raises(RunStateError, match="no passing review record"):
+        check_done(s, node, "aaa")
+    s.reviews.append(ReviewRecord(key, "aaa", node, "findings", "v.json", NOW))
+    with pytest.raises(RunStateError, match="no passing review record"):
+        check_done(s, node, "aaa")
+    s.reviews.append(ReviewRecord(key, "old", node, "pass", "v.json", NOW))
+    with pytest.raises(RunStateError, match="no passing review record"):
+        check_done(s, node, "aaa")
+    s.reviews.append(ReviewRecord(key, "aaa", node, "pass", "v.json", NOW))
+    check_done(s, node, "aaa")
+
+
+def test_delta_review_done_without_a_review_when_nothing_is_must_fix(tmp_path):
+    s = _running(tmp_path, "delta-review")
+    check_done(s, "delta-review", None, nothing_to_fix=True)
+
+
+def test_final_review_done_needs_a_verdict_ingested_this_round(tmp_path):
+    s = _running(tmp_path, "final-review")
+    with pytest.raises(RunStateError, match="no verdict ingested"):
+        check_done(s, "final-review", None)
+    s.reviews.append(ReviewRecord("final-review", "x", "final-review", "pass", "v", "2026-01-01"))
+    with pytest.raises(RunStateError, match="no verdict ingested"):  # older than this round
+        check_done(s, "final-review", None)
+    s.reviews.append(ReviewRecord("final-review", "x", "final-review", "findings", "v", NOW))
+    check_done(s, "final-review", None)
+
+
+@pytest.mark.parametrize(
+    ("node", "command"),
+    [
+        ("T1.merge", "wf merge"),
+        ("T1.deploy-watch", "wf deploy-watch"),
+        ("milestone-pr", "wf milestone-pr --ready"),
+    ],
+)
+def test_command_nodes_are_never_finished_done_by_hand(tmp_path, node, command):
+    s = _running(tmp_path, node)
+    with pytest.raises(RunStateError, match=f"done only through `{command}`"):
+        check_done(s, node, None)
+
+
+@pytest.mark.parametrize("node", ["T1.implement", "triage", "batched-fix", "retro"])
+def test_committing_agent_nodes_are_done_when_running(tmp_path, node):
+    check_done(_running(tmp_path, node), node, None)
+
+
+def test_done_needs_a_running_node(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    with pytest.raises(RunStateError, match="not running"):
+        check_done(s, "T1.implement", None)
