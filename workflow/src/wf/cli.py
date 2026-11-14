@@ -38,9 +38,11 @@ from wf.schedule import (
     TaskGraph,
     TaskInfo,
     Waiting,
+    Window,
     load_task_graph,
     next_decision,
     parse_usage,
+    window_total,
 )
 from wf.setup import setup_milestone
 from wf.tasks import PlanError, check_plan_file, parse_plan_tasks
@@ -160,6 +162,7 @@ def _parser() -> argparse.ArgumentParser:
     use.add_argument("--pct-before", type=float, required=True)
     use.add_argument("--pct-after", type=float, required=True)
     use.add_argument("--tokens", type=int)
+    add("usage-total")
     return p
 
 
@@ -188,6 +191,10 @@ def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) ->
         usage = parse_usage(json.loads(text))
     except (OSError, ValueError, AttributeError) as e:
         raise st.RunStateError(f"cannot read usage JSON from {src}") from e
+    if usage.five_hour is not None:  # every reading, for the retro's whole-run total
+        reading = {"at": now, **asdict(usage.five_hour)}
+        with _readings(root, args.milestone).open("a") as log:
+            log.write(json.dumps(reading) + "\n")
     project = load_project(args.project or root / "workflow/project.toml")
     graph = load_graph(args.graph or root / "workflow/graph.toml")
     decision = next_decision(state, graph, _tasks(root, state), usage, project.pacing, now)
@@ -200,6 +207,35 @@ def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) ->
     out = _decision_json(decision)
     (st.run_dir(root, args.milestone) / "last-decision.json").write_text(json.dumps(out) + "\n")
     return out
+
+
+def _readings(root: Path, milestone: int) -> Path:
+    return st.run_dir(root, milestone) / "usage-readings.jsonl"
+
+
+def _usage_total(root: Path, milestone: int) -> object:
+    """The 5-hour-window percent used across every reading `wf next` was given."""
+    readings: list[tuple[str, Window]] = []
+    try:
+        lines = _readings(root, milestone).read_text().splitlines()
+    except FileNotFoundError:
+        lines = []
+    except OSError as e:
+        raise st.RunStateError(f"cannot read usage readings: {e.strerror}") from e
+    for line in lines:
+        try:
+            raw = json.loads(line)
+            readings.append((str(raw["at"]), Window(float(raw["pct_used"]), str(raw["resets_at"]))))
+        except (ValueError, KeyError, TypeError):
+            continue  # a torn last line from an interrupted write
+    total, windows = window_total(readings)
+    return {
+        "readings": len(readings),
+        "windows": windows,
+        "pct_used": total if readings else None,
+        "first_at": readings[0][0] if readings else None,
+        "last_at": readings[-1][0] if readings else None,
+    }
 
 
 def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
@@ -505,6 +541,8 @@ def _run(args: argparse.Namespace) -> object:
         return asdict(review)
     if cmd == "next":
         return _next(root, args, state, now)
+    if cmd == "usage-total":
+        return _usage_total(root, m)
     if cmd == "usage":
         _budget(load_graph(graph_path), args.node)  # validates the node name
         sample = st.UsageSample(

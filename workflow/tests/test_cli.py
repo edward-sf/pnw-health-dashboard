@@ -538,3 +538,29 @@ def test_cli_milestone_pr_ready_finishes_the_node(tmp_path, monkeypatch, capsys)
     capsys.readouterr()
     run(tmp_path, "status", "--milestone", "13")
     assert json.loads(capsys.readouterr().out)["nodes"]["milestone-pr"]["status"] == "done"
+
+
+def test_cli_next_logs_each_reading_and_usage_total_sums_them(tmp_path, capsys):
+    _git_run(tmp_path)
+    usage = tmp_path / "usage.json"
+
+    def reading(pct, resets):
+        usage.write_text(json.dumps({"plan": {"status": "ok", "windows": [
+            {"label": "5-hour limit", "percentUsed": pct, "resetsAt": resets}]}}))  # fmt: skip
+
+    for pct in (10, 25):
+        reading(pct, "2099-01-01T00:00:00Z")
+        assert _proj(tmp_path, "next", "--milestone", "13", "--usage", str(usage)) == 0
+    usage.write_text(json.dumps({"plan": {"status": "unavailable"}}))  # not logged
+    assert _proj(tmp_path, "next", "--milestone", "13", "--usage", str(usage)) == 0
+    capsys.readouterr()
+    assert run(tmp_path, "usage-total", "--milestone", "13") == 0
+    out = json.loads(capsys.readouterr().out)
+    assert (out["readings"], out["windows"], out["pct_used"]) == (2, 1, 15.0)
+
+
+def test_cli_usage_total_with_no_readings(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "usage-total", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out)["pct_used"] is None

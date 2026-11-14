@@ -30,8 +30,8 @@ Every `wf` command prints JSON on stdout. Exit 0 is success; anything else is li
 
 Repeat until a step says stop:
 
-1. Call `mcp__ccd_session_mgmt__get_usage`. Keep its `5-hour limit` `percentUsed` as `pct_before`.
-2. Pass the JSON to `wf next` on stdin, exactly as returned:
+1. Call `mcp__ccd_session_mgmt__get_usage` at the start of the session and after each agent node returns (step 4 under "Agent nodes"). Every other pass reuses the latest reading, because script nodes spend no tokens. Keep its `5-hour limit` `percentUsed` as `pct_before`.
+2. Pass the JSON to `wf next` on stdin, exactly as returned. `wf next` logs every reading it is given; the first is the run's starting point for the retro's whole-run total (`wf usage-total`).
    ```
    uv run --project workflow wf next --milestone <N> --usage - <<'EOF'
    <get_usage JSON>
@@ -64,7 +64,7 @@ Placeholders: `{N}`; `{task_id}`, `{issue}`, `{branch}`, `{k}` (task number) fro
 | `triage` | `{final_verdict_path}` = the ingested final verdict; `{triage_path}` / `{must_fix_path}` = `.workflow/work/m<N>/triage.json` / `must-fix.json` | `wf finish triage --status done`. Nothing must-fix → `wf start batched-fix` (no `--branch`) and `wf finish batched-fix --status done --note "nothing must-fix"`, then the same two for `delta-review` (`wf` accepts it with no review because no fix branch was started and `{must_fix_path}` lists no findings) |
 | `batched-fix` | Start it with `wf start batched-fix --milestone <N> --branch m<N>-final-review-fixes` (this records the fix branch). `{branch}` = that branch; `{delta_verdict_path}` = the last delta verdict, `{findings}` = the last fix gate's failed checks, each or `(none)` | `wf finish batched-fix --status done`; keep the PR number and fix range it reports. Then, on the fix branch at its pushed head, `wf gate batched-fix --milestone <N>`. Exit 1 → `wf finish batched-fix --status failed --note "gates failed at <sha7>"` (the next round fixes them) |
 | `delta-review` | On the fix branch at its pushed head: `wf package delta --milestone <N> --range <fix range> --findings <must_fix_path>` | `wf ingest delta-review <verdict_path>`; `pass` → `wf finish delta-review --status done`, then merge the fix PR: `gh pr checks <fix PR> --watch`, `wf merge <fix PR> --milestone <N>` (it needs the `batched-fix` gate and this passing delta review for the PR's head); `findings` → `wf finish delta-review --status failed` and `wf finish batched-fix --status failed --note "delta findings r<k>"` |
-| `retro` | `uv run --project workflow wf status --milestone <N> > .workflow/work/m<N>/status.json`; `{status_path}` that file; `{baseline}` from the plan or `(not recorded)` | `wf finish retro --status done` |
+| `retro` | `uv run --project workflow wf status --milestone <N> > .workflow/work/m<N>/status.json`; `{status_path}` that file; `{baseline}` = `workflow/baselines/m11.json`; `{transcripts_dir}` = this repo's Claude Code project directory (`~/.claude/projects/` plus the repo's absolute path with every `/` replaced by `-`) | `wf finish retro --status done` |
 
 **Send back** after task-review findings: `wf finish T<k>.task-review --status failed --note "findings r<round>"`, `wf finish T<k>.gates --status failed`, `wf finish T<k>.implement --status failed --note "review findings"`. The next `wf next` dispatches implement again; its `wf start` enforces the 3-round budget, and the review's own `wf start` the 2-round budget.
 

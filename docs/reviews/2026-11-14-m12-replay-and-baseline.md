@@ -28,7 +28,7 @@ New in the replay, not in the original: legend and Alaska label overlap at 900x8
 
 ## M11 baseline
 
-Produced by `wf baseline --milestone 11 --since 2026-11-13T16:00:00Z --until 2026-11-14T09:00:00Z --branch milestone/m11 --tasks 8 --fix-prs 248,250,251` (output in `.superpowers/sdd/2026-11-14-m12-workflow-engineering/m11-baseline.json`).
+Produced by `wf baseline --milestone 11 --since 2026-11-13T16:00:00Z --until 2026-11-14T09:00:00Z --branch milestone/m11 --tasks 8 --fix-prs 248,250,251` (output committed as `workflow/baselines/m11.json`).
 
 | Measure | M11 |
 |---|---|
@@ -44,7 +44,7 @@ The only session in the window is `d876724f-189a-488f-ac71-be03472ecc70` ("Miles
 
 - Window correction: the planned `--since 2026-11-13T17:00:00Z` matched no session, because the M11 session began at 16:22Z. The baseline uses `--since 2026-11-13T16:00:00Z`. The M10 session (`d0b4756d…`, 2026-11-13T00:05Z) is outside it.
 - The baseline is untrimmed. The session file runs to 2026-11-14T18:59Z, and 188,033 of the tokens are from messages after 09:00Z on 14 November. That is M11's own post-review fix work and belongs in the M11 cost. Trimmed alternative, computed the same way (last line per message id): 6,704,368 tokens, 838,046 per task.
-- Transcripts write one line per content block, each repeating the message's usage. `wf baseline` keeps the last line per `message.id` within each file (lines with no id count once each). Summing every line instead inflates the totals by about 1.9x. M13 must be measured with the same `wf baseline` method, or the comparison is invalid.
+- Transcripts write one line per content block, each repeating the message's usage. `wf baseline` keeps the last line per `message.id` within each file (lines with no id count once each). Summing every line instead inflates the totals 2.10x overall. M13 must be measured with the same `wf baseline` method, or the comparison is invalid.
 - Cache reads are reported separately, not summed. Subagent tokens come from `subagents/*.jsonl` transcripts.
 - Red deploys are counted as `failure` conclusions on or after the first run on the branch. Cancelled runs are not counted.
 - Replay package caveat: its build-deploy history includes runs after `544bbf2` on `milestone/m11`. The three failed runs are not ancestors of `544bbf2`, and the reviewer did not judge them.

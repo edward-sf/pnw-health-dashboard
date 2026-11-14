@@ -278,6 +278,10 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **Oversized estimates.** A node is blocked outright only when its estimate times the margin exceeds a whole window. One that merely does not fit what is left pauses until the reset.
 - **Unavailable usage.** When `get_usage` is unavailable or not applicable, the walker dispatches the earliest ready node without a fit check and records `pacing: off` for that decision.
 
+**Pilot measurement (§5.10)**
+- **Target 3 uses the baseline's method.** The retro runs `wf baseline` for the milestone with M11's flags and compares with `workflow/baselines/m11.json` (861,550 tokens per task, about 21.5M cache reads per task). The per-node `tokens` from task notifications are a different counter and leave out the orchestrating session, so they only rank nodes.
+- **Whole-run window use.** `wf next` logs every `get_usage` reading it is given, and `wf usage-total` sums the 5-hour-window percent across them, orchestration included. The skill calls `get_usage` only at a session's start and after agent nodes, since script nodes spend no tokens.
+
 **Loops and budgets (§5.2)**
 - **Red deploys escalate.** The design gave deploy-watch one fix round per red run. As built, a red or timed-out `build-deploy` escalates to the author, who decides the fix.
 - **One late round on review budget.** The task-review budget is checked when the next review starts, so after the last allowed review round finds problems, one more implement and gates round runs before `wf start` refuses the review and escalates.

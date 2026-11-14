@@ -369,3 +369,25 @@ def test_same_window_tolerates_jitter():
     assert not same_window("2026-11-14T21:00:00Z", "2026-11-14T21:06:00Z")
     assert not same_window(None, "2026-11-14T21:00:00Z")
     assert same_window("garbage", "garbage") and not same_window("garbage", "other")
+
+
+def test_window_total_within_one_window_is_last_minus_first():
+    from wf.schedule import window_total
+
+    readings = [(NOW, Window(10, FUTURE)), (NOW, Window(25, FUTURE)), (NOW, Window(40, FUTURE))]
+    assert window_total(readings) == (30.0, 1)
+
+
+def test_window_total_counts_a_later_window_from_its_reset():
+    from wf.schedule import window_total
+
+    a, b = "2026-11-14T12:00:00Z", "2026-11-14T17:00:00Z"
+    readings = [
+        ("2026-11-14T08:00:00Z", Window(10, a)),
+        ("2026-11-14T11:00:00Z", Window(70, a)),
+        ("2026-11-14T13:00:00Z", Window(70, a)),  # taken after a's reset: stale, skipped
+        ("2026-11-14T13:01:00Z", Window(5, b)),
+        ("2026-11-14T15:00:00Z", Window(30, b)),
+    ]
+    assert window_total(readings) == (60.0 + 30.0, 2)
+    assert window_total([]) == (0.0, 0)

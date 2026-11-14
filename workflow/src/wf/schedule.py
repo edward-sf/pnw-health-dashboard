@@ -257,6 +257,26 @@ def _is_past(resets_at: str, now: str) -> bool:
         return resets_at <= now
 
 
+def window_total(readings: list[tuple[str, Window]]) -> tuple[float, int]:
+    """Percent of the 5-hour window used across `(taken_at, window)` readings, in order, and
+    how many windows they span. Within a window that is last minus first. A later window
+    counts from its reset, so its first reading's percent is included. A reading whose reset
+    had already passed when it was taken says nothing about the new window and is skipped.
+    """
+    groups: list[tuple[str, list[float]]] = []
+    for at, win in readings:
+        if _is_past(win.resets_at, at):
+            continue
+        if groups and same_window(groups[-1][0], win.resets_at):
+            groups[-1][1].append(win.pct_used)
+        else:
+            groups.append((win.resets_at, [win.pct_used]))
+    total = sum(
+        max(0.0, pcts[-1] - (pcts[0] if i == 0 else 0.0)) for i, (_, pcts) in enumerate(groups)
+    )
+    return total, len(groups)
+
+
 def node_estimate(
     state: RunState, graph: Graph, tasks: list[TaskInfo], node: str, pacing: Pacing
 ) -> float:
