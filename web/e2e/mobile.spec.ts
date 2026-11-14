@@ -22,7 +22,8 @@ async function settledAt(page: Page, share: number) {
         () => document.querySelector(".county-panel[data-vaul-drawer]")?.getAnimations().length ?? 1,
       );
       return moving === 0 && Math.abs((await drawerShare(page)) - share) < 0.01;
-    })
+      // A short, even interval: the default back-off (up to a second a poll) would add seconds.
+    }, { intervals: [50] })
     .toBe(true);
 }
 
