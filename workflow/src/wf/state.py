@@ -212,6 +212,8 @@ def escalate(state: RunState, node: str, reason: str, now: str) -> None:
 
 def start_round(state: RunState, node: str, budget: int | None, now: str) -> None:
     rec = _record(state, node)
+    if rec.status not in ("pending", "failed"):
+        raise RunStateError(f"{node} cannot be started (status {rec.status})")
     if budget is not None and rec.rounds >= budget:
         escalate(state, node, f"budget of {budget} rounds exhausted", now)
         raise BudgetExhausted(f"{node}: budget of {budget} rounds exhausted")
@@ -228,6 +230,8 @@ def finish(
     rec.status = status
     rec.finished_at = now
     rec.note = note
+    if status == "escalated":
+        state.escalations.append(Escalation(node, note or "escalated", now))
 
 
 def resume(state: RunState, node: str, now: str) -> None:
