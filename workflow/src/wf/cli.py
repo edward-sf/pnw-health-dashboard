@@ -14,6 +14,12 @@ from wf import state as st
 from wf.config import ConfigError, Graph, load_graph, load_project
 from wf.gates import LoggedRunner, run_gates
 from wf.github import CommandError, SubprocessGh, SubprocessGit
+from wf.packages import (
+    delta_package,
+    final_package,
+    task_review_package,
+    verdict_path,
+)
 from wf.schedule import (
     Blocked,
     Decision,
@@ -27,6 +33,7 @@ from wf.schedule import (
 )
 from wf.setup import setup_milestone
 from wf.tasks import PlanError, check_plan_file
+from wf.verdict import VerdictError, ingest, load_verdict
 
 
 def _now() -> str:
@@ -88,6 +95,25 @@ def _parser() -> argparse.ArgumentParser:
     esc.add_argument("--reason", required=True)
     nxt = add("next")
     nxt.add_argument("--usage", required=True, help="get_usage JSON file, or - for stdin")
+    pkg = sub.add_parser("package")
+    kinds = pkg.add_subparsers(dest="kind", required=True)
+    for kind in ("task-review", "final", "delta"):
+        kp = kinds.add_parser(kind)
+        kp.add_argument("--milestone", type=int, required=True)
+        if kind == "task-review":
+            kp.add_argument("--task", required=True)
+            kp.add_argument("--base", help="base ref (default: origin/<milestone branch>)")
+            kp.add_argument("--pr", type=int, help="PR number (default: found from the branch)")
+        elif kind == "final":
+            kp.add_argument("--range", required=True, help="commit range, e.g. a..b")
+        else:
+            kp.add_argument("--range", required=True, help="the fix's commit range")
+            kp.add_argument(
+                "--findings", type=Path, required=True, help="verdict file listing them"
+            )
+    ing = add("ingest", node=True)
+    ing.add_argument("verdict", type=Path)
+    ing.add_argument("--pr", type=int, help="PR number (default: found from the task's branch)")
     use = add("usage", node=True)
     use.add_argument("--pct-before", type=float, required=True)
     use.add_argument("--pct-after", type=float, required=True)
@@ -132,6 +158,56 @@ def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) ->
     out = _decision_json(decision)
     (st.run_dir(root, args.milestone) / "last-decision.json").write_text(json.dumps(out) + "\n")
     return out
+
+
+def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
+    if not state.task_graph:
+        raise st.RunStateError("run state has no task graph; re-run setup")
+    graph = load_task_graph(root / state.task_graph)
+    plan, spec = root / graph.plan, root / graph.spec
+    git = SubprocessGit(root)
+    if args.kind == "task-review":
+        base = args.base
+        if not base:
+            project = load_project(args.project or root / "workflow/project.toml")
+            base = "origin/" + project.milestone_branch.format(n=args.milestone)
+        node = f"{args.task}.task-review"
+        head = _head(root, state, node, args.pr)
+        path = task_review_package(root, state, plan, spec, args.task, base, git, head)
+    elif args.kind == "final":
+        project = load_project(args.project or root / "workflow/project.toml")
+        path = final_package(root, state, plan, spec, args.range, git, SubprocessGh(), project)
+        node = "final-review"
+    else:
+        findings = load_verdict(args.findings).findings
+        path = delta_package(root, state, args.range, findings, git)
+        node = "delta-review"
+    return {"path": str(path), "verdict_path": str(verdict_path(root, state, node))}
+
+
+def _head(root: Path, state: st.RunState, node: str, pr: int | None) -> str:
+    """The commit a verdict must be for: the PR head for a task review, else HEAD."""
+    if pr is None and node.endswith(".task-review"):
+        task = node.rpartition(".")[0]
+        graph = load_task_graph(root / state.task_graph) if state.task_graph else None
+        info = graph.tasks.get(task) if graph else None
+        if info is None or not info.branch:
+            raise st.RunStateError(f"no branch recorded for {task}; pass --pr")
+        out = SubprocessGh().run(["pr", "list", "--head", info.branch, "--json", "number"])
+        try:
+            found = json.loads(out)
+            pr = int(found[0]["number"]) if found else None
+        except (ValueError, KeyError, TypeError, IndexError) as e:
+            raise CommandError("cannot read gh pr list output") from e
+        if pr is None:
+            raise st.RunStateError(f"no PR for branch {info.branch}; pass --pr")
+    if pr is None:
+        return SubprocessGit(root).run(["rev-parse", "HEAD"]).strip()
+    out = SubprocessGh().run(["pr", "view", str(pr), "--json", "headRefOid"])
+    try:
+        return str(json.loads(out)["headRefOid"])
+    except (ValueError, KeyError, TypeError) as e:
+        raise CommandError(f"cannot read the head of PR {pr}") from e
 
 
 def _window_from_last_decision(root: Path, milestone: int, node: str) -> str | None:
@@ -192,6 +268,12 @@ def _run(args: argparse.Namespace) -> object:
         state.gates.append(record)
         st.save(root, state)
         return asdict(record)
+    if cmd == "package":
+        return _package(root, args, state)
+    if cmd == "ingest":
+        review = ingest(state, args.node, args.verdict, now, _head(root, state, args.node, args.pr))
+        st.save(root, state)
+        return asdict(review)
     if cmd == "next":
         return _next(root, args, state, now)
     if cmd == "usage":
@@ -230,7 +312,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         result = _run(args)
-    except (st.RunStateError, ConfigError, PlanError, CommandError) as e:
+    except (st.RunStateError, ConfigError, PlanError, CommandError, VerdictError) as e:
         print(f"wf: {e}", file=sys.stderr)
         return 2
     print(json.dumps(result, indent=2))
