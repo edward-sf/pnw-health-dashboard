@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { manifest, lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import type { CountyModel, Flag, TargetModel } from "../types";
 import { ModelCard } from "./ModelCard";
@@ -91,7 +92,7 @@ test("the factors section draws neutral bars and never uses a tier colour", () =
   const factors = container.querySelector(".model-factors")!;
   const rects = factors.querySelectorAll("rect.shap-bar");
   expect(rects.length).toBeGreaterThan(0);
-  for (const r of rects) expect(r.getAttribute("fill")).toBe("#6b7280");
+  for (const r of rects) expect(r).not.toHaveAttribute("fill");
   const tiers = ["#ca0020", "#f4a582", "#e3e3e3", "#92c5de", "#0571b0"];
   for (const el of [factors, ...factors.querySelectorAll("*")]) {
     const used = ["style", "fill", "stroke"]
@@ -165,4 +166,38 @@ test.each([
   expect(text).toMatch(/because its .+ figure isn't reported\./);
   expect(text).not.toContain("(");
   expect(text).not.toMatch(/deaths isn't/);
+});
+
+const targets = [
+  { id: "life_expectancy", label: "Life expectancy" },
+  { id: "premature_death", label: "Premature death (years lost)" },
+  { id: "injury_deaths", label: "Injury deaths" },
+];
+
+test("with targets, an Outcome select changes the target", async () => {
+  const onTargetChange = vi.fn();
+  render(
+    <MemoryRouter>
+      <ModelCard
+        county={king}
+        entry={model.counties["53033"]!}
+        indicators={manifest.indicators}
+        target={model}
+        targets={targets}
+        onTargetChange={onTargetChange}
+      />
+    </MemoryRouter>,
+  );
+  const select = screen.getByRole("combobox", { name: "Outcome" });
+  expect(select).toHaveTextContent("Life expectancy");
+  const heading = screen.getByRole("heading", { level: 3, name: "Life expectancy model" });
+  expect(heading.parentElement).toContainElement(select);
+  await userEvent.click(select);
+  await userEvent.click(screen.getByRole("option", { name: "Injury deaths" }));
+  expect(onTargetChange).toHaveBeenCalledExactlyOnceWith("injury_deaths");
+});
+
+test("without targets there is no Outcome select", () => {
+  renderCard(model.counties["53033"]!);
+  expect(screen.queryByRole("combobox", { name: "Outcome" })).not.toBeInTheDocument();
 });

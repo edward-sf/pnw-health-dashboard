@@ -86,7 +86,7 @@ test("shows 'Not available' for a null value", () => {
   expect(within(row).getByText("Not available")).toBeInTheDocument();
 });
 
-test("model mode shows actual, expected and flag; median row has no flag", () => {
+test("Compared with expected shows actual, expected and flag; median row has no flag", () => {
   setup();
   const king = screen.getByRole("row", { name: /King/ });
   expect(within(king).getByText("80.8 years")).toBeInTheDocument();

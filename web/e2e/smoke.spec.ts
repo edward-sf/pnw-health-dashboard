@@ -2,20 +2,21 @@ import { expect, test } from "@playwright/test";
 
 test("load, pick an indicator, select a county", async ({ page }) => {
   await page.goto("./");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Poverty rate", exact: true }).click();
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
+  await page.getByRole("button", { name: /^Measure: / }).click();
+  await page.getByRole("option", { name: "Poverty rate", exact: true }).click();
   await expect(page).toHaveURL(/[?&]i=poverty_rate/);
-  await page.locator('path[data-fips="53033"]').click();
+  await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  await expect(page.locator('path[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
+  await expect(page.locator('path.county[data-fips="53033"]')).toHaveAttribute("aria-current", "true");
   await expect(
-    page.getByRole("complementary", { name: "County details" }).locator("svg circle").first(),
+    page.getByRole("dialog", { name: "County details" }).locator("svg circle").first(),
   ).toBeVisible();
 });
 
 test("table view and county search", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.getByRole("combobox", { name: "Search counties" }).fill("Multnomah");
@@ -23,7 +24,7 @@ test("table view and county search", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/[?&]c=41051/);
   await expect(
-    page.getByRole("complementary", { name: "County details" }).getByRole("heading", { level: 2 }),
+    page.getByRole("dialog", { name: "County details" }).getByRole("heading", { level: 2 }),
   ).toBeFocused();
 });
 
@@ -34,20 +35,21 @@ test("strip plot shows every county inside the chart", async ({ page }) => {
   const chart = page.locator(".strip-plot-chart");
   await expect(chart).toHaveAttribute("aria-hidden", "true");
   await expect(chart.locator("svg circle")).toHaveCount(150);
-  const { grey, selected, outside } = await chart.locator("svg").evaluate((svg) => {
+  // The marks take the chart tokens, so they follow the theme.
+  const { muted, selected, outside } = await chart.locator("svg").evaluate((svg) => {
     const box = svg.getBoundingClientRect();
     const circles = [...svg.querySelectorAll("circle")];
     const fill = (c: Element) => c.getAttribute("fill") ?? c.parentElement?.getAttribute("fill");
     return {
-      grey: circles.filter((c) => fill(c) === "#9ca3af").length,
-      selected: circles.filter((c) => fill(c) === "#000").length,
+      muted: circles.filter((c) => fill(c) === "var(--chart-muted)").length,
+      selected: circles.filter((c) => fill(c) === "var(--chart-ink)").length,
       outside: circles.filter((c) => {
         const r = c.getBoundingClientRect();
         return r.left < box.left || r.right > box.right || r.top < box.top || r.bottom > box.bottom;
       }).length,
     };
   });
-  expect(grey).toBe(149);
+  expect(muted).toBe(149);
   expect(selected).toBe(1);
   expect(outside).toBe(0);
 });
@@ -68,15 +70,15 @@ test("strip plot axis text does not overlap", async ({ page }) => {
 });
 
 test("model mode: map, card, table and back", async ({ page }) => {
-  await page.goto("./?i=poverty_rate");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
-  await page.getByRole("button", { name: "Model", exact: true }).click();
-  await expect(page).toHaveURL(/[?&]mode=model/);
-  await expect(page).toHaveURL(/[?&]i=poverty_rate/);
+  await page.goto("./?i=life_expectancy");
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
+  await page.getByRole("radio", { name: "Compared with expected", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]show=expected/);
+  await expect(page).toHaveURL(/[?&]i=life_expectancy/);
   await expect(page.locator(".legend li")).toHaveCount(6);
-  await page.locator('path[data-fips="53033"]').click();
+  await page.locator('path.county[data-fips="53033"]').click();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  const panel = page.getByRole("complementary", { name: "County details" });
+  const panel = page.getByRole("dialog", { name: "County details" });
   await expect(
     panel.getByRole("heading", { name: "Life expectancy model" }),
   ).toBeVisible();
@@ -85,30 +87,36 @@ test("model mode: map, card, table and back", async ({ page }) => {
       name: "Factors associated with the expected value",
     }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
   await expect(page.getByRole("button", { name: /^Result\b/ })).toBeVisible();
   await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
   await page.goBack();
   await expect(page).toHaveURL(/[?&]c=53033/);
-  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page.locator(".legend li")).toHaveCount(6);
   await page.goBack();
-  await expect(page).toHaveURL(/[?&]mode=model/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(panel).toBeHidden();
   await page.goBack();
-  await expect(page.locator(".legend")).toContainText("%");
-  expect(new URL(page.url()).search).toBe("?i=poverty_rate");
+  await expect(page.locator(".legend")).toContainText("years");
+  expect(new URL(page.url()).search).toBe("?i=life_expectancy");
   await expect(page.locator(".legend")).not.toContainText("Not enough data");
 });
 
-test("model mode: change the outcome", async ({ page }) => {
+test("an old model link is rewritten in place", async ({ page }) => {
   await page.goto("./?mode=model&c=53033");
-  await expect(page.locator("path[data-fips]")).toHaveCount(149);
-  await page
-    .getByRole("combobox", { name: "Outcome" })
-    .selectOption({ label: "Premature death (years lost)" });
-  await expect(page).toHaveURL(/[?&]t=premature_death/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
+  expect(new URL(page.url()).search).toBe("?c=53033&i=life_expectancy&show=expected");
+});
+
+test("model mode: change the outcome", async ({ page }) => {
+  await page.goto("./?i=life_expectancy&show=expected&c=53033");
+  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
+  await page.getByRole("button", { name: "Measure: Life expectancy" }).click();
+  await page.getByRole("option", { name: /^Premature death/ }).click();
+  await expect(page).toHaveURL(/[?&]i=premature_death/);
+  await expect(page).toHaveURL(/[?&]show=expected/);
   await expect(page).toHaveURL(/[?&]c=53033/);
   await expect(
     page.getByText("Premature death (years lost): compared with expected").first(),
@@ -117,7 +125,7 @@ test("model mode: change the outcome", async ({ page }) => {
 
 test("select a similar county", async ({ page }) => {
   await page.goto("./?c=53033");
-  const panel = page.getByRole("complementary", { name: "County details" });
+  const panel = page.getByRole("dialog", { name: "County details" });
   const similar = panel.getByRole("region", { name: "Similar counties" });
   const peer = similar.getByRole("button").first();
   const label = (await peer.textContent())?.trim() ?? "";
@@ -145,8 +153,8 @@ test("methodology and about pages render", async ({ page }) => {
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
   // King County (53033) has a model result, so its model card has no Methodology link. Chugach
   // doesn't, so its card links to #no-result (the panel's Similar counties link is a different one).
-  await page.goto("./?i=poverty_rate&c=02063&mode=model");
-  const panel = page.getByRole("complementary", { name: "County details" });
+  await page.goto("./?i=life_expectancy&show=expected&c=02063");
+  const panel = page.getByRole("dialog", { name: "County details" });
   await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
   const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
@@ -166,7 +174,7 @@ test("race breakdown follows the indicator and the outcome", async ({ page }) =>
   await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
   await expect(section()).toHaveCount(0);
 
-  await page.goto("./?mode=model&c=53077&t=premature_death");
+  await page.goto("./?i=premature_death&show=expected&c=53077");
   await expect(section()).toHaveCount(1);
   await expect(section()).toBeVisible();
   // The region never names the outcome, so assert it sits directly after the model card.
@@ -193,4 +201,22 @@ test("who lives here shows population and groups", async ({ page }) => {
   await expect(who.getByRole("heading", { level: 4, name: "Age and sex" })).toBeVisible();
   await expect(who.getByRole("heading", { level: 4, name: "Race and ethnicity" })).toBeVisible();
   await expect(who.getByRole("heading", { level: 4, name: "Other" })).toBeVisible();
+});
+
+test("the panel floats over a live map: clicks keep it open, Escape anywhere closes it", async ({
+  page,
+}) => {
+  await page.goto("./?i=poverty_rate");
+  await page.locator('path.county[data-fips="53033"]').click();
+  const panel = page.getByRole("dialog", { name: "County details" });
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  // Opening from the map leaves focus where it was.
+  await expect(panel.getByRole("heading", { level: 2 })).not.toBeFocused();
+  await page.locator('path.county[data-fips="53077"]').click();
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+  // Escape with focus on the toolbar, outside the panel, still closes it.
+  await page.getByRole("radio", { name: "Map", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "County details" })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/[?&]c=/);
 });

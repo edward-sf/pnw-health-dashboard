@@ -62,7 +62,22 @@ test("describes the three outcomes and the similar counties list", () => {
   renderAbout();
   const text = document.body.textContent ?? "";
   expect(text).toContain("life expectancy by default, premature death and injury deaths");
-  expect(text).toContain("model mode compares one of the three outcomes with its expected value");
+  expect(text).toContain("switch between Observed and Compared with expected");
   expect(text).toMatch(/similar counties, the nearest Pacific Northwest counties/);
   expect(text).not.toMatch(/model of county life expectancy/);
+});
+
+test("How to use it describes the toolbar, the switch and the theme menu", () => {
+  renderAbout();
+  const text = document.body.textContent ?? "";
+  expect(text).toMatch(/Pick a category \(Indicators, Demographics or Outcomes\)/);
+  expect(text).toMatch(/Observed and Compared with expected/);
+  expect(text).toMatch(/theme menu in the header/);
+  expect(text).not.toMatch(/values\smode|model\smode/i);
+});
+
+test("Built with names the front-end libraries", () => {
+  renderAbout();
+  const text = document.body.textContent ?? "";
+  for (const name of ["Tailwind", "Radix", "shadcn", "Lucide"]) expect(text).toContain(name);
 });

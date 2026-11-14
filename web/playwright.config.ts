@@ -18,7 +18,7 @@ export default defineConfig({
     {
       name: "mobile",
       use: { ...devices["Pixel 7"] },
-      testMatch: /(mobile|a11y)\.spec\.ts/,
+      testMatch: /(mobile|a11y|stage|keyboard)\.spec\.ts/,
     },
     {
       // Real 404 responses, like GitHub Pages, so the 404.html deep-link redirect runs.

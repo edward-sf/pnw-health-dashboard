@@ -134,6 +134,8 @@ All files are small enough to load up front.
 **Why SVG + d3-geo rather than MapLibre:** a composite projection (Albers for WA/OR/ID plus a scaled Alaska inset) avoids Mercator distortion of Alaska; no tile basemap or API keys; 149 DOM elements are easy to style, test, and make accessible.
 
 ### Routes
+
+> **Note (2026-11-13):** The Explorer URL is now `?i=&c=&view=&show=expected&t=`. `mode` is legacy and redirects; `show` is new. See M11 §5.
 - `/` — Explorer. All state in URL: `?i=<indicator_id>&c=<fips>&t=<target_id>&mode=values|model&view=map|table`. `t` defaults to the first model target and is kept in both modes.
 - `/methodology` — sources and vintages, harmonization rules, ML method, model card, caveats.
 - `/about` — project overview and author links.
@@ -141,6 +143,8 @@ All files are small enough to load up front.
 GitHub Pages SPA routing handled via a `404.html` redirect fallback.
 
 ### Explorer
+
+> **Note (2026-11-13):** The M11 redesign (`2026-11-13-m11-explorer-redesign-design.md`) replaced the layout described here. There is no picker column: a toolbar holds a category switch and a searchable measure dropdown. "Model mode" is now the Compared with expected view of a modelled outcome, set with `show=expected`, and the `mode` parameter is legacy (see the M11 URL table). The county panel floats over a fixed-size map stage on desktop and is a bottom drawer on phones. Where this section and the M11 design differ, the M11 design applies.
 - **Indicator picker:** grouped by category, searchable.
 - **Map:**
   - *Values mode:* direction-aware sequential color scale, quantile bins, legend; hatch pattern for suppressed/missing.

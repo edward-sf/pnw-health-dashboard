@@ -36,6 +36,8 @@ Work order: §3.1 → §3.7, i.e. #138, #139, #98, #130, #129, #81, #83. The acc
 
 ### 3.1 #138 County outline contrast
 
+> **Note (2026-11-13):** Extended to the dark palette by M11 (`2026-11-13-m11-explorer-redesign-design.md` §9). `outlineFor` is given the active theme's neutrals, and the contrast test runs over both palettes. The sequential ramps and the four colored tiers keep their hex values in both themes.
+
 **Decision:** county boundaries are required graphics under WCAG 1.4.11. They are what separates a pale county from the page and from a pale neighbour.
 
 **Change:** the outline depends on the county's fill, so it is at least 3:1 against every fill the map draws. `outlineFor(fill)` in `web/src/color/outline.ts` returns the grey default `#808080` when that reaches 3:1 against the fill, and otherwise black or white, whichever contrasts more. The hatch fill is judged by its `#f2f2f2` background. `CountyMap` sets it on each path as the `--county-stroke` custom property, and `.county { stroke: var(--county-stroke, #808080) }` uses it, so the hover/focus rule (`#333`, width 1) and the selected rule (`#000`, width 2) still win. Stroke width and every fill, including the M5 tier fills, stay as they are.

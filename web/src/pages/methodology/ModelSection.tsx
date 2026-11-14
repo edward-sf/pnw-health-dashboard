@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatValue } from "../../color/formatValue";
 import { modelDigits } from "../../model/modelView";
 import { defaultTargetId, targetModel } from "../../model/targetView";
@@ -48,16 +49,21 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
         well below its national expectation, so the flags would have shown a regional offset, not
         differences between counties.
       </p>
-      <label className="methodology-select">
-        Outcome{" "}
-        <select value={targetId} onChange={(e) => onTargetChange(e.target.value)}>
-          {targets.map(([id, t]) => (
-            <option key={id} value={id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="methodology-select">
+        <span id="methodology-outcome">Outcome</span>
+        <Select value={targetId} onValueChange={onTargetChange}>
+          <SelectTrigger aria-labelledby="methodology-outcome" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {targets.map(([id, t]) => (
+              <SelectItem key={id} value={id}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <p>
         The details below, the factors by importance, and the details under Reproducibility are for
         the outcome selected here. The accuracy table covers every outcome.
@@ -127,7 +133,7 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
       </h4>
       <p>
         A county whose value for the outcome isn't reported has no model result, because there is
-        nothing to compare its expected value with. In model mode these counties are hatched and
+        nothing to compare its expected value with. On the map, with Compared with expected on, these counties are hatched and
         marked "Not enough data".
       </p>
       <h4>Factors that stand in for others</h4>

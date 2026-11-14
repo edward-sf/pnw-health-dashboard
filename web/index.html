@@ -11,6 +11,16 @@
         if (url !== null) history.replaceState(null, "", url);
       })();
     </script>
+    <!-- The theme, before first paint so a dark page never flashes light. Keep in step with
+         src/theme/theme.ts (STORAGE_KEY, readChoice, resolveTheme). -->
+    <script>
+      (function () {
+        var c = "system";
+        try { c = localStorage.getItem("pnw-theme") || "system"; } catch (e) {}
+        var dark = c === "dark" || (c !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

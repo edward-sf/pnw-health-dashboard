@@ -1,4 +1,5 @@
 import { formatBound, formatSigned, formatTick, formatValue } from "../color/formatValue";
+import { usePalette } from "../color/palette";
 import { modelDigits, tierFill } from "../model/modelView";
 import type { Flag, Unit } from "../types";
 
@@ -49,6 +50,7 @@ function baseMeaning(residual: number, r: string, a: string, b: string, t75: num
 type Props = { residual: number; threshold75: number; threshold90: number; flag: Flag; unit: Unit; note?: string | null };
 
 export function ResidualRange({ residual, threshold75, threshold90, flag, unit, note = null }: Props) {
+  const palette = usePalette();
   const half = rangeDomain(residual, threshold90);
   const x = (v: number) => ((v + half) / (2 * half)) * W;
   const band = (t: number) => ({ x: x(-t), width: x(t) - x(-t) });
@@ -70,10 +72,18 @@ export function ResidualRange({ residual, threshold75, threshold90, flag, unit, 
         aria-hidden="true"
         focusable="false"
       >
-        <rect x={b90.x} y={10} width={b90.width} height={20} fill="#c9ced6" />
-        <rect x={b75.x} y={10} width={b75.width} height={20} fill="#e6e9ee" />
-        <line x1={x(0)} x2={x(0)} y1={6} y2={34} stroke="#374151" strokeWidth={1} />
-        <circle cx={x(residual)} cy={20} r={5} fill={tierFill(flag)} stroke="#111" strokeWidth={1} />
+        {/* Colors other than the tier's come from the chart tokens, by class, in styles.css. */}
+        <rect className="range-band-90" x={b90.x} y={10} width={b90.width} height={20} />
+        <rect className="range-band-75" x={b75.x} y={10} width={b75.width} height={20} />
+        <line className="range-zero" x1={x(0)} x2={x(0)} y1={6} y2={34} strokeWidth={1} />
+        <circle
+          className="range-dot"
+          cx={x(residual)}
+          cy={20}
+          r={5}
+          fill={tierFill(flag, palette)}
+          strokeWidth={1}
+        />
         {ticks.map((t) => (
           <text
             key={t}
@@ -81,7 +91,6 @@ export function ResidualRange({ residual, threshold75, threshold90, flag, unit, 
             x={x(t)}
             y={LABEL_Y}
             fontSize={10}
-            fill="#4b5563"
             textAnchor="middle"
           >
             {signedBound(t, unit)}

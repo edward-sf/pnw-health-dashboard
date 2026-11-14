@@ -106,11 +106,13 @@ test("the outline nests: one page h2, sections at h3, sub-anchors at h4", () => 
 test("the outcome select lives on the page, defaults to life expectancy and drives importance and the model card", async () => {
   at(ready);
   const select = screen.getByRole("combobox", { name: "Outcome" });
-  expect(select).toHaveValue("life_expectancy");
+  expect(select).toHaveTextContent("Life expectancy");
   expect(
     screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
   ).toHaveTextContent("Life expectancy");
-  await userEvent.setup().selectOptions(select, "premature_death");
+  const user = userEvent.setup();
+  await user.click(select);
+  await user.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
   expect(
     screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
   ).toHaveTextContent("Premature death");

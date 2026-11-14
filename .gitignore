@@ -15,6 +15,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# The web app's own helpers (shadcn's `@/lib/utils`), not a Python build directory.
+!web/src/lib/
 lib64/
 parts/
 sdist/

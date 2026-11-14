@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import type { Sort } from "./sortRows";
 
 type Props<K extends string> = {
@@ -13,6 +14,7 @@ type Props<K extends string> = {
  */
 export function SortHeader<K extends string>({ sortKey, label, sort, onSort }: Props<K>) {
   const active = sort.key === sortKey;
+  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
   return (
     <th
       scope="col"
@@ -30,6 +32,7 @@ export function SortHeader<K extends string>({ sortKey, label, sort, onSort }: P
         }
       >
         {label}
+        <Icon aria-hidden="true" />
       </button>
     </th>
   );

@@ -2,9 +2,19 @@ import { act, render } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { useEffect } from "react";
 import { expect, test } from "vitest";
-import { manifest } from "../test/fixtures";
+import { manifest as fixtureManifest } from "../test/fixtures";
 import { useExplorerParams } from "./useExplorerParams";
 
+// The fixture manifest only carries life expectancy; add the other two targets as indicators.
+const lifeExpectancy = fixtureManifest.indicators.find((x) => x.id === "life_expectancy")!;
+const manifest = {
+  ...fixtureManifest,
+  indicators: [
+    ...fixtureManifest.indicators,
+    { ...lifeExpectancy, id: "premature_death", label: "Premature death" },
+    { ...lifeExpectancy, id: "injury_deaths", label: "Injury deaths" },
+  ],
+};
 const fipsSet = new Set(["53033", "02016"]);
 let targetIds = ["life_expectancy", "premature_death", "injury_deaths"];
 
@@ -77,29 +87,43 @@ test("setCounty(null) deletes only c", async () => {
   expect(router.state.location.search).toBe("?i=pct_asian");
 });
 
-test("setMode pushes, keeps i, c and view, and values deletes mode", async () => {
-  const router = setup("/?i=poverty_rate&c=53033&view=table");
-  await act(async () => api.setMode("model"));
-  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&view=table&mode=model");
+test("setShow pushes, keeps i, c and view, and observed deletes show", async () => {
+  const router = setup("/?i=life_expectancy&c=53033&view=table");
+  await act(async () => api.setShow("expected"));
+  expect(router.state.location.search).toBe("?i=life_expectancy&c=53033&view=table&show=expected");
   expect(router.state.historyAction).toBe("PUSH");
-  await act(async () => api.setMode("values"));
-  expect(router.state.location.search).toBe("?i=poverty_rate&c=53033&view=table");
+  await act(async () => api.setShow("observed"));
+  expect(router.state.location.search).toBe("?i=life_expectancy&c=53033&view=table");
+});
+
+test("setIndicator to a model target drops t and keeps show", async () => {
+  const router = setup("/?i=life_expectancy&show=expected");
+  await act(async () => api.setIndicator("premature_death"));
+  expect(router.state.location.search).toBe("?i=premature_death&show=expected");
+});
+
+test("setIndicator to a measure with no model drops show and keeps t", async () => {
+  const router = setup("/?i=life_expectancy&show=expected");
+  await act(async () => api.setIndicator("poverty_rate"));
+  expect(router.state.location.search).toBe("?i=poverty_rate");
+  await act(async () => api.setTarget("injury_deaths"));
+  await act(async () => api.setIndicator("pct_asian"));
+  expect(router.state.location.search).toBe("?i=pct_asian&t=injury_deaths");
+});
+
+test("an old model link is rewritten in place", async () => {
+  const router = setup("/?mode=model&t=injury_deaths&c=53033&view=table");
+  expect(router.state.location.search).toBe("?c=53033&view=table&i=injury_deaths&show=expected");
+  expect(router.state.historyAction).toBe("REPLACE");
+  await act(async () => router.navigate(-1));
+  expect(router.state.location.pathname).toBe("/start");
 });
 
 test("setTarget keeps c and i and pushes", async () => {
-  const router = setup("/?i=pct_asian&c=53033&mode=model");
+  const router = setup("/?i=pct_asian&c=53033");
   await act(async () => api.setTarget("injury_deaths"));
-  expect(router.state.location.search).toBe("?i=pct_asian&c=53033&mode=model&t=injury_deaths");
+  expect(router.state.location.search).toBe("?i=pct_asian&c=53033&t=injury_deaths");
   expect(router.state.historyAction).toBe("PUSH");
-});
-
-test("t survives a switch to values mode and back", async () => {
-  const router = setup("/?mode=model&t=premature_death");
-  await act(async () => api.setMode("values"));
-  expect(router.state.location.search).toBe("?t=premature_death");
-  expect(api.params.target).toBe("premature_death");
-  await act(async () => api.setMode("model"));
-  expect(router.state.location.search).toBe("?t=premature_death&mode=model");
 });
 
 test("setTarget to the default removes t", async () => {

@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router";
 import { formatCi, formatValue } from "../color/formatValue";
-import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import type {
   County,
   CountyModel,
@@ -16,6 +17,7 @@ import type {
 import { buildPeerRows } from "./buildPeerRows";
 import { SimilarCounties } from "./SimilarCounties";
 import { ModelCard } from "./ModelCard";
+import { PanelShell } from "./PanelShell";
 import { RaceBreakdown } from "./RaceBreakdown";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
@@ -33,7 +35,7 @@ type Props = {
   strata: StrataFile;
   /** The manifest indicator for the model target; its race breakdown follows the model card. */
   targetIndicator: Indicator | undefined;
-  /** In model mode the model card comes first (parent spec §6). */
+  /** With Compared with expected the model card comes first (parent spec §6). */
   modelMode: boolean;
   peers: Peers;
   /** Selects another county, exactly as a map click does. */
@@ -41,6 +43,9 @@ type Props = {
   focusRequested: boolean;
   onFocusHandled: () => void;
   onClose: () => void;
+  /** The outcomes the model card can switch between; given only when the measure is not one. */
+  targets?: { id: string; label: string }[];
+  onTargetChange?: (id: string) => void;
 };
 
 export function CountyPanel({
@@ -60,32 +65,17 @@ export function CountyPanel({
   focusRequested,
   onFocusHandled,
   onClose,
+  targets,
+  onTargetChange,
 }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const bodyId = useId();
   const similarId = useId();
-  const isPhone = useMediaQuery(PHONE_QUERY);
-  // The county the sheet was expanded for. It is cleared once another county is selected or the
-  // viewport goes wide, so the sheet always opens in peek and never comes back expanded.
-  const [expandedFips, setExpandedFips] = useState<string | null>(null);
-  if (expandedFips !== null && (expandedFips !== county.fips || !isPhone)) {
-    setExpandedFips(null);
-  }
-  const expanded = isPhone && expandedFips === county.fips;
 
   useEffect(() => {
     if (!focusRequested) return;
     headingRef.current?.focus();
     onFocusHandled();
   }, [focusRequested, onFocusHandled]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const entry = entries[county.fips];
   const v = entry?.v ?? null;
@@ -97,7 +87,7 @@ export function CountyPanel({
       : null;
 
   const indicatorSection = (
-    <>
+    <div className="panel-indicator">
       <p className="panel-measure">{indicator.label}</p>
       {v !== null ? (
         <>
@@ -119,12 +109,12 @@ export function CountyPanel({
           <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
         </p>
       )}
-      {/* In model mode the breakdown is the target's, after the model card, so it is not repeated here. */}
+      {/* With Compared with expected the breakdown is the target's, after the model card, so it is not repeated here. */}
       {!modelMode && (
         <RaceBreakdown indicator={indicator} fips={county.fips} overall={entry} strata={strata} />
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
-    </>
+    </div>
   );
   const peerData = buildPeerRows(
     county.fips,
@@ -138,19 +128,13 @@ export function CountyPanel({
       entry={modelEntry}
       indicators={manifest.indicators}
       target={target}
+      targets={targets}
+      onTargetChange={onTargetChange}
     />
   );
 
   return (
-    <aside
-      className={
-        isPhone
-          ? `county-panel county-panel--sheet${expanded ? " county-panel--expanded" : ""}`
-          : "county-panel"
-      }
-      aria-label="County details"
-    >
-      {isPhone && <div className="sheet-handle" aria-hidden="true" />}
+    <PanelShell onClose={onClose} county={county.fips}>
       <div className="panel-header">
         <div>
           <h2 ref={headingRef} tabIndex={-1}>
@@ -158,24 +142,19 @@ export function CountyPanel({
           </h2>
           <p className="panel-state">{county.state}</p>
         </div>
-        <div className="panel-actions">
-          {isPhone && (
-            <button
-              type="button"
-              className="panel-expand"
-              aria-expanded={expanded}
-              aria-controls={bodyId}
-              onClick={() => setExpandedFips(expanded ? null : county.fips)}
-            >
-              {expanded ? "Collapse" : "Expand"}
-            </button>
-          )}
-          <button type="button" className="panel-close" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="panel-close"
+          aria-label="Close"
+          title="Close"
+          onClick={onClose}
+        >
+          <X aria-hidden="true" />
+        </Button>
       </div>
-      <div id={bodyId} className="panel-body">
+      <div className="panel-body">
         {modelMode && modelCard}
         {modelMode && targetIndicator && (
           <RaceBreakdown
@@ -203,6 +182,6 @@ export function CountyPanel({
           </section>
         )}
       </div>
-    </aside>
+    </PanelShell>
   );
 }

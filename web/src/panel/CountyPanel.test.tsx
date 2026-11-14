@@ -47,7 +47,7 @@ function setup(fips: string, indicatorId: string, modelMode = false, peers: Peer
 
 test("shows header, value, CI and ranks", () => {
   setup("53033", "poverty_rate");
-  expect(screen.getByRole("complementary", { name: "County details" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "County details" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
   expect(screen.getByText("WA")).toBeInTheDocument();
   expect(document.querySelector(".panel-value")).toHaveTextContent("9.5%");
@@ -191,7 +191,7 @@ test("shows the model card after the strip plot and before Who lives here", () =
   expect(card.compareDocumentPosition(who) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-describe("phone sheet", () => {
+describe("phone drawer", () => {
   const indicator = manifest.indicators.find((i) => i.id === "poverty_rate") as Indicator;
   const panel = (fips: string, onClose = () => {}) => (
     <MemoryRouter>
@@ -215,77 +215,27 @@ describe("phone sheet", () => {
       />
     </MemoryRouter>
   );
-  const aside = () => screen.getByRole("complementary", { name: "County details" });
+  const dialog = () => screen.getByRole("dialog", { name: "County details" });
 
-  test("renders as a sheet in peek on a phone", () => {
+  test("renders as a drawer with Close and no Expand button on a phone", () => {
     mockMatchMedia(true);
     render(panel("53033"));
-    expect(aside()).toHaveClass("county-panel--sheet");
-    expect(aside()).not.toHaveClass("county-panel--expanded");
-    const expand = screen.getByRole("button", { name: "Expand" });
-    expect(expand).toHaveAttribute("aria-expanded", "false");
-    const body = document.getElementById(expand.getAttribute("aria-controls")!);
-    expect(body).not.toBeNull();
-    expect(aside()).toContainElement(body);
-    expect(expand.nextElementSibling).toBe(screen.getByRole("button", { name: "Close" }));
-  });
-
-  test("Expand toggles aria-expanded, the class and the label", async () => {
-    mockMatchMedia(true);
-    render(panel("53033"));
-    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
-    const collapse = screen.getByRole("button", { name: "Collapse" });
-    expect(collapse).toHaveAttribute("aria-expanded", "true");
-    expect(aside()).toHaveClass("county-panel--expanded");
-    await userEvent.click(collapse);
-    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
-    expect(aside()).not.toHaveClass("county-panel--expanded");
-  });
-
-  test("a different county returns the sheet to peek", async () => {
-    mockMatchMedia(true);
-    const { rerender } = render(panel("53033"));
-    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
-    expect(aside()).toHaveClass("county-panel--expanded");
-    rerender(panel("02016"));
-    expect(screen.getByRole("heading", { level: 2, name: "Aleutians West" })).toBeInTheDocument();
-    expect(aside()).not.toHaveClass("county-panel--expanded");
-    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
-  });
-
-  test("returning to a county after another opens it in peek", async () => {
-    mockMatchMedia(true);
-    const { rerender } = render(panel("53033"));
-    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
-    rerender(panel("02016"));
-    rerender(panel("53033"));
+    expect(dialog()).toHaveAttribute("data-vaul-drawer");
+    expect(dialog()).toHaveClass("county-panel");
     expect(screen.getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
-    expect(aside()).not.toHaveClass("county-panel--expanded");
-    expect(screen.getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
-  });
-
-  test("going wide and back to a phone reopens the sheet in peek", async () => {
-    const mm = mockMatchMedia(true);
-    render(panel("53033"));
-    await userEvent.click(screen.getByRole("button", { name: "Expand" }));
-    act(() => mm.set(false));
-    act(() => mm.set(true));
-    expect(aside()).toHaveClass("county-panel--sheet");
-    expect(aside()).not.toHaveClass("county-panel--expanded");
-  });
-
-  test("crossing to a wide viewport drops the sheet and keeps the county", () => {
-    const mm = mockMatchMedia(true);
-    render(panel("53033"));
-    const heading = screen.getByRole("heading", { level: 2, name: "King" });
-    act(() => mm.set(false));
-    expect(aside()).not.toHaveClass("county-panel--sheet");
-    expect(aside()).not.toHaveClass("county-panel--expanded");
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Expand" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "King" })).toBe(heading);
   });
 
-  test("Escape closes the sheet", async () => {
+  test("crossing to a wide viewport swaps the drawer for the floating panel and keeps the county", () => {
+    const mm = mockMatchMedia(true);
+    render(panel("53033"));
+    act(() => mm.set(false));
+    expect(dialog()).not.toHaveAttribute("data-vaul-drawer");
+    expect(screen.getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
+  });
+
+  test("Escape closes the drawer", async () => {
     mockMatchMedia(true);
     const onClose = vi.fn();
     render(panel("53033", onClose));
@@ -293,10 +243,18 @@ describe("phone sheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  test("Close closes the drawer", async () => {
+    mockMatchMedia(true);
+    const onClose = vi.fn();
+    render(panel("53033", onClose));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   test("a wide viewport has no Expand button", () => {
     mockMatchMedia(false);
     render(panel("53033"));
-    expect(aside()).not.toHaveClass("county-panel--sheet");
+    expect(dialog()).not.toHaveAttribute("data-vaul-drawer");
     expect(screen.queryByRole("button", { name: "Expand" })).not.toBeInTheDocument();
   });
 });
@@ -304,14 +262,14 @@ describe("phone sheet", () => {
 const precedes = (a: Element, b: Element) =>
   (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
-test("model mode puts the model card before the indicator section", () => {
+test("Compared with expected puts the model card before the indicator section", () => {
   setup("53033", "poverty_rate", true);
   const card = screen.getByRole("heading", { name: "Life expectancy model" });
   const measure = document.querySelector(".panel-measure")!;
   expect(precedes(card, measure)).toBe(true);
 });
 
-test("values mode keeps the indicator section before the model card", () => {
+test("Observed keeps the indicator section before the model card", () => {
   setup("53033", "poverty_rate", false);
   const card = screen.getByRole("heading", { name: "Life expectancy model" });
   const measure = document.querySelector(".panel-measure")!;
@@ -319,7 +277,7 @@ test("values mode keeps the indicator section before the model card", () => {
 });
 
 describe("similar counties", () => {
-  test.each([false, true])("renders after Who lives here (model mode %s)", (modelMode) => {
+  test.each([false, true])("renders after Who lives here (Compared with expected %s)", (modelMode) => {
     setup("02016", "poverty_rate", modelMode);
     const who = screen.getByRole("heading", { name: "Who lives here" });
     const similar = screen.getByRole("heading", { name: "Similar counties" });
@@ -425,7 +383,7 @@ describe("race breakdown", () => {
     expect(breakdowns()).toHaveLength(0);
   });
 
-  test("model mode: breakdown for the target, right after the model card, and none in the indicator section", () => {
+  test("Compared with expected: breakdown for the target, right after the model card, and none in the indicator section", () => {
     render(panel({ indicatorId: "life_expectancy", modelMode: true }));
     expect(breakdowns()).toHaveLength(1);
     const [section] = breakdowns();
@@ -438,13 +396,13 @@ describe("race breakdown", () => {
     expect(section).toHaveTextContent(/County overall\s*80\.4 years/);
   });
 
-  test("model mode: the breakdown follows the target, not the explore indicator", () => {
+  test("Compared with expected: the breakdown follows the target, not the explore indicator", () => {
     render(panel({ indicatorId: "poverty_rate", modelMode: true }));
     expect(breakdowns()).toHaveLength(1);
     expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
   });
 
-  test("model mode with a different target re-renders for that target", () => {
+  test("Compared with expected with a different target re-renders for that target", () => {
     const { rerender } = render(panel({ indicatorId: "poverty_rate", modelMode: true }));
     expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
     rerender(
@@ -463,14 +421,14 @@ describe("race breakdown", () => {
     expect(section).not.toHaveTextContent("years");
   });
 
-  test("model mode without a target indicator shows no breakdown", () => {
+  test("Compared with expected without a target indicator shows no breakdown", () => {
     render(panel({ indicatorId: "life_expectancy", modelMode: true, target: undefined }));
     expect(breakdowns()).toHaveLength(0);
   });
 
   // Chugach has no strata entries, so every group is unreported, as in the real data.
   test.each([false, true])(
-    "all groups unreported: only the not-reported note (model mode %s)",
+    "all groups unreported: only the not-reported note (Compared with expected %s)",
     (modelMode) => {
       render(panel({ indicatorId: "life_expectancy", modelMode, fips: "02063" }));
       expect(breakdowns()).toHaveLength(1);
