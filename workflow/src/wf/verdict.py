@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from wf.state import ReviewRecord, RunState, RunStateError
+from wf.state import ReviewRecord, RunState, require_running
 
 Severity = Literal["critical", "important", "minor"]
 _SEVERITIES = ("critical", "important", "minor")
@@ -105,10 +106,28 @@ def load_verdict(path: Path) -> Verdict:
     return parse_verdict(raw)
 
 
+def _written_after(path: Path, started_at: str | None) -> bool:
+    if started_at is None:
+        return False
+    try:
+        mtime = path.stat().st_mtime
+    except OSError as e:
+        raise VerdictError(f"cannot read verdict {path}: {e.strerror}") from e
+    return mtime > datetime.fromisoformat(started_at).timestamp()
+
+
 def ingest(state: RunState, node: str, path: Path, now: str, head: str) -> ReviewRecord:
-    """Record a verdict for `node`, provided it names this node and the PR's current head."""
-    if node not in state.nodes:
-        raise RunStateError(f"unknown node '{node}'")
+    """Record a verdict for `node`, provided it names this node and the PR's current head.
+
+    The node must be running and the file written after its round started. That proves the
+    verdict is fresh, not who wrote it (spec section 11, known gaps).
+    """
+    rec = require_running(state, node)
+    if not _written_after(path, rec.started_at):
+        raise VerdictError(
+            f"verdict {path} was written before {node} started at {rec.started_at}: "
+            "a reviewer must write a fresh one"
+        )
     verdict = load_verdict(path)
     if verdict.node != node:
         raise VerdictError(f"verdict is for node '{verdict.node}', not '{node}'")

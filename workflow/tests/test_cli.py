@@ -118,6 +118,7 @@ def test_cli_package_task_review_prints_paths(tmp_path, capsys, monkeypatch):
 
 def test_cli_ingest_with_pr_records_and_stale_sha_exits_2(tmp_path, capsys, monkeypatch):
     _repo_with_run(tmp_path)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
 
     class Gh:
         def run(self, args):
@@ -151,6 +152,7 @@ def test_cli_ingest_with_pr_records_and_stale_sha_exits_2(tmp_path, capsys, monk
 
 def test_cli_ingest_finds_the_pr_from_the_tasks_branch(tmp_path, capsys, monkeypatch):
     _repo_with_run(tmp_path)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
     seen = []
 
     class Gh:

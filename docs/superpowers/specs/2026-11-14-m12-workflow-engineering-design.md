@@ -292,4 +292,7 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **The e2e job is in PR `ci`** (#295), and `ci` needs it. New or changed specs are repeated 3 times at 4x CPU throttle (`E2E_CPU_THROTTLE`), in the gate and in CI. e2e also still runs on milestone pushes in `build-deploy`, and the job runs on pushes too, which duplicates that.
 - **A `workflow` job** runs `ruff`, `mypy` and `pytest` for the engine, and is in `ci`'s `needs`.
 
+**Known gaps**
+- **Verdict authorship is not proven.** `wf ingest` refuses a node that is not running, and a verdict file last written before the node's round started. That proves the verdict is fresh, not who wrote it: the orchestrating session could still write one during the round. The real guards are the skill's instruction ("never write or edit a verdict") and the hook-protected run state, which only `wf` writes.
+
 **Known minors, left to the final review's triage.** Run state has no file locking (the walker is serial). The merge hook fires on any command whose text merely mentions the merge phrase, and the state hook can false-positive on a heredoc that names the runs path with `>` (use a body file). The replay and the pilot in §5.10 are task T11 and M13.

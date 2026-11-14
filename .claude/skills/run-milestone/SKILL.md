@@ -68,7 +68,7 @@ Placeholders: `{N}`; `{task_id}`, `{issue}`, `{branch}`, `{k}` (task number) fro
 
 **Send back** after task-review findings: `wf finish T<k>.task-review --status failed --note "findings r<round>"`, `wf finish T<k>.gates --status failed`, `wf finish T<k>.implement --status failed --note "review findings"`. The next `wf next` dispatches implement again; its `wf start` enforces the 3-round budget, and the review's own `wf start` the 2-round budget.
 
-`wf ingest` exit 2 (stale SHA, invalid verdict, wrong node) is unexpected: escalate.
+`wf ingest` exit 2 (stale SHA, invalid verdict, wrong node, a node that is not running, a verdict written before the round started) is unexpected: escalate. Ingest before `wf finish`, while the node is still running.
 
 ## Script nodes
 
