@@ -20,74 +20,98 @@ async function explorer(page: Page, query: string) {
   await expect(page.locator(".indicator-title")).toBeVisible();
 }
 
-test("explorer: values map", async ({ page }, testInfo) => {
-  await explorer(page, "?i=poverty_rate");
-  await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
-  await audit(page, testInfo);
-});
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`${theme} theme`, () => {
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((t) => localStorage.setItem("pnw-theme", t), theme);
+    });
 
-test("explorer: model map", async ({ page }, testInfo) => {
-  await explorer(page, "?i=life_expectancy&show=expected");
-  await expect(page.locator(".legend li")).toHaveCount(6);
-  await audit(page, testInfo);
-});
+    async function openExplorer(page: Page, query: string) {
+      await explorer(page, query);
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /\bdark\b/ : /^(?!.*\bdark\b)/);
+    }
 
-test("explorer: table view", async ({ page }, testInfo) => {
-  await explorer(page, "?i=poverty_rate&view=table");
-  await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
-  await audit(page, testInfo);
-});
+    test("explorer: values map", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate");
+      await expect(page.locator("path.county[data-fips]")).toHaveCount(149);
+      await audit(page, testInfo);
+    });
 
-test("explorer: county panel open", async ({ page }, testInfo) => {
-  await explorer(page, "?i=poverty_rate&c=53033");
-  const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
-  await expect(panel.locator("svg circle").first()).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: model map", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=life_expectancy&show=expected");
+      await expect(page.locator(".legend li")).toHaveCount(6);
+      await expect(page.getByRole("radiogroup", { name: "Show" })).toBeVisible();
+      await audit(page, testInfo);
+    });
 
-test("explorer: county panel with race breakdown", async ({ page }, testInfo) => {
-  await explorer(page, "?i=life_expectancy&c=53077");
-  const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
-  await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: table view", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate&view=table");
+      await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
+      await audit(page, testInfo);
+    });
 
-test("explorer: model mode county panel", async ({ page }, testInfo) => {
-  await explorer(page, "?i=life_expectancy&show=expected&c=53077");
-  const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
-  await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: county panel open", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate&c=53033");
+      const panel = page.getByRole("dialog", { name: "County details" });
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+      await expect(panel.locator("svg circle").first()).toBeVisible();
+      await audit(page, testInfo);
+    });
 
-test("explorer: measure list open", async ({ page }, testInfo) => {
-  await explorer(page, "?i=poverty_rate");
-  const toggle = page.getByRole("button", { name: "Measure: Poverty rate" });
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("combobox", { name: "Filter measures" })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: county panel with race breakdown", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=life_expectancy&c=53077");
+      const panel = page.getByRole("dialog", { name: "County details" });
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+      await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+      await audit(page, testInfo);
+    });
 
-test("explorer: show switch on a modelled outcome", async ({ page }, testInfo) => {
-  await explorer(page, "?i=life_expectancy");
-  await expect(page.getByRole("radiogroup", { name: "Show" })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: model mode county panel", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=life_expectancy&show=expected&c=53077");
+      const panel = page.getByRole("dialog", { name: "County details" });
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+      await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+      await audit(page, testInfo);
+    });
 
-test("methodology page", async ({ page }, testInfo) => {
-  await page.goto("./methodology");
-  await expect(page.getByRole("navigation", { name: "On this page" })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: measure popover open", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate");
+      const toggle = page.getByRole("button", { name: "Measure: Poverty rate" });
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(page.getByRole("combobox", { name: "Filter measures" })).toBeVisible();
+      await audit(page, testInfo);
+    });
 
-test("about page", async ({ page }, testInfo) => {
-  await page.goto("./about");
-  await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
-  await audit(page, testInfo);
-});
+    test("explorer: county search list open", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate");
+      const search = page.getByRole("combobox", { name: "Search counties" });
+      await search.fill("wash");
+      await expect(search).toHaveAttribute("aria-expanded", "true");
+      await expect(page.getByRole("option").first()).toBeVisible();
+      await audit(page, testInfo);
+    });
+
+    test("explorer: theme menu open", async ({ page }, testInfo) => {
+      await openExplorer(page, "?i=poverty_rate");
+      await page.getByRole("button", { name: "Theme" }).click();
+      await expect(page.getByRole("menuitemradio", { name: "Dark" })).toBeVisible();
+      await audit(page, testInfo);
+    });
+
+    test("methodology page", async ({ page }, testInfo) => {
+      await page.goto("./methodology");
+      await expect(page.getByRole("navigation", { name: "On this page" })).toBeVisible();
+      await audit(page, testInfo);
+    });
+
+    test("about page", async ({ page }, testInfo) => {
+      await page.goto("./about");
+      await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+      await audit(page, testInfo);
+    });
+  });
+}
 
 test("skip link reaches the county search", async ({ page }) => {
   await explorer(page, "?i=poverty_rate");
@@ -101,36 +125,4 @@ test("skip link reaches the county search", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByRole("combobox", { name: "Search counties" })).toBeFocused();
   expect(new URL(page.url()).hash).toBe("");
-});
-
-test.describe("dark theme", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("pnw-theme", "dark"));
-  });
-
-  test("explorer: values map with the county panel", async ({ page }, testInfo) => {
-    await explorer(page, "?i=life_expectancy&c=53077");
-    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
-    const panel = page.getByRole("dialog", { name: "County details" });
-    await expect(panel.locator("svg circle").first()).toBeVisible();
-    await audit(page, testInfo);
-  });
-
-  test("explorer: model map with the county panel", async ({ page }, testInfo) => {
-    await explorer(page, "?i=life_expectancy&show=expected&c=53077");
-    await expect(page.getByRole("dialog", { name: "County details" })).toBeVisible();
-    await audit(page, testInfo);
-  });
-
-  test("explorer: table view", async ({ page }, testInfo) => {
-    await explorer(page, "?i=poverty_rate&view=table&c=53033");
-    await expect(page.locator(".county-table tbody tr")).toHaveCount(149);
-    await audit(page, testInfo);
-  });
-
-  test("methodology page", async ({ page }, testInfo) => {
-    await page.goto("./methodology");
-    await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
-    await audit(page, testInfo);
-  });
 });

@@ -23,7 +23,8 @@ export function ThemeMenu() {
   const { choice, setChoice } = useTheme();
   const { Icon } = OPTIONS.find((o) => o.value === choice) ?? OPTIONS[2];
   return (
-    <DropdownMenu>
+    // Non-modal: a modal menu aria-hides #root while its focusable children stay tabbable (axe aria-hidden-focus).
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="theme-menu" aria-label="Theme">
           <Icon aria-hidden="true" />

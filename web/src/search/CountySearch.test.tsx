@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { CountySearch } from "./CountySearch";
@@ -145,4 +145,26 @@ test("aria-controls is absent while the listbox is closed and points at it when 
 test("inputId sets the input id and keeps its label", () => {
   render(<CountySearch counties={counties} onSelect={() => {}} inputId="x" />);
   expect(screen.getByRole("combobox", { name: "Search counties" })).toHaveAttribute("id", "x");
+});
+
+test("aria-activedescendant names the highlighted option and follows the arrow keys", async () => {
+  const { input } = setup();
+  await userEvent.type(input, "Washington");
+  const highlighted = () => screen.getAllByRole("option").find((o) => o.getAttribute("aria-selected") === "true")!;
+  expect(input.getAttribute("aria-activedescendant")).toBe(highlighted().id);
+  const first = highlighted();
+  await userEvent.keyboard("{ArrowDown}");
+  expect(highlighted()).not.toBe(first);
+  expect(input.getAttribute("aria-activedescendant")).toBe(highlighted().id);
+  expect(input).toHaveAttribute("aria-controls", screen.getByRole("listbox").id);
+});
+
+test("the list closes when focus leaves the page", async () => {
+  // Tabbing past the last control hands focus to the browser: the input blurs with no new target.
+  const { input } = setup();
+  await userEvent.type(input, "Wash");
+  expect(input).toHaveAttribute("aria-expanded", "true");
+  act(() => input.blur());
+  expect(input).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("option")).not.toBeInTheDocument();
 });

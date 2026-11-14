@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHandle, DrawerTitle } from "@/components/ui/drawer";
 import { PHONE_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
@@ -16,6 +16,17 @@ const contentProps = {
   onCloseAutoFocus: keepFocus,
   onInteractOutside: keepFocus,
 };
+
+/** On mount, if a breakpoint switch asked for it, focuses the h2 of the content it sits in. */
+function FocusRestorer({ pending, onDone }: { pending: boolean; onDone: () => void }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!pending) return;
+    ref.current?.parentElement?.querySelector("h2")?.focus();
+    onDone();
+  }, [pending, onDone]);
+  return <span ref={ref} hidden />;
+}
 
 /**
  * The county panel's frame: a non-modal dialog floating over the map stage from 721px, a
@@ -38,6 +49,37 @@ export function PanelShell({
     setSnapCounty(county);
     setSnap(SNAP_POINTS[0]!);
   }
+
+  // Crossing the breakpoint swaps the dialog for the drawer (or back), which remounts the content
+  // and drops focus. If focus was inside the panel, put it on the county heading of the new one.
+  const [focusInside, setFocusInside] = useState(false);
+  useEffect(() => {
+    const inPanel = (t: EventTarget | null) => t instanceof Element && !!t.closest(".county-panel");
+    const onFocusIn = (e: FocusEvent) => setFocusInside(inPanel(e.target));
+    const onPointerDown = (e: PointerEvent) => {
+      if (!inPanel(e.target)) setFocusInside(false);
+    };
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, []);
+  const [wasPhone, setWasPhone] = useState(isPhone);
+  const [restoreFocus, setRestoreFocus] = useState(false);
+  if (wasPhone !== isPhone) {
+    setWasPhone(isPhone);
+    setRestoreFocus(focusInside);
+  }
+  const restoreDone = useCallback(() => setRestoreFocus(false), []);
+  const body = (
+    <>
+      {children}
+      <FocusRestorer pending={restoreFocus} onDone={restoreDone} />
+    </>
+  );
+
   const onOpenChange = (open: boolean) => {
     if (!open) onClose();
   };
@@ -64,7 +106,7 @@ export function PanelShell({
           {/* Tapping the handle in peek opens the drawer further; at full height it does nothing. */}
           <DrawerHandle preventCycle={snap === SNAP_POINTS[SNAP_POINTS.length - 1]} />
           <DrawerTitle asChild>{title}</DrawerTitle>
-          {children}
+          {body}
         </DrawerContent>
       </Drawer>
     );
@@ -74,7 +116,7 @@ export function PanelShell({
     <Dialog open modal={false} onOpenChange={onOpenChange}>
       <DialogContent {...contentProps}>
         <DialogTitle asChild>{title}</DialogTitle>
-        {children}
+        {body}
       </DialogContent>
     </Dialog>
   );

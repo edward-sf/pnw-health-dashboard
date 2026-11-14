@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { mockMatchMedia } from "./test/matchMedia";
 import { manifest, model, strata, topology, values } from "./test/fixtures";
 
 function LocationProbe({ onChange }: { onChange: (search: string) => void }) {
@@ -43,6 +44,29 @@ describe("App", () => {
       "PNW Health Dashboard",
     );
     expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();
+  });
+
+  it("keeps focus order equal to visual order in the header, on desktop and on phones", () => {
+    const tabOrder = () =>
+      [...document.querySelectorAll<HTMLElement>(".site-header a, .site-header button")].map(
+        (el) => el.getAttribute("aria-label") ?? el.textContent,
+      );
+    // Desktop: brand, then the nav, then the theme button at the right end.
+    const desktop = render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(tabOrder()).toEqual(["Explorer", "Methodology", "About", "Theme"]);
+    desktop.unmount();
+    // Phone: the theme button sits on the brand's row, above the nav.
+    mockMatchMedia(true);
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(tabOrder()).toEqual(["Theme", "Explorer", "Methodology", "About"]);
   });
 
   const at = (path: string) =>

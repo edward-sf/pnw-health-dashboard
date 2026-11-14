@@ -76,6 +76,7 @@ export function CountySearch({ counties, onSelect, inputId }: Props) {
                 setText(e.target.value);
                 setOpen(true);
               }}
+              onBlur={() => setOpen(false)}
               onKeyDown={(e) => {
                 if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !open && options.length > 0) {
                   e.preventDefault();

@@ -1154,15 +1154,14 @@
     }
 
     .site-header nav {
-      order: 2;
       flex-basis: 100%;
       margin-left: -0.75rem;
     }
 
-    /* Beside the brand on the first row, so the nav keeps the second row to itself. Its 44px
-       target overhangs the row instead of making it taller than the brand. */
+    /* Beside the brand on the first row, so the nav keeps the second row to itself. It comes
+       before the nav in the DOM on phones (App.tsx), so tab order matches. Its 44px target
+       overhangs the row instead of making it taller than the brand. */
     .site-header .theme-menu {
-      order: 1;
       margin-block: -0.625rem -0.75rem;
       margin-right: -0.5rem;
     }
