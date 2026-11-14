@@ -34,16 +34,17 @@ Produced by `wf baseline --milestone 11 --since 2026-11-13T16:00:00Z --until 202
 |---|---|
 | Fix PRs after the final review | 3 (248, 250, 251) |
 | Red `build-deploy` runs after a merge | 3 (bb9310c, d45f69e, 0cbd3e1) of 15 runs on `milestone/m11` |
-| Tokens (input + output + cache creation, session and 21 subagents) | 14,441,992 |
-| Tokens per task (8 tasks) | 1,805,249 (about 1.81M) |
-| Cache reads, not counted above | 332,227,408 |
+| Tokens (input + output + cache creation, once per message, session and 21 subagents) | 6,892,401 |
+| Tokens per task (8 tasks) | 861,550 (about 0.86M) |
+| Cache reads, not counted above | 171,892,946 |
 
 The only session in the window is `d876724f-189a-488f-ac71-be03472ecc70` ("Milestone 11 - UI/UX Overhaul"), first message 2026-11-13T16:22:29Z.
 
 ## Caveats
 
 - Window correction: the planned `--since 2026-11-13T17:00:00Z` matched no session, because the M11 session began at 16:22Z. The baseline uses `--since 2026-11-13T16:00:00Z`. The M10 session (`d0b4756d…`, 2026-11-13T00:05Z) is outside it.
-- The baseline is untrimmed. The session file runs to 2026-11-14T18:59Z, and 508,141 of the tokens are from messages after 09:00Z on 14 November. That is M11's own post-review fix work and belongs in the M11 cost. Trimmed alternative: about 13.93M tokens, about 1.74M per task.
+- The baseline is untrimmed. The session file runs to 2026-11-14T18:59Z, and 188,033 of the tokens are from messages after 09:00Z on 14 November. That is M11's own post-review fix work and belongs in the M11 cost. Trimmed alternative, computed the same way (last line per message id): 6,704,368 tokens, 838,046 per task.
+- Transcripts write one line per content block, each repeating the message's usage. `wf baseline` keeps the last line per `message.id` within each file (lines with no id count once each). Summing every line instead inflates the totals by about 1.9x. M13 must be measured with the same `wf baseline` method, or the comparison is invalid.
 - Cache reads are reported separately, not summed. Subagent tokens come from `subagents/*.jsonl` transcripts.
 - Red deploys are counted as `failure` conclusions on or after the first run on the branch. Cancelled runs are not counted.
 - Replay package caveat: its build-deploy history includes runs after `544bbf2` on `milestone/m11`. The three failed runs are not ancestors of `544bbf2`, and the reviewer did not judge them.
@@ -55,4 +56,4 @@ The only session in the window is `d876724f-189a-488f-ac71-be03472ecc70` ("Miles
 |---|---|---|
 | Fix PRs after the final review | 3 | at most 1 |
 | Red `build-deploy` runs after a merge | 3 | 0 |
-| Tokens per task | 1.81M | at most 1.26M (30% below M11) |
+| Tokens per task | 0.86M | at most 0.60M (30% below M11) |
