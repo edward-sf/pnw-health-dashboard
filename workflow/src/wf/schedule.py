@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import statistics
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
@@ -240,6 +240,16 @@ class Waiting:
 Decision = Dispatch | Pause | Done | Blocked | Waiting
 
 
+def same_window(a: str | None, b: str) -> bool:
+    """`resetsAt` jitters by fractions of a second between calls for one window."""
+    if a is None:
+        return False
+    try:
+        return abs(datetime.fromisoformat(a) - datetime.fromisoformat(b)) < timedelta(minutes=5)
+    except ValueError:
+        return a == b
+
+
 def _is_past(resets_at: str, now: str) -> bool:
     try:
         return datetime.fromisoformat(resets_at) <= datetime.fromisoformat(now)
@@ -287,7 +297,7 @@ def next_decision(
         est = node_estimate(state, graph, tasks, first, pacing)
         return Dispatch(first, model(first), est, "off")
 
-    fresh = state.window != five.resets_at or _is_past(five.resets_at, now)
+    fresh = not same_window(state.window, five.resets_at) or _is_past(five.resets_at, now)
     considered = ready[:1] if fresh else ready
     weekly = usage.weekly
 
