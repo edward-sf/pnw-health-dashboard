@@ -30,7 +30,11 @@ class _Scan:
 
 
 def _scan(jsonl: Path) -> _Scan:
+    """Transcripts write one line per content block, all repeating the message's usage.
+    Keep the last line per `message.id` (earlier streaming lines can hold partial output)."""
     scan = _Scan()
+    by_id: dict[str, dict[str, object]] = {}
+    anonymous: list[dict[str, object]] = []
     for line in jsonl.read_text(errors="replace").splitlines():
         if not line.strip():
             continue
@@ -45,6 +49,12 @@ def _scan(jsonl: Path) -> _Scan:
         usage = message.get("usage") if isinstance(message, dict) else None
         if not isinstance(usage, dict):
             continue
+        mid = message.get("id") if isinstance(message, dict) else None
+        if isinstance(mid, str) and mid:
+            by_id[mid] = usage
+        else:
+            anonymous.append(usage)
+    for usage in [*by_id.values(), *anonymous]:
         scan.tokens += sum(_int(usage.get(k)) for k in _COUNTED)
         scan.cache_read += _int(usage.get("cache_read_input_tokens"))
     return scan
@@ -55,7 +65,7 @@ def _int(value: object) -> int:
 
 
 def session_tokens(jsonl: Path) -> int:
-    """Input + output + cache-creation tokens over assistant messages; cache reads excluded."""
+    """Input + output + cache-creation tokens, once per assistant message; cache reads excluded."""
     return _scan(jsonl).tokens
 
 

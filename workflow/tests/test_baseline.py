@@ -72,3 +72,14 @@ def test_baseline_windows_sessions_includes_subagents_and_counts_red(tmp_path: P
 def test_zero_tasks_gives_no_per_task_figure(tmp_path: Path):
     result = baseline(tmp_path, "2026-11-13", "2026-11-14", FakeGh(run_lists=[[]]), "b", 0, [])
     assert result.tokens_per_task is None and result.tokens_by_session == {}
+
+
+def test_lines_sharing_a_message_id_count_once_with_the_last_usage(tmp_path: Path):
+    def msg(mid, out):
+        usage = {"input_tokens": 1, "output_tokens": out, "cache_read_input_tokens": 50}
+        message = {"usage": usage} if mid is None else {"id": mid, "usage": usage}
+        return json.dumps({"type": "assistant", "message": message})
+
+    p = tmp_path / "s.jsonl"
+    p.write_text("\n".join([msg("m1", 3), msg("m1", 20), msg(None, 7)]) + "\n")
+    assert session_tokens(p) == (1 + 20) + (1 + 7)
