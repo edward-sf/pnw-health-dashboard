@@ -5,9 +5,18 @@
 # A guard against drift, not a security boundary: Bash is matched by pattern, so a determined
 # command (an interpreter script, a variable-built path) can still get around it. It stops the
 # honest mistake of hand-editing state that `wf` keeps consistent. Reads are never blocked.
-set -u
+set -uE
+
+# Fail closed: an unexpected error in this script blocks the call instead of letting it through.
+trap 'echo "Blocked by .claude/hooks/guard-state.sh: hook error (unexpected failure while checking the call)." >&2; exit 2' ERR
 
 input=$(cat)
+# Cheap pre-test on the raw input, so ordinary calls never need jq.
+grep -qF '.workflow/runs' <<<"$input" || exit 0
+command -v jq >/dev/null || {
+  echo "Blocked by .claude/hooks/guard-state.sh: jq is not installed, so this call cannot be checked." >&2
+  exit 2
+}
 
 block() {
   echo "Blocked by .claude/hooks/guard-state.sh: $1 Run state in .workflow/runs/ is written only by 'uv run --project workflow wf <command>'." >&2

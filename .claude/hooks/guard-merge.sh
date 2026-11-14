@@ -2,9 +2,21 @@
 # PreToolUse hook (Bash): allow `gh pr merge` only for PRs whose base branch is milestone/*.
 # Milestone PRs into main are the author's to merge (CONTRIBUTING.md). Exit 2 blocks the
 # command and shows stderr to Claude; exit 0 lets it through to the normal permission check.
-set -u
+# When the PR's milestone has a workflow run, `wf check-merge` must also pass.
+set -uE
 
-cmd=$(jq -r '.tool_input.command // ""')
+# Fail closed: an unexpected error in this script blocks the call instead of letting it through.
+trap 'echo "Blocked by .claude/hooks/guard-merge.sh: hook error (unexpected failure while checking the merge)." >&2; exit 2' ERR
+
+input=$(cat)
+# Cheap pre-test on the raw input, so ordinary commands never need jq.
+grep -qE 'gh[^[:alnum:]]{1,6}pr[^[:alnum:]]{1,6}merge' <<<"$input" || exit 0
+command -v jq >/dev/null || {
+  echo "Blocked by .claude/hooks/guard-merge.sh: jq is not installed, so this merge cannot be checked." >&2
+  exit 2
+}
+
+cmd=$(jq -r '.tool_input.command // ""' <<<"$input")
 pattern='(^|[^[:alnum:]_-])gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)'
 [[ "$cmd" =~ $pattern ]] || exit 0
 
@@ -40,11 +52,14 @@ done
 pr=${pr//\"/}; pr=${pr//\'/}
 repo=${repo//\"/}; repo=${repo//\'/}
 
+# Resolve the argument (number, URL, branch, or none for the current branch) to a number and base.
 view=(gh pr view)
 [[ -n "$pr" ]] && view+=("$pr")
 [[ -n "$repo" ]] && view+=(--repo "$repo")
-base=$("${view[@]}" --json baseRefName --jq .baseRefName 2>/dev/null) ||
-  block "could not look up the base branch of PR ${pr:-for the current branch}."
+resolved=$("${view[@]}" --json number,baseRefName --jq '"\(.number) \(.baseRefName)"' 2>/dev/null) ||
+  block "could not look up PR ${pr:-for the current branch}."
+read -r number base <<<"$resolved"
+[[ "$number" =~ ^[0-9]+$ ]] || block "could not resolve PR ${pr:-for the current branch} to a number."
 
 if [[ "$base" == milestone/* ]]; then
   # A milestone with a workflow run also needs the gate, review and CI records for the PR's
@@ -52,15 +67,15 @@ if [[ "$base" == milestone/* ]]; then
   if [[ "$base" =~ ^milestone/m([0-9]+)$ ]]; then
     m=${BASH_REMATCH[1]}
     root=${CLAUDE_PROJECT_DIR:-.}
-    if [[ -f "$root/.workflow/runs/m$m/state.json" && -n "$pr" ]]; then
-      check=$(cd "$root" && uv run --project workflow wf check-merge "$pr" --milestone "$m" 2>&1)
-      status=$?
+    if [[ -f "$root/.workflow/runs/m$m/state.json" ]]; then
+      status=0
+      check=$(cd "$root" && uv run --project workflow wf check-merge "$number" --milestone "$m" 2>&1) || status=$?
       if (( status != 0 )); then
-        reasons=$(jq -r '.reasons // [] | join("; ")' <<<"$check" 2>/dev/null)
-        block "wf check-merge refused PR $pr: ${reasons:-${check:-exit $status}}."
+        reasons=$(jq -r '.reasons // [] | join("; ")' <<<"$check" 2>/dev/null) || reasons=""
+        block "wf check-merge refused PR $number: ${reasons:-${check:-exit $status}}."
       fi
     fi
   fi
   exit 0
 fi
-block "PR ${pr:-for the current branch} targets '${base:-unknown}'."
+block "PR $number targets '${base:-unknown}'."
