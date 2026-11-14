@@ -38,6 +38,7 @@ def test_cli_budget_exhaustion_exits_2_and_escalates(tmp_path, capsys):
     run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
     for _ in range(2):
         assert run(tmp_path, "start", "T1.task-review", "--milestone", "13") == 0
+        run(tmp_path, "finish", "T1.task-review", "--milestone", "13", "--status", "failed")
     capsys.readouterr()
     assert run(tmp_path, "start", "T1.task-review", "--milestone", "13") == 2
     assert "budget" in capsys.readouterr().err

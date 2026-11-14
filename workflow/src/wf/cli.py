@@ -11,7 +11,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from wf import state as st
-from wf.config import ConfigError, Graph, load_graph
+from wf.config import ConfigError, Graph, load_graph, load_project
+from wf.schedule import (
+    Blocked,
+    Decision,
+    Dispatch,
+    Done,
+    TaskInfo,
+    load_task_graph,
+    next_decision,
+    parse_usage,
+)
 
 
 def _now() -> str:
@@ -39,6 +49,9 @@ def _parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="wf")
     p.add_argument("--root", type=Path, help="repository root (default: git toplevel)")
     p.add_argument("--graph", type=Path, help="graph.toml (default: <root>/workflow/graph.toml)")
+    p.add_argument(
+        "--project", type=Path, help="project.toml (default: <root>/workflow/project.toml)"
+    )
     sub = p.add_subparsers(dest="command", required=True)
 
     def add(name: str, node: bool = False) -> argparse.ArgumentParser:
@@ -59,7 +72,76 @@ def _parser() -> argparse.ArgumentParser:
     add("resume", node=True)
     esc = add("escalate", node=True)
     esc.add_argument("--reason", required=True)
+    nxt = add("next")
+    nxt.add_argument("--usage", required=True, help="get_usage JSON file, or - for stdin")
+    use = add("usage", node=True)
+    use.add_argument("--pct-before", type=float, required=True)
+    use.add_argument("--pct-after", type=float, required=True)
+    use.add_argument("--tokens", type=int)
     return p
+
+
+def _tasks(root: Path, state: st.RunState) -> list[TaskInfo]:
+    if not state.task_graph:
+        raise st.RunStateError("run state has no task graph; re-run setup")
+    return load_task_graph(root / state.task_graph).infos()
+
+
+def _decision_json(decision: Decision) -> dict[str, object]:
+    if isinstance(decision, Dispatch):
+        return {"decision": "dispatch", **asdict(decision)}
+    if isinstance(decision, Blocked):
+        return {"decision": "blocked", **asdict(decision)}
+    if isinstance(decision, Done):
+        return {"decision": "done"}
+    return {"decision": "pause", **asdict(decision)}
+
+
+def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) -> object:
+    src = args.usage
+    try:
+        text = sys.stdin.read() if src == "-" else Path(src).read_text()
+        usage = parse_usage(json.loads(text))
+    except (OSError, ValueError, AttributeError) as e:
+        raise st.RunStateError(f"cannot read usage JSON from {src}") from e
+    project = load_project(args.project or root / "workflow/project.toml")
+    graph = load_graph(args.graph or root / "workflow/graph.toml")
+    decision = next_decision(state, graph, _tasks(root, state), usage, project.pacing, now)
+    if isinstance(decision, Blocked):
+        known = {(e.node, e.reason) for e in state.escalations}
+        for esc in decision.escalations:
+            if (esc.node, esc.reason) not in known:
+                st.escalate(state, esc.node, esc.reason, now)
+        st.save(root, state)
+    out = _decision_json(decision)
+    (st.run_dir(root, args.milestone) / "last-decision.json").write_text(json.dumps(out) + "\n")
+    return out
+
+
+def _window_from_last_decision(root: Path, milestone: int, node: str) -> str | None:
+    try:
+        last = json.loads((st.run_dir(root, milestone) / "last-decision.json").read_text())
+    except (OSError, ValueError):
+        return None
+    if (
+        isinstance(last, dict)
+        and last.get("decision") == "dispatch"
+        and last.get("node") == node
+        and last.get("pacing") == "on"
+        and isinstance(last.get("resets_at"), str)
+    ):
+        return str(last["resets_at"])
+    return None
+
+
+def _steps(tasks: list[TaskInfo], node: str) -> int:
+    task, dot, _ = node.rpartition(".")
+    if not dot:
+        return sum(t.steps for t in tasks)
+    for t in tasks:
+        if t.id == task:
+            return t.steps
+    raise st.RunStateError(f"unknown task '{task}'")
 
 
 def _run(args: argparse.Namespace) -> object:
@@ -77,9 +159,27 @@ def _run(args: argparse.Namespace) -> object:
     state = st.load(root, m)
     if cmd == "status":
         return asdict(state)
+    if cmd == "next":
+        return _next(root, args, state, now)
+    if cmd == "usage":
+        _budget(load_graph(graph_path), args.node)  # validates the node name
+        sample = st.UsageSample(
+            node=args.node,
+            kind=args.node.rpartition(".")[2],
+            steps=_steps(_tasks(root, state), args.node),
+            pct_before=args.pct_before,
+            pct_after=args.pct_after,
+            tokens=args.tokens,
+        )
+        state.usage.append(sample)
+        st.save(root, state)
+        return asdict(sample)
     if cmd == "start":
         try:
             st.start_round(state, args.node, _budget(load_graph(graph_path), args.node), now)
+            window = _window_from_last_decision(root, m, args.node)
+            if window is not None:
+                state.window = window
         except st.BudgetExhausted:
             st.save(root, state)  # keep the escalation record
             raise

@@ -75,6 +75,7 @@ def test_budget_exhaustion_escalates(tmp_path):
     s = init_run(tmp_path, 13, GRAPH, ["T1"])
     for _ in range(2):
         start_round(s, "T1.task-review", 2, NOW)
+        finish(s, "T1.task-review", "failed", NOW)
     with pytest.raises(BudgetExhausted):
         start_round(s, "T1.task-review", 2, NOW)
     assert s.escalations[-1].node == "T1.task-review"
@@ -132,3 +133,27 @@ def test_latest_gate_returns_most_recent(tmp_path):
     s.gates.append(GateRecord("T1", "aaa", {"web": False}, False, NOW))
     s.gates.append(GateRecord("T1", "aaa", {"web": True}, True, NOW))
     assert latest_gate(s, "T1", "aaa").passed
+
+
+def test_start_round_refuses_non_pending_nodes(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.implement", 3, NOW)
+    with pytest.raises(RunStateError, match="cannot be started"):
+        start_round(s, "T1.implement", 3, NOW)  # running
+    finish(s, "T1.implement", "done", NOW)
+    with pytest.raises(RunStateError, match="cannot be started"):
+        start_round(s, "T1.implement", 3, NOW)  # done
+    s.nodes["T1.gates"].status = "escalated"
+    with pytest.raises(RunStateError, match="cannot be started"):
+        start_round(s, "T1.gates", 3, NOW)
+    assert s.escalations == []
+
+
+def test_finish_escalated_records_an_escalation(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    finish(s, "T1.implement", "escalated", NOW, "stuck")
+    finish(s, "T1.gates", "escalated", NOW)
+    assert [(e.node, e.reason) for e in s.escalations] == [
+        ("T1.implement", "stuck"),
+        ("T1.gates", "escalated"),
+    ]
