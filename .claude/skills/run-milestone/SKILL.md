@@ -14,6 +14,7 @@ Every `wf` command prints JSON on stdout. Exit 0 is success; anything else is li
 
 - **Never merge a PR whose base is `main`, and never approve any PR.** Milestone PRs and `checkpoint` issues are the author's. Merge issue PRs only through `wf merge`.
 - **Never write under `.workflow/runs/`**: no Edit, Write or shell redirect there. Run every command that names that path from the repo root, starting with `uv run --project workflow wf ` (the state hook blocks anything else). Your own scratch files go in `.workflow/work/m<N>/`.
+- **Never run `wf clear`.** Clearing an escalation is the author's decision.
 - **Never write or edit a verdict.** If a reviewer did not write one, re-dispatch it or escalate.
 - **On any unexpected `wf` exit, escalate rather than improvise**: `wf escalate <node> --reason "<command>: <stderr line>"`, notify, stop. Do not retry with other flags, edit state, or skip the node.
 - One node at a time (deploy-watch in the background is the only overlap).

@@ -253,6 +253,18 @@ def resume(state: RunState, node: str, now: str) -> None:
     rec.note = f"interrupted, resumed at {now}"
 
 
+def clear(state: RunState, node: str, note: str) -> None:
+    """The author's decision on an escalated node: back to pending with its rounds reset."""
+    rec = _record(state, node)
+    if rec.status != "escalated":
+        raise RunStateError(f"{node} is not escalated (status {rec.status})")
+    rec.status = "pending"
+    rec.rounds = 0
+    rec.started_at = None
+    rec.finished_at = None
+    rec.note = f"{rec.note} | author: {note}" if rec.note else f"author: {note}"
+
+
 def latest_gate(state: RunState, task: str, sha: str) -> GateRecord | None:
     for gate in reversed(state.gates):
         if gate.task == task and gate.sha == sha:

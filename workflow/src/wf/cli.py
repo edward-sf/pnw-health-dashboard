@@ -102,6 +102,8 @@ def _parser() -> argparse.ArgumentParser:
     fin.add_argument("--status", required=True, choices=["done", "failed", "escalated"])
     fin.add_argument("--note")
     add("resume", node=True)
+    clr = add("clear", node=True)
+    clr.add_argument("--note", required=True, help="the author's decision")
     esc = add("escalate", node=True)
     esc.add_argument("--reason", required=True)
     nxt = add("next")
@@ -468,6 +470,8 @@ def _run(args: argparse.Namespace) -> object:
         st.finish(state, args.node, args.status, now, args.note)
     elif cmd == "resume":
         st.resume(state, args.node, now)
+    elif cmd == "clear":
+        st.clear(state, args.node, args.note)
     else:
         st.escalate(state, args.node, args.reason, now)
     st.save(root, state)

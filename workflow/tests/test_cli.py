@@ -343,3 +343,19 @@ def test_cli_package_final_names_the_report_under_reviews_dir(tmp_path, capsys, 
     assert Path(out["report_path"]).parent == tmp_path / "docs/reviews"
     assert Path(out["report_path"]).name.endswith("-m11-final-review.md")
     assert ".workflow/work/m11/verdicts/" in out["verdict_path"]
+
+
+def test_cli_clear_an_escalated_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    run(tmp_path, "escalate", "T1.implement", "--milestone", "13", "--reason", "stuck")
+    capsys.readouterr()
+    assert run(tmp_path, "clear", "T1.implement", "--milestone", "13", "--note", "go on") == 0
+    rec = json.loads(capsys.readouterr().out)
+    assert (rec["status"], rec["rounds"], rec["note"]) == ("pending", 0, "author: go on")
+
+
+def test_cli_clear_refuses_a_node_that_is_not_escalated(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "clear", "T1.implement", "--milestone", "13", "--note", "x") == 2
+    assert "not escalated" in capsys.readouterr().err
