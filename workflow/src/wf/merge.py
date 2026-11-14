@@ -11,6 +11,7 @@ from wf.github import CommandError, Gh
 from wf.schedule import TaskGraph
 from wf.state import RunState, latest_gate, latest_review
 
+_CHECK_FIELDS = "headRefOid,baseRefName,statusCheckRollup"
 ROLLUP_CHECK = "ci"
 MILESTONE_BASE = "milestone/*"
 
@@ -48,7 +49,10 @@ def _ci_state(rollup: Any) -> str | None:
 
 
 def check_merge(state: RunState, task: str, pr: int, gh: Gh) -> MergeCheck:
-    view = view_pr(gh, pr, "headRefOid,baseRefName,statusCheckRollup")
+    return _check(state, task, pr, view_pr(gh, pr, _CHECK_FIELDS))
+
+
+def _check(state: RunState, task: str, pr: int, view: dict[str, Any]) -> MergeCheck:
     head, base = str(view.get("headRefOid", "")), str(view.get("baseRefName", ""))
     reasons: list[str] = []
     if not fnmatch.fnmatchcase(base, MILESTONE_BASE):
@@ -73,10 +77,15 @@ def check_merge(state: RunState, task: str, pr: int, gh: Gh) -> MergeCheck:
 
 def merge_task(state: RunState, task: str, pr: int, gh: Gh) -> str:
     """Squash-merge and return the merged commit's SHA. Refuses unless `check_merge` is ok."""
-    check = check_merge(state, task, pr, gh)
+    view = view_pr(gh, pr, _CHECK_FIELDS)
+    check = _check(state, task, pr, view)
     if not check.ok:
         raise CommandError("not merging: " + "; ".join(check.reasons))
-    gh.run(["pr", "merge", str(pr), "--squash", "--delete-branch"])
+    # Pinned to the head that was checked, so a push after the check cannot slip in.
+    gh.run([
+        "pr", "merge", str(pr), "--squash", "--delete-branch",
+        "--match-head-commit", str(view["headRefOid"]),
+    ])  # fmt: skip
     commit = view_pr(gh, pr, "mergeCommit").get("mergeCommit")
     oid = commit.get("oid") if isinstance(commit, dict) else None
     if not isinstance(oid, str) or not oid:

@@ -88,7 +88,15 @@ def test_later_pass_after_failure_counts_and_later_failure_does_not():
 def test_merge_squashes_and_deletes_branch():
     gh = FakeGh(pr_view=view("aaa"))
     sha = merge_task(passing_state("aaa"), "T1", 5, gh)
-    assert ["pr", "merge", "5", "--squash", "--delete-branch"] in gh.calls
+    assert [
+        "pr",
+        "merge",
+        "5",
+        "--squash",
+        "--delete-branch",
+        "--match-head-commit",
+        "aaa",
+    ] in gh.calls
     assert sha == "merge-5"
 
 

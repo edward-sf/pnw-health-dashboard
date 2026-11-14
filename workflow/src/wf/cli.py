@@ -34,6 +34,7 @@ from wf.schedule import (
     Decision,
     Dispatch,
     Done,
+    TaskGraph,
     TaskInfo,
     Waiting,
     load_task_graph,
@@ -280,6 +281,22 @@ def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
     return {**asdict(result), "sha": sha}
 
 
+def _merged_prs(gh: SubprocessGh, graph: TaskGraph) -> dict[str, int]:
+    """The merged PR of each task, from its branch; tasks with none are left out."""
+    prs: dict[str, int] = {}
+    for task_id, node in graph.tasks.items():
+        if not node.branch:
+            continue
+        out = gh.run(["pr", "list", "--state", "merged", "--head", node.branch, "--json", "number"])
+        try:
+            found = json.loads(out)
+            if found:
+                prs[task_id] = int(found[0]["number"])
+        except (ValueError, KeyError, TypeError) as e:
+            raise CommandError(f"cannot read gh pr list output for {node.branch}") from e
+    return prs
+
+
 def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
@@ -291,6 +308,7 @@ def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> o
         raise st.RunStateError(f"cannot read plan {graph.plan}: {e.strerror}") from e
     issues = {t.id: t.issue for t in graph.tasks.values() if t.issue is not None}
     gh = SubprocessGh()
+    prs = _merged_prs(gh, graph)
     head = project.milestone_branch.format(n=args.milestone)
     found = json.loads(
         gh.run(
@@ -312,7 +330,7 @@ def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> o
         raise st.RunStateError(f"no open milestone PR from {head}; run setup")
     pr = int(found[0]["number"])
     body = str(view_pr(gh, pr, "body").get("body", ""))
-    new = render_milestone_body(state, tasks, issues, body)
+    new = render_milestone_body(state, tasks, issues, body, prs)
     gh.run(["pr", "edit", str(pr), "--body", new])
     if args.ready:
         mark_ready(gh, pr)

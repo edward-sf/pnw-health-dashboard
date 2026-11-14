@@ -47,8 +47,18 @@ def _escalation_log(escalations: list[Escalation]) -> str:
     return "\n".join(f"- {e.at} {e.node}: {e.reason}" for e in escalations)
 
 
+def _issue_line(milestone: int, task: PlanTask, issue: int, pr: int | None) -> str:
+    if pr is None:
+        return f"- {task.id} — {task.title} (#{issue})"
+    return f"- #{pr} — M{milestone}.{task.id} {task.title} (closes #{issue})"
+
+
 def render_milestone_body(
-    state: RunState, tasks: list[PlanTask], issues: dict[str, int], template: str
+    state: RunState,
+    tasks: list[PlanTask],
+    issues: dict[str, int],
+    template: str,
+    prs: dict[str, int] | None = None,
 ) -> str:
     """Fill the sections that come from run state; the rest stay for later nodes."""
     ordered = sorted(tasks, key=lambda t: t.number)
@@ -57,7 +67,9 @@ def render_milestone_body(
     body = _fill(
         body,
         "Issue PRs in this milestone",
-        "\n".join(f"- {t.id} — {t.title} (#{issues[t.id]})" for t in listed),
+        "\n".join(
+            _issue_line(state.milestone, t, issues[t.id], (prs or {}).get(t.id)) for t in listed
+        ),
     )
     body = _fill(body, "Closes", "\n".join(f"Closes #{issues[t.id]}" for t in listed))
     verification = (

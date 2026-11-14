@@ -74,3 +74,18 @@ def test_posts_use_comment_and_ready_but_never_merge_or_approve():
         ["pr", "comment", "9", "--body", "table"],
         ["pr", "ready", "9"],
     ]
+
+
+def test_issue_lines_use_pr_numbers_when_known_and_fall_back_per_task():
+    body = render_milestone_body(STATE, TASKS, {"T1": 300, "T2": 301}, TEMPLATE, {"T1": 410})
+    assert "- #410 — M13.T1 First (closes #300)" in body
+    assert "- T2 — Second (#301)" in body
+    assert body.index("#410") < body.index("T2 — Second")
+    assert "Closes #300" in body and "Closes #301" in body
+
+
+def test_issue_lines_all_prs_known():
+    body = render_milestone_body(
+        STATE, TASKS, {"T1": 300, "T2": 301}, TEMPLATE, {"T1": 410, "T2": 411}
+    )
+    assert "- #411 — M13.T2 Second (closes #301)" in body
