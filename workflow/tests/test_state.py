@@ -8,6 +8,8 @@ from wf.state import (
     GateRecord,
     ReviewRecord,
     RunStateError,
+    clear,
+    escalate,
     finish,
     init_run,
     latest_gate,
@@ -186,3 +188,21 @@ def test_bad_fix_branch_is_refused(tmp_path):
     path.write_text(json.dumps(raw))
     with pytest.raises(RunStateError, match="unreadable"):
         load(tmp_path, 13)
+
+
+def test_clear_returns_an_escalated_node_to_pending_with_rounds_reset(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.implement", 3, NOW)
+    escalate(s, "T1.implement", "stuck", NOW)
+    clear(s, "T1.implement", "retry with a smaller step")
+    rec = s.nodes["T1.implement"]
+    assert (rec.status, rec.rounds) == ("pending", 0)
+    assert rec.note == "author: retry with a smaller step"
+    start_round(s, "T1.implement", 3, NOW)
+    assert s.nodes["T1.implement"].rounds == 1
+
+
+def test_clear_refuses_a_node_that_is_not_escalated(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    with pytest.raises(RunStateError, match="not escalated"):
+        clear(s, "T1.implement", "x")

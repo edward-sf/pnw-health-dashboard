@@ -48,7 +48,15 @@ main ◄──(milestone PR, author reviews, merge commit)── milestone/m1 �
 2. **In progress.** Create a branch from the up-to-date milestone branch, named `<issue-number>-<short-slug>`, e.g. `7-acs-source`. One issue per branch.
 3. **Implement with TDD.** Follow the plan's steps: write a failing test, then make it pass, then commit. Small commits are fine on the branch.
 4. **In review.** Open a PR into `milestone/m<N>` using the issue PR template. The PR title is in Conventional Commit form (`feat(pipeline): add ACS source`). The body says `Part of #<n>`, not `Closes`: closing keywords don't fire on non-default branches, so they live in the milestone PR. It also notes any deviation from the plan.
-5. **Merged to milestone.** Checks pass (local in M1, `ci` from M2), the task gets a self-review against its plan section, and then it's squash-merged into the milestone branch. The squashed commit message is the PR title. Delete the branch and move the issue to `Merged to milestone`.
+5. **Merged to milestone.** Checks pass (local in M1, `ci` from M2), the task gets a self-review against its plan section, and then it's squash-merged into the milestone branch. The squashed commit message is the PR title. Delete the branch and move the issue to `Merged to milestone`. When the milestone has an agent workflow run, the merge also needs a passing gate record and a passing review record for the PR's current head commit (see Agent workflow).
+
+## Agent workflow
+
+Agents can run a milestone from an approved plan to a ready milestone PR with the orchestrated graph in [`workflow/`](workflow/README.md): `wf setup`, then `/run-milestone <N>`. It stops for the author at named gates and never merges into `main`. The graph's rules sit on top of this document, not instead of it.
+
+- **Plans carry a `workflow-tasks` block.** It lists each task's id, title, step count, dependencies and files, and `uv run --project workflow wf check-plan <plan>` checks it. A plan with a missing block, an unknown dependency, a cycle or an undeclared file overlap cannot be set up.
+- **PR `ci` runs e2e.** It builds the site and runs the Playwright suite, and repeats new or changed e2e specs under CPU throttling. `ci` needs it to pass.
+- **Merges need records.** With a run in progress, a hook allows an issue PR merge only when the head commit has a passing gate record, a passing review record and a green `ci`.
 
 ## Rules
 
