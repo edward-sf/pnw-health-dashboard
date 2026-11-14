@@ -132,12 +132,14 @@ def check_plan(tasks: list[PlanTask]) -> list[str]:
     for i, later in enumerate(tasks):
         covered = _reach(later.id, deps)
         for earlier in tasks[:i]:
+            # Either order is fine: what matters is that one task reaches the other.
             if earlier.id == later.id or earlier.id in covered:
+                continue
+            if later.id in _reach(earlier.id, deps):
                 continue
             for f in sorted(set(earlier.files) & set(later.files)):
                 problems.append(
-                    f"{later.id} and {earlier.id} both change {f} "
-                    f"but {later.id} does not depend on {earlier.id}"
+                    f"{later.id} and {earlier.id} both change {f} but neither depends on the other"
                 )
     return problems
 
