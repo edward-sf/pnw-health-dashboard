@@ -130,8 +130,13 @@ class FakeGh(_Fake):
         milestones: list[str] | None = None,
         prs: list[dict[str, Any]] | None = None,
         canned: dict[str, str] | None = None,
+        pr_view: dict[str, Any] | None = None,
+        run_lists: list[list[dict[str, Any]]] | None = None,
     ) -> None:
         super().__init__(canned)
+        self.pr_view = dict(pr_view or {})
+        self.run_lists = [list(r) for r in (run_lists or [])]  # one per `run list`; last repeats
+        self.merged: set[str] = set()
         self.issues = dict(existing_issues or {})
         self.next_number = next_issue
         self.milestones = list(milestones or [])
@@ -169,7 +174,17 @@ class FakeGh(_Fake):
             n = self._take()
             self.prs.append({"number": n, "state": "OPEN", "headRefName": _value(args, "--head")})
             return f"https://github.com/o/r/pull/{n}\n"
+        if args[:2] == ["pr", "view"] and self.pr_view:
+            view = dict(self.pr_view)
+            if args[2] in self.merged:
+                view["mergeCommit"] = {"oid": f"merge-{args[2]}"}
+            return json.dumps(view)
+        if args[:2] == ["run", "list"] and self.run_lists:
+            return json.dumps(
+                self.run_lists.pop(0) if len(self.run_lists) > 1 else self.run_lists[0]
+            )
         if args[:2] == ["pr", "merge"]:
+            self.merged.add(args[2])
             for p in self.prs:
                 if str(p["number"]) == args[2]:
                     p["state"] = "MERGED"

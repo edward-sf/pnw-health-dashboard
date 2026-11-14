@@ -166,3 +166,109 @@ def test_cli_ingest_finds_the_pr_from_the_tasks_branch(tmp_path, capsys, monkeyp
     assert run(tmp_path, "ingest", "T3.task-review", str(v), "--milestone", "11") == 0
     assert seen[0] == ["pr", "list", "--head", "7-toolbar", "--json", "number"]
     assert seen[1] == ["pr", "view", "42", "--json", "headRefOid"]
+
+
+def _merge_setup(tmp_path, monkeypatch, view):
+    from wf import cli
+    from wf import state as st
+    from wf.github import FakeGh
+    from wf.schedule import TaskGraph, TaskNode, write_task_graph
+
+    node = TaskNode("T1", 300, "First", 3, (), (), (), (), "300-first")
+    write_task_graph(
+        tmp_path / "tg.json", TaskGraph(13, "plan.md", "spec.md", "x", ("T1",), {"T1": node})
+    )
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1", "--task-graph", "tg.json")
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("T1", "aaa", {"web": True}, True, "t"))
+    state.reviews.append(st.ReviewRecord("T1", "aaa", "T1.task-review", "pass", "v", "t"))
+    st.save(tmp_path, state)
+    gh = FakeGh(pr_view={"headRefName": "300-first", "headRefOid": "aaa",
+                         "baseRefName": "milestone/m13",
+                         "statusCheckRollup": [{"name": "ci", "conclusion": "SUCCESS"}],
+                         **view})  # fmt: skip
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    return gh
+
+
+def test_cli_check_merge_exit_codes(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"ok": True, "reasons": []}
+
+
+def test_cli_check_merge_not_ok_and_unknown_branch(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefOid": "bbb"})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 1
+    assert json.loads(capsys.readouterr().out)["ok"] is False
+
+
+def test_cli_check_merge_unknown_branch_is_not_ok(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefName": "other"})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 1
+    assert "not on any task" in json.loads(capsys.readouterr().out)["reasons"][0]
+
+
+def test_cli_merge_marks_merge_done(tmp_path, monkeypatch, capsys):
+    gh = _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"task": "T1", "sha": "merge-5"}
+    merge = ["pr", "merge", "5", "--squash", "--delete-branch", "--match-head-commit", "aaa"]
+    assert merge in gh.calls
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "done"
+
+
+def test_cli_merge_refused_exits_2_and_leaves_node_pending(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefOid": "bbb"})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 2
+    assert "not merging" in capsys.readouterr().err
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "pending"
+
+
+def test_cli_deploy_watch_exit_codes_and_state(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf.github import FakeGh
+
+    gh = FakeGh(run_lists=[[{"headSha": "aaa", "status": "completed", "conclusion": "failure"}]])
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    code = run(tmp_path, "--project", str(REPO / "workflow/project.toml"), "deploy-watch",
+               "T1.deploy-watch", "--milestone", "13", "--sha", "aaa")  # fmt: skip
+    assert code == 1
+    run(tmp_path, "status", "--milestone", "13")
+    out = capsys.readouterr().out
+    state = json.loads(out[out.rindex('{\n  "milestone"') :])
+    assert state["nodes"]["T1.deploy-watch"]["status"] == "failed"
+
+
+def test_cli_milestone_pr_fills_merged_pr_numbers(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf.github import FakeGh
+
+    _merge_setup(tmp_path, monkeypatch, {})
+    (tmp_path / "plan.md").write_text(
+        '```toml workflow-tasks\n[[task]]\nid = "T1"\ntitle = "First"\nsteps = 3\n```\n'
+    )
+    template = (REPO / ".github/PULL_REQUEST_TEMPLATE/milestone.md").read_text()
+    gh = FakeGh(
+        pr_view={"body": template},
+        canned={
+            "pr list --head milestone/m13": '[{"number": 77}]',
+            "pr list --state merged --head 300-first": '[{"number": 410}]',
+        },
+    )
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    capsys.readouterr()
+    code = run(tmp_path, "--project", str(REPO / "workflow/project.toml"),
+               "milestone-pr", "--milestone", "13")  # fmt: skip
+    assert code == 0
+    edit = next(c for c in gh.calls if c[:2] == ["pr", "edit"])
+    assert "- #410 — M13.T1 First (closes #300)" in edit[edit.index("--body") + 1]
