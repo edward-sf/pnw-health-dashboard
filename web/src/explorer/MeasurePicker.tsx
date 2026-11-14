@@ -40,9 +40,14 @@ export function MeasurePicker({ indicators, selectedId, onSelect }: Props) {
     if (id) onSelect(id);
   };
 
+  // However the popover closes (a choice, Escape, a click outside), it reopens unfiltered.
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setFilter("");
+  };
+
   const choose = (id: string) => {
-    setOpen(false);
-    setFilter("");
+    onOpenChange(false);
     onSelect(id);
   };
 
@@ -61,7 +66,7 @@ export function MeasurePicker({ indicators, selectedId, onSelect }: Props) {
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger asChild>
           <Button
             type="button"

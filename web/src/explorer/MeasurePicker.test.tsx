@@ -114,3 +114,18 @@ test("Escape closes the popover and does not bubble", async () => {
   expect(seen.every(Boolean)).toBe(true);
   expect(trigger()).toHaveFocus();
 });
+
+for (const close of ["Escape", "an outside click"] as const) {
+  test(`closing with ${close} clears the filter, so reopening shows the full list`, async () => {
+    setup("poverty_rate");
+    await userEvent.click(trigger());
+    await userEvent.type(screen.getByRole("combobox", { name: "Filter measures" }), "zzz");
+    expect(screen.getByText("No measures match")).toBeInTheDocument();
+    if (close === "Escape") await userEvent.keyboard("{Escape}");
+    else await userEvent.click(document.body);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    await userEvent.click(trigger());
+    expect(screen.getByRole("combobox", { name: "Filter measures" })).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Uninsured adults" })).toBeInTheDocument();
+  });
+}
