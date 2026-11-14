@@ -118,6 +118,8 @@ Tablet (721–1099px) and desktop layouts don't change.
 
 ### 5.1 Bottom sheet
 
+> **Note (2026-11-13):** The button-driven peek/expanded sheet and its Expand/Collapse button are superseded by the draggable drawer in M11 (`2026-11-13-m11-explorer-redesign-design.md` §4 and §6). The drawer has snap points at 40% and 85%, and only Close remains.
+
 - A `useMediaQuery("(max-width: 720px)")` hook switches `CountyPanel` into sheet mode: fixed to the bottom of the viewport above the map, rounded top corners, a decorative handle bar.
 - Two heights, both scrollable: **peek** (about 40dvh: name, state, the selected value or tier and the rank visible without scrolling) and **expanded** (about 85dvh). Because both heights scroll, no content is clipped or hidden from assistive technology.
 - Header buttons: **Expand**/**Collapse** (`aria-expanded`, `aria-controls` pointing at the sheet body) and **Close**. Escape closes, as today.
@@ -131,6 +133,8 @@ Tablet (721–1099px) and desktop layouts don't change.
 Map hover handlers move from `onMouse*` to `onPointer*` and ignore `pointerType === "touch"`. On touch, a tap selects the county and opens the sheet, which replaces the tooltip. Mouse hover is unchanged.
 
 ### 5.3 Indicator picker
+
+> **Note (2026-11-13):** Superseded by the M11 toolbar: on phones the category switch and measure dropdown are full width and the dropdown is a searchable popover (M11 §4 and §5).
 
 On phones the picker collapses into a disclosure button, "Indicator: {current label}" (`aria-expanded`). Opening it shows the existing search box and list; choosing an indicator closes it and returns focus to the button. Desktop and tablet are unchanged.
 

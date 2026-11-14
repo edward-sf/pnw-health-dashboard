@@ -72,9 +72,11 @@ test("the outcome select is labelled, defaults to the given target and reports c
     />,
   );
   const select = screen.getByRole("combobox", { name: "Outcome" });
-  expect(select).toHaveValue("life_expectancy");
-  expect(within(select).getAllByRole("option")).toHaveLength(Object.keys(modelFile.targets).length);
-  await userEvent.setup().selectOptions(select, "premature_death");
+  expect(select).toHaveTextContent("Life expectancy");
+  const user = userEvent.setup();
+  await user.click(select);
+  expect(screen.getAllByRole("option")).toHaveLength(Object.keys(modelFile.targets).length);
+  await user.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
   expect(seen).toEqual(["premature_death"]);
 });
 

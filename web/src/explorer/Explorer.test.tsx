@@ -330,7 +330,7 @@ test("model table replaces the value table, keeps c and view, and back restores 
   expect(screen.getByRole("button", { name: "King, WA" })).toHaveAttribute("aria-current", "true");
 });
 
-test("model mode: hovering King shows the tier tooltip", () => {
+test("Compared with expected: hovering King shows the tier tooltip", () => {
   setup("/?i=life_expectancy&show=expected");
   fireEvent.pointerEnter(document.querySelector('path[data-fips="53033"]')!, {
     pointerType: "mouse",
@@ -483,7 +483,7 @@ test("the skip link falls back to the plain anchor when the search isn't there",
   expect(fireEvent.click(screen.getByRole("link", { name: "Skip to county search" }))).toBe(true);
 });
 
-test("switching to model mode with a county open puts the card first and keeps focus", async () => {
+test("switching to Compared with expected with a county open puts the card first and keeps focus", async () => {
   const router = setup("/?i=life_expectancy&c=53033");
   const user = userEvent.setup();
   const modelButton = screen.getByRole("radio", { name: "Compared with expected" });

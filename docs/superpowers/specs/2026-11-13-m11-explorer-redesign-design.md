@@ -92,6 +92,7 @@ The author chose A.
 - **Legend.** Inside the stage, in the empty corner above Alaska, laid out so its height does not move the map **(call)**. On phones it sits under the map inside the stage.
 - **Panel, ≥721px.** 400px wide, inset 12px from the stage's top, right and bottom edges, own scroll, sticky header, a shadow to lift it off the map. It floats over the stage in map view. In table view the table's scroll frame narrows to leave room for it, since a table has no size to keep stable and covering its right-hand columns would hide ranks **(call)**.
 - **Panel, ≤720px.** A bottom drawer with snap points at 40% and 85% of the viewport, dragged by its handle. The Expand/Collapse button goes; Close stays.
+- **Open question for the author.** At 721 to 1099px the 400px panel covers most of Washington, Oregon and Idaho, and in table view it leaves a narrow table. Nothing was changed for this width; it needs a decision on whether the panel should narrow, dock, or use the drawer at tablet widths.
 - **Phone toolbar.** Category switch full width; measure dropdown full width; county search and Map/Table on one row. The description moves behind an information button (Radix Popover) so the map starts higher; the title and source line stay visible **(call)**.
 - **No county selected.** A one-line hint in the stage ("Select a county for its details") until the first selection **(call)**.
 
@@ -195,3 +196,13 @@ One issue each, in this order. Detailed steps belong to the M11 plan.
 - Dark token values, within the contrast rules in §9.
 - Component file layout under `web/src`, and whether the category mapping lives with `parseParams` or beside the picker.
 - Test structure, beyond the criteria in §2 and §10.
+
+## 14. As built (2026-11-13)
+
+Where the implementation differs from the text above:
+
+- **Map canvas.** Alaska's extent is `[[16, 150], [560, 664]]`. Hit halos use a 30-unit minimum.
+- **URL.** `show=observed` is stripped as invalid. A legacy `mode=model` link is converted only when its target is a manifest indicator.
+- **Stage height.** On phones the stage takes the map's natural height, with no 480px minimum. From 721px the model legend's note is hidden inside the stage.
+- **Panel.** The hidden dialog title "County details" is a span, not a heading. Table view leaves a 424px margin (the 400px panel plus a 12px gap) beside the panel. The phone drawer returns to its 40% position when the county changes. vaul's `modal={false}` is worked around with a nested non-modal Radix root.
+- **Methodology page.** Its Outcome control is the Radix `Select`; the native select component was removed.

@@ -262,14 +262,14 @@ describe("phone drawer", () => {
 const precedes = (a: Element, b: Element) =>
   (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
-test("model mode puts the model card before the indicator section", () => {
+test("Compared with expected puts the model card before the indicator section", () => {
   setup("53033", "poverty_rate", true);
   const card = screen.getByRole("heading", { name: "Life expectancy model" });
   const measure = document.querySelector(".panel-measure")!;
   expect(precedes(card, measure)).toBe(true);
 });
 
-test("values mode keeps the indicator section before the model card", () => {
+test("Observed keeps the indicator section before the model card", () => {
   setup("53033", "poverty_rate", false);
   const card = screen.getByRole("heading", { name: "Life expectancy model" });
   const measure = document.querySelector(".panel-measure")!;
@@ -277,7 +277,7 @@ test("values mode keeps the indicator section before the model card", () => {
 });
 
 describe("similar counties", () => {
-  test.each([false, true])("renders after Who lives here (model mode %s)", (modelMode) => {
+  test.each([false, true])("renders after Who lives here (Compared with expected %s)", (modelMode) => {
     setup("02016", "poverty_rate", modelMode);
     const who = screen.getByRole("heading", { name: "Who lives here" });
     const similar = screen.getByRole("heading", { name: "Similar counties" });
@@ -383,7 +383,7 @@ describe("race breakdown", () => {
     expect(breakdowns()).toHaveLength(0);
   });
 
-  test("model mode: breakdown for the target, right after the model card, and none in the indicator section", () => {
+  test("Compared with expected: breakdown for the target, right after the model card, and none in the indicator section", () => {
     render(panel({ indicatorId: "life_expectancy", modelMode: true }));
     expect(breakdowns()).toHaveLength(1);
     const [section] = breakdowns();
@@ -396,13 +396,13 @@ describe("race breakdown", () => {
     expect(section).toHaveTextContent(/County overall\s*80\.4 years/);
   });
 
-  test("model mode: the breakdown follows the target, not the explore indicator", () => {
+  test("Compared with expected: the breakdown follows the target, not the explore indicator", () => {
     render(panel({ indicatorId: "poverty_rate", modelMode: true }));
     expect(breakdowns()).toHaveLength(1);
     expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
   });
 
-  test("model mode with a different target re-renders for that target", () => {
+  test("Compared with expected with a different target re-renders for that target", () => {
     const { rerender } = render(panel({ indicatorId: "poverty_rate", modelMode: true }));
     expect(breakdowns()[0]).toHaveTextContent(/White\s*81\.2 years/);
     rerender(
@@ -421,14 +421,14 @@ describe("race breakdown", () => {
     expect(section).not.toHaveTextContent("years");
   });
 
-  test("model mode without a target indicator shows no breakdown", () => {
+  test("Compared with expected without a target indicator shows no breakdown", () => {
     render(panel({ indicatorId: "life_expectancy", modelMode: true, target: undefined }));
     expect(breakdowns()).toHaveLength(0);
   });
 
   // Chugach has no strata entries, so every group is unreported, as in the real data.
   test.each([false, true])(
-    "all groups unreported: only the not-reported note (model mode %s)",
+    "all groups unreported: only the not-reported note (Compared with expected %s)",
     (modelMode) => {
       render(panel({ indicatorId: "life_expectancy", modelMode, fips: "02063" }));
       expect(breakdowns()).toHaveLength(1);
