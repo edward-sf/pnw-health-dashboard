@@ -2,13 +2,17 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 from wf.cli import main
 from wf.config import load_project
 from wf.gates import areas_touched, changed_specs, run_gates
 from wf.github import FakeGit
+from wf.state import RunStateError
 
 REPO = Path(__file__).resolve().parents[2]
 PROJECT = load_project(REPO / "workflow/project.toml")
+CLEAN = {"status --porcelain --untracked-files=no": ""}
 
 
 @dataclass
@@ -19,7 +23,7 @@ class Call:
 
 
 def gate_with(paths, fail_on=None, head="abc123", with_calls=False, task="T1"):
-    git = FakeGit(canned={"diff": "\n".join(paths) + "\n", "rev-parse HEAD": head + "\n"})
+    git = FakeGit(canned={**CLEAN, "diff": "\n".join(paths) + "\n", "rev-parse HEAD": head + "\n"})
     calls: list[Call] = []
 
     def runner(cmd, cwd, env):
@@ -66,7 +70,7 @@ def test_no_throttled_check_without_changed_specs():
 
 
 def test_deleted_specs_are_excluded_from_the_diff():
-    git = FakeGit(canned={"diff": "web/src/x.ts\n", "rev-parse HEAD": "h\n"})
+    git = FakeGit(canned={**CLEAN, "diff": "web/src/x.ts\n", "rev-parse HEAD": "h\n"})
     run_gates(PROJECT, REPO, "T1", "origin/main", git, lambda c, d, e: 0)
     diff = next(c for c in git.calls if c[0] == "diff")
     assert "--diff-filter=d" in diff and "origin/main...HEAD" in diff
@@ -93,7 +97,7 @@ def test_cli_gate_appends_record_and_exits_by_result(tmp_path, capsys, monkeypat
     assert "no run state" in capsys.readouterr().err
     monkeypatch.setattr(
         "wf.cli.SubprocessGit",
-        lambda root: FakeGit(canned={"diff": "\n", "rev-parse HEAD": "h1\n"}),
+        lambda root: FakeGit(canned={**CLEAN, "diff": "\n", "rev-parse HEAD": "h1\n"}),
     )
     assert (
         main(
@@ -113,3 +117,28 @@ def test_cli_gate_appends_record_and_exits_by_result(tmp_path, capsys, monkeypat
     assert out["passed"] and out["sha"] == "h1"
     state = json.loads((tmp_path / ".workflow/runs/m13/state.json").read_text())
     assert state["gates"][0]["task"] == "T1"
+
+
+def test_gate_refuses_a_dirty_working_tree(tmp_path, capsys, monkeypatch):
+    """The record is keyed to HEAD, so the checks must run on HEAD, not on local edits."""
+    git = FakeGit(canned={"status --porcelain --untracked-files=no": " M web/src/a.ts\n"})
+    calls = []
+    with pytest.raises(RunStateError, match="working tree is dirty"):
+        run_gates(PROJECT, REPO, "T1", "origin/main", git, lambda c, d, e: calls.append(c) or 0)
+    assert not calls
+    graph = str(REPO / "workflow/graph.toml")
+    base = [
+        "--root",
+        str(tmp_path),
+        "--graph",
+        graph,
+        "--project",
+        str(REPO / "workflow/project.toml"),
+    ]
+    main([*base, "init", "--milestone", "13", "--tasks", "T1"])
+    monkeypatch.setattr("wf.cli.SubprocessGit", lambda root: git)
+    capsys.readouterr()
+    assert main([*base, "gate", "T1", "--milestone", "13"]) == 2
+    assert "working tree is dirty" in capsys.readouterr().err
+    state = json.loads((tmp_path / ".workflow/runs/m13/state.json").read_text())
+    assert state["gates"] == []

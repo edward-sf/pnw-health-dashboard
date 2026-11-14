@@ -11,7 +11,7 @@ from typing import Protocol
 
 from wf.config import Project
 from wf.github import CommandError, Git
-from wf.state import GateRecord
+from wf.state import GateRecord, RunStateError
 
 
 class Runner(Protocol):
@@ -64,6 +64,10 @@ def _stamp() -> str:
 def run_gates(
     project: Project, root: Path, task: str, base_ref: str, git: Git, runner: Runner
 ) -> GateRecord:
+    if git.run(["status", "--porcelain", "--untracked-files=no"]).strip():
+        raise RunStateError(
+            "working tree is dirty: commit or stash first (the record is keyed to HEAD)"
+        )
     diff = git.run(["diff", "--name-only", "--diff-filter=d", f"{base_ref}...HEAD"])
     paths = [line for line in diff.splitlines() if line]
     sha = git.run(["rev-parse", "HEAD"]).strip()
