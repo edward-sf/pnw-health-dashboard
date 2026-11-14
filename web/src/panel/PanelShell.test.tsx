@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { mockMatchMedia } from "../test/matchMedia";
@@ -94,4 +94,35 @@ test("phone: the drawer returns to peek when the county changes", async () => {
   await waitFor(() => expect(dialog().style.getPropertyValue("--drawer-hidden")).toBe("15dvh"));
   rerender(shell("41051"));
   expect(dialog().style.getPropertyValue("--drawer-hidden")).toBe("60dvh");
+});
+
+function setupSwitch(initialPhone: boolean) {
+  const media = mockMatchMedia(initialPhone);
+  render(
+    <>
+      <button type="button">Outside</button>
+      <PanelShell onClose={() => {}}>
+        <h2 tabIndex={-1}>King County</h2>
+        <button type="button">Inside</button>
+      </PanelShell>
+    </>,
+  );
+  return media;
+}
+
+test("crossing the breakpoint with focus in the panel moves focus to the county heading", async () => {
+  const media = setupSwitch(false);
+  screen.getByRole("button", { name: "Inside" }).focus();
+  act(() => media.set(true));
+  expect(screen.getByRole("dialog", { name: "County details" })).toHaveAttribute("data-vaul-drawer");
+  expect(screen.getByRole("heading", { level: 2, name: "King County" })).toHaveFocus();
+  act(() => media.set(false));
+  expect(screen.getByRole("heading", { level: 2, name: "King County" })).toHaveFocus();
+});
+
+test("crossing the breakpoint leaves focus alone when it was outside the panel", () => {
+  const media = setupSwitch(false);
+  screen.getByRole("button", { name: "Outside" }).focus();
+  act(() => media.set(true));
+  expect(screen.getByRole("button", { name: "Outside" })).toHaveFocus();
 });
