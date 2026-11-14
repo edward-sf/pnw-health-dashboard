@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+from wf.config import Project
 from wf.github import Gh, Git
 from wf.state import RunState, latest_gate, run_dir
 from wf.tasks import plan_section
@@ -104,21 +105,22 @@ def _gate_results(state: RunState, task: str, sha: str) -> str:
     return f"Overall: {'passed' if gate.passed else 'FAILED'} at {gate.sha} ({gate.at})\n\n{rows}"
 
 
-def _rules(node: str, vpath: Path, free: bool) -> str:
+def _rules(node: str, vpath: Path, free: bool, sha: str) -> str:
+    sha_rule = f'In the verdict write exactly `"sha": "{sha}"`; any other value is rejected.'
     if free:
         return (
             "You have free access to the repo and the running app. This package is a head "
             "start, not a fence: look wherever the work needs.\n\n"
             f"Write your verdict to `{vpath}` as JSON matching "
             f"`workflow/schemas/verdict.schema.json` "
-            f'(`"node": "{node}"`, `"sha"` the head you reviewed).'
+            f'(`"node": "{node}"`). {sha_rule}'
         )
     return (
         "Do not explore beyond this package, except to read the current version of a file "
         "where a hunk is not enough.\n\n"
         f"Write your verdict to `{vpath}` as JSON matching "
         f"`workflow/schemas/verdict.schema.json` "
-        f'(`"node": "{node}"`, `"sha"` the head you reviewed).'
+        f'(`"node": "{node}"`). {sha_rule}'
     )
 
 
@@ -130,10 +132,12 @@ def task_review_package(
     task_id: str,
     base_ref: str,
     git: Git,
+    head: str,
 ) -> Path:
+    """`head` is the full SHA `wf ingest` will compare the verdict against (the PR head)."""
     plan, spec = plan_path.read_text(), spec_path.read_text()
     node = f"{task_id}.task-review"
-    sha = git.run(["rev-parse", "HEAD"]).strip()
+    sha = git.run(["rev-parse", "HEAD"]).strip()  # gates are keyed by the local HEAD
     anti = _checklist(spec_section(spec, r"^(\d+\.\s*)?anti-goals\b"))
     return _write(root, state, node, [
         ("Diff", _fence(git.run(["diff", f"{base_ref}...HEAD"]))),
@@ -142,7 +146,7 @@ def task_review_package(
         ("Spec anti-goals", anti or "The spec lists no anti-goals."),
         ("Gate results", _gate_results(state, task_id, sha)),
         ("Earlier findings on this task", _earlier_findings(root, state, task_id)),
-        ("Rules", _rules(node, verdict_path(root, state, node), free=False)),
+        ("Rules", _rules(node, verdict_path(root, state, node), False, head)),
     ])  # fmt: skip
 
 
@@ -163,9 +167,13 @@ def _review_outcomes(state: RunState) -> str:
     return text + ("\n\nDeferred minors:\n\n" + _findings_md(minors) if minors else "")
 
 
-def _runs(gh: Gh) -> str:
+def _runs(gh: Gh, project: Project, milestone: int) -> str:
     fields = "databaseId,status,conclusion,headBranch,headSha,createdAt,url"
-    raw = gh.run(["run", "list", "--workflow", "build-deploy", "--limit", "20", "--json", fields])
+    branch = project.milestone_branch.format(n=milestone)
+    raw = gh.run([
+        "run", "list", "--workflow", project.deploy_workflow, "--branch", branch,
+        "--limit", "20", "--json", fields,
+    ])  # fmt: skip
     try:
         runs = json.loads(raw)
     except ValueError:
@@ -189,8 +197,10 @@ def final_package(
     range_: str,
     git: Git,
     gh: Gh,
+    project: Project,
 ) -> Path:
     plan, spec = plan_path.read_text(), spec_path.read_text()
+    head = git.run(["rev-parse", "HEAD"]).strip()
     goals = _body(spec, r"^(\d+\.\s*)?goals$")
     anti = _body(spec, r"^(\d+\.\s*)?anti-goals\b")
     spec_text = "\n\n".join(
@@ -202,9 +212,9 @@ def final_package(
         ("Review Focus", _body(plan, r"^review focus$")),
         ("Spec goals and anti-goals", spec_text),
         ("Task review outcomes and deferred minors", _review_outcomes(state)),
-        ("build-deploy history", _runs(gh)),
+        ("build-deploy history", _runs(gh, project, state.milestone)),
         ("Escalations", _escalations(state)),
-        ("Rules", _rules("final-review", verdict_path(root, state, "final-review"), free=True)),
+        ("Rules", _rules("final-review", verdict_path(root, state, "final-review"), True, head)),
     ])  # fmt: skip
 
 
@@ -212,9 +222,10 @@ def delta_package(
     root: Path, state: RunState, fix_range: str, findings: list[Finding], git: Git
 ) -> Path:
     node = "delta-review"
+    head = git.run(["rev-parse", "HEAD"]).strip()
     return _write(root, state, node, [
         ("Fix range", f"`{fix_range}`"),
         ("Diff", _fence(git.run(["diff", fix_range]))),
         ("Findings addressed", _findings_md(findings)),
-        ("Rules", _rules(node, verdict_path(root, state, node), free=False)),
+        ("Rules", _rules(node, verdict_path(root, state, node), False, head)),
     ])  # fmt: skip

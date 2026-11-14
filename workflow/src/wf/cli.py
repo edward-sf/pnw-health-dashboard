@@ -103,6 +103,7 @@ def _parser() -> argparse.ArgumentParser:
         if kind == "task-review":
             kp.add_argument("--task", required=True)
             kp.add_argument("--base", help="base ref (default: origin/<milestone branch>)")
+            kp.add_argument("--pr", type=int, help="PR number (default: found from the branch)")
         elif kind == "final":
             kp.add_argument("--range", required=True, help="commit range, e.g. a..b")
         else:
@@ -170,10 +171,12 @@ def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object
         if not base:
             project = load_project(args.project or root / "workflow/project.toml")
             base = "origin/" + project.milestone_branch.format(n=args.milestone)
-        path = task_review_package(root, state, plan, spec, args.task, base, git)
         node = f"{args.task}.task-review"
+        head = _head(root, state, node, args.pr)
+        path = task_review_package(root, state, plan, spec, args.task, base, git, head)
     elif args.kind == "final":
-        path = final_package(root, state, plan, spec, args.range, git, SubprocessGh())
+        project = load_project(args.project or root / "workflow/project.toml")
+        path = final_package(root, state, plan, spec, args.range, git, SubprocessGh(), project)
         node = "final-review"
     else:
         findings = load_verdict(args.findings).findings
@@ -182,23 +185,22 @@ def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object
     return {"path": str(path), "verdict_path": str(verdict_path(root, state, node))}
 
 
-def _head(root: Path, args: argparse.Namespace, state: st.RunState) -> str:
+def _head(root: Path, state: st.RunState, node: str, pr: int | None) -> str:
     """The commit a verdict must be for: the PR head for a task review, else HEAD."""
-    pr: int | None = args.pr
-    if pr is None and args.node.endswith(".task-review"):
-        task = args.node.rpartition(".")[0]
+    if pr is None and node.endswith(".task-review"):
+        task = node.rpartition(".")[0]
         graph = load_task_graph(root / state.task_graph) if state.task_graph else None
-        node = graph.tasks.get(task) if graph else None
-        if node is None or not node.branch:
+        info = graph.tasks.get(task) if graph else None
+        if info is None or not info.branch:
             raise st.RunStateError(f"no branch recorded for {task}; pass --pr")
-        out = SubprocessGh().run(["pr", "list", "--head", node.branch, "--json", "number"])
+        out = SubprocessGh().run(["pr", "list", "--head", info.branch, "--json", "number"])
         try:
             found = json.loads(out)
             pr = int(found[0]["number"]) if found else None
         except (ValueError, KeyError, TypeError, IndexError) as e:
             raise CommandError("cannot read gh pr list output") from e
         if pr is None:
-            raise st.RunStateError(f"no PR for branch {node.branch}; pass --pr")
+            raise st.RunStateError(f"no PR for branch {info.branch}; pass --pr")
     if pr is None:
         return SubprocessGit(root).run(["rev-parse", "HEAD"]).strip()
     out = SubprocessGh().run(["pr", "view", str(pr), "--json", "headRefOid"])
@@ -269,7 +271,7 @@ def _run(args: argparse.Namespace) -> object:
     if cmd == "package":
         return _package(root, args, state)
     if cmd == "ingest":
-        review = ingest(state, args.node, args.verdict, now, _head(root, args, state))
+        review = ingest(state, args.node, args.verdict, now, _head(root, state, args.node, args.pr))
         st.save(root, state)
         return asdict(review)
     if cmd == "next":

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from wf.config import load_graph
+from wf.config import load_graph, load_project
 from wf.github import FakeGh, FakeGit
 from wf.packages import (
     delta_package,
@@ -15,10 +15,12 @@ from wf.verdict import Finding
 
 REPO = Path(__file__).resolve().parents[2]
 GRAPH = load_graph(REPO / "workflow/graph.toml")
+PROJECT = load_project(REPO / "workflow/project.toml")
 M11_PLAN = REPO / "docs/superpowers/plans/2026-11-13-m11-explorer-redesign.md"
 M11_SPEC = REPO / "docs/superpowers/specs/2026-11-13-m11-explorer-redesign-design.md"
 M12_SPEC = REPO / "docs/superpowers/specs/2026-11-14-m12-workflow-engineering-design.md"
 NOW = "2026-11-14T10:00:00Z"
+HEAD = "a" * 40
 
 
 def make_state(tmp_path):
@@ -66,7 +68,7 @@ def test_spec_section_stops_at_same_or_higher_heading():
 def test_task_package_has_its_sections(tmp_path):
     git = FakeGit(canned={"diff": "DIFF"})
     p = task_review_package(
-        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "T3", "8960663", git
+        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "T3", "8960663", git, HEAD
     )
     text = p.read_text()
     assert p == tmp_path / ".workflow/runs/m11/packages/T3.task-review.md"
@@ -84,7 +86,7 @@ def test_task_package_has_its_sections(tmp_path):
 
 def test_task_package_global_constraints_come_from_the_plan(tmp_path):
     text = task_review_package(
-        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "T3", "b", FakeGit()
+        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "T3", "b", FakeGit(), HEAD
     ).read_text()
     plan = M11_PLAN.read_text()
     first = plan.split("## Global Constraints")[1].split("\n\n")[1].splitlines()[0]
@@ -96,7 +98,7 @@ def test_task_package_without_anti_goals_says_so(tmp_path):
     spec = tmp_path / "spec.md"
     spec.write_text("# Spec\n\nNothing here.\n")
     text = task_review_package(
-        tmp_path, make_state(tmp_path), M11_PLAN, spec, "T3", "b", FakeGit()
+        tmp_path, make_state(tmp_path), M11_PLAN, spec, "T3", "b", FakeGit(), HEAD
     ).read_text()
     assert "The spec lists no anti-goals." in text
 
@@ -105,11 +107,11 @@ def test_task_package_gate_results_follow_the_head(tmp_path):
     s = make_state(tmp_path)
     s.gates.append(GateRecord("T3", "h1", {"web:npm test": True, "e2e": False}, False, NOW))
     git = FakeGit(canned={"rev-parse HEAD": "h1\n"})
-    text = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", git).read_text()
+    text = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", git, HEAD).read_text()
     gates = text.split("## Gate results")[1].split("## Earlier")[0]
     assert "FAILED" in gates and "pass: web:npm test" in gates and "FAIL: e2e" in gates
     stale = FakeGit(canned={"rev-parse HEAD": "h2\n"})
-    text = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", stale).read_text()
+    text = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", stale, HEAD).read_text()
     assert "No gate record for T3 at h2" in text
 
 
@@ -126,7 +128,9 @@ def test_earlier_findings_come_from_every_earlier_review(tmp_path):
         ("T4", "s1", other),
     ]:
         s.reviews.append(ReviewRecord(task, sha, f"{task}.task-review", "findings", str(path), NOW))
-    text = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", FakeGit()).read_text()
+    text = task_review_package(
+        tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", FakeGit(), HEAD
+    ).read_text()
     earlier = text.split("## Earlier findings on this task")[1].split("## Rules")[0]
     assert "first problem" in earlier and "second problem" in earlier
     assert "T4 problem" not in earlier
@@ -136,7 +140,14 @@ def test_earlier_findings_come_from_every_earlier_review(tmp_path):
 
 def test_final_package_does_not_fence_the_reviewer(tmp_path):
     text = final_package(
-        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "8960663..544bbf2", FakeGit(), FakeGh()
+        tmp_path,
+        make_state(tmp_path),
+        M11_PLAN,
+        M11_SPEC,
+        "8960663..544bbf2",
+        FakeGit(),
+        FakeGh(),
+        PROJECT,
     ).read_text()
     assert "Review Focus" in text and "free access" in text
     assert "head start, not a fence" in text and "Do not explore beyond" not in text
@@ -153,7 +164,9 @@ def test_final_package_sections_and_content(tmp_path):
                         "conclusion": "failure", "url": "http://run/1"}])  # fmt: skip
     git = FakeGit(canned={"diff --stat": " web/a.ts | 2 +-\n"})
     gh = FakeGh(canned={"run list": runs})
-    text = final_package(tmp_path, s, M11_PLAN, M11_SPEC, "8960663..544bbf2", git, gh).read_text()
+    text = final_package(
+        tmp_path, s, M11_PLAN, M11_SPEC, "8960663..544bbf2", git, gh, PROJECT
+    ).read_text()
     for h in ["## Range", "## Review Focus", "## Spec goals and anti-goals",
               "## Task review outcomes and deferred minors", "## build-deploy history",
               "## Escalations", "## Rules"]:  # fmt: skip
@@ -169,7 +182,7 @@ def test_final_package_sections_and_content(tmp_path):
 
 def test_final_package_review_focus_is_the_plans_list(tmp_path):
     text = final_package(
-        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "a..b", FakeGit(), FakeGh()
+        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "a..b", FakeGit(), FakeGh(), PROJECT
     ).read_text()
     focus = M11_PLAN.read_text().split("## Review Focus")[1].split("\n## ")[0].strip()
     assert focus.splitlines()[0] in text
@@ -186,3 +199,27 @@ def test_delta_package(tmp_path):
     assert "**I1** [important] bad thing (x.ts:9): the detail" in text
     assert "Do not explore beyond this package" in text
     assert verdict_path(tmp_path, s, "delta-review").name in text
+
+
+def test_final_package_asks_gh_for_the_deploy_workflow_on_the_milestone_branch(tmp_path):
+    gh = FakeGh()
+    final_package(
+        tmp_path, make_state(tmp_path), M11_PLAN, M11_SPEC, "a..b", FakeGit(), gh, PROJECT
+    )
+    runs = [c for c in gh.calls if c[:2] == ["run", "list"]]
+    assert len(runs) == 1
+    argv = runs[0]
+    assert argv[argv.index("--workflow") + 1] == "build-deploy.yml"
+    assert argv[argv.index("--branch") + 1] == "milestone/m11"
+
+
+def test_every_package_states_the_sha_the_verdict_must_carry(tmp_path):
+    s = make_state(tmp_path)
+    want = 'write exactly `"sha": "{}"`'
+    task = task_review_package(tmp_path, s, M11_PLAN, M11_SPEC, "T3", "b", FakeGit(), HEAD)
+    assert want.format(HEAD) in task.read_text()
+    git = FakeGit(canned={"rev-parse HEAD": "f" * 40 + "\n"})
+    final = final_package(tmp_path, s, M11_PLAN, M11_SPEC, "a..b", git, FakeGh(), PROJECT)
+    assert want.format("f" * 40) in final.read_text()
+    delta = delta_package(tmp_path, s, "a..b", [], git)
+    assert want.format("f" * 40) in delta.read_text()

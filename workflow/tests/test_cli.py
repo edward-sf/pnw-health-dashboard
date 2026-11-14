@@ -95,15 +95,23 @@ def _repo_with_run(tmp_path):
     )
 
 
-def test_cli_package_task_review_prints_paths(tmp_path, capsys):
+def test_cli_package_task_review_prints_paths(tmp_path, capsys, monkeypatch):
     _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            assert args == ["pr", "view", "5", "--json", "headRefOid"]
+            return json.dumps({"headRefOid": "c" * 40})
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
     capsys.readouterr()
     assert run(tmp_path, "package", "task-review", "--milestone", "11", "--task", "T3",
-               "--base", "HEAD") == 0  # fmt: skip
+               "--base", "HEAD", "--pr", "5") == 0  # fmt: skip
     out = json.loads(capsys.readouterr().out)
     assert out["path"].endswith("packages/T3.task-review.md")
     assert out["verdict_path"].endswith("verdicts/T3.task-review-r1.json")
-    assert "### Task 3:" in Path(out["path"]).read_text()
+    text = Path(out["path"]).read_text()
+    assert "### Task 3:" in text and 'exactly `"sha": "' + "c" * 40 + '"`' in text
 
 
 def test_cli_ingest_with_pr_records_and_stale_sha_exits_2(tmp_path, capsys, monkeypatch):
