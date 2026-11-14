@@ -284,6 +284,7 @@ Where M12's build differs from the design above, and why. The rulings were made 
 
 **Loops and budgets (§5.2)**
 - **Red deploys escalate.** The design gave deploy-watch one fix round per red run. As built, a red or timed-out `build-deploy` escalates to the author, who decides the fix.
+- **Milestone pushes are watched too.** After the final-review report push, the fix-PR merge and the retro push, the skill runs `wf deploy-watch --milestone <N>` with no node: it watches the milestone head and changes no state. A red run escalates the node that pushed (`final-gates` for the fix-PR merge), inside the batched-fix budget rather than a node of its own.
 - **One late round on review budget.** The task-review budget is checked when the next review starts, so after the last allowed review round finds problems, one more implement and gates round runs before `wf start` refuses the review and escalates.
 - **The fix PR is merged by the graph.** `wf start batched-fix --branch <b>` records the fix branch. `wf merge` maps that branch to a `batched-fix` gate record and a `delta-review` record, so the fix PR merges under the same record rules as an issue PR.
 - **Merge hardening.** `wf merge` passes `--match-head-commit`, so a push between the record check and the merge is refused. The merge hook resolves the PR number and base with one `gh pr view` and blocks if that lookup fails. `wf check-merge` finds the task by matching the PR's head branch to the task graph.

@@ -135,7 +135,10 @@ def _parser() -> argparse.ArgumentParser:
     cm.add_argument("pr", type=int)
     mg = add("merge")
     mg.add_argument("pr", type=int)
-    dw = add("deploy-watch", node=True)
+    dw = add("deploy-watch")
+    dw.add_argument(
+        "node", nargs="?", help="the running node to finish (omit to watch the milestone head only)"
+    )
     dw.add_argument("--sha", help="merged commit (default: origin/<milestone branch> after fetch)")
     dw.add_argument("--timeout", type=int, default=1800, help="seconds to wait")
     mp = add("milestone-pr")
@@ -363,7 +366,8 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
 
 
 def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
-    st.require_running(st.load(root, args.milestone), args.node)
+    if args.node:
+        st.require_running(st.load(root, args.milestone), args.node)
     project = load_project(args.project or root / "workflow/project.toml")
     branch = project.milestone_branch.format(n=args.milestone)
     git = SubprocessGit(root)
@@ -372,6 +376,8 @@ def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
         git.run(["fetch", "origin", branch])
         sha = git.run(["rev-parse", f"origin/{branch}"]).strip()
     result = watch_deploy(SubprocessGh(), project, branch, sha, timeout_s=args.timeout)
+    if not args.node:
+        return {**asdict(result), "sha": sha}
     # The watch runs in the background while other commands write state: reload before saving.
     state = st.load(root, args.milestone)
     status: st.NodeStatus = "done" if result.conclusion == "success" else "failed"

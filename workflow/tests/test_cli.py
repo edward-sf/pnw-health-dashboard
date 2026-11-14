@@ -604,3 +604,21 @@ def test_cli_verdict_paths_are_root_relative_so_packages_read_them_from_any_cwd(
     assert _proj(tmp_path, "package", "final", "--milestone", "11", "--range", "HEAD..HEAD") == 0
     text = Path(json.loads(capsys.readouterr().out)["path"]).read_text()
     assert "verdict unreadable" not in text and "a deferred minor" in text
+
+
+def test_cli_deploy_watch_without_a_node_only_reports(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf import state as st
+    from wf.github import FakeGh
+
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    path = st.run_dir(tmp_path, 13) / "state.json"
+    before = path.read_text()
+    args = ["deploy-watch", "--milestone", "13", "--sha", "aaa"]
+    for conclusion, code in (("failure", 1), ("success", 0)):
+        runs = [[{"headSha": "aaa", "status": "completed", "conclusion": conclusion}]]
+        monkeypatch.setattr(cli, "SubprocessGh", lambda runs=runs: FakeGh(run_lists=runs))
+        capsys.readouterr()
+        assert _proj(tmp_path, *args) == code
+        assert json.loads(capsys.readouterr().out)["conclusion"] == conclusion
+    assert path.read_text() == before
