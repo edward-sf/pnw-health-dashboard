@@ -223,3 +223,11 @@ def test_every_package_states_the_sha_the_verdict_must_carry(tmp_path):
     assert want.format("f" * 40) in final.read_text()
     delta = delta_package(tmp_path, s, "a..b", [], git)
     assert want.format("f" * 40) in delta.read_text()
+
+
+def test_verdict_path_is_outside_protected_run_state(tmp_path):
+    # Reviewers write verdicts themselves; the state hook blocks every write under .workflow/runs.
+    s = make_state(tmp_path)
+    p = verdict_path(tmp_path, s, "T3.task-review")
+    assert p == tmp_path / ".workflow/work/m11/verdicts/T3.task-review-r1.json"
+    assert ".workflow/runs" not in p.as_posix()

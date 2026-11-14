@@ -157,3 +157,30 @@ def test_finish_escalated_records_an_escalation(tmp_path):
         ("T1.implement", "stuck"),
         ("T1.gates", "escalated"),
     ]
+
+
+def test_fix_branch_round_trips_and_old_state_loads_without_it(tmp_path):
+    import json
+
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    assert s.fix_branch is None
+    s.fix_branch = "m13-final-review-fixes"
+    save(tmp_path, s)
+    assert load(tmp_path, 13).fix_branch == "m13-final-review-fixes"
+    path = run_dir(tmp_path, 13) / "state.json"
+    raw = json.loads(path.read_text())
+    del raw["fix_branch"]  # a run saved before the field existed
+    path.write_text(json.dumps(raw))
+    assert load(tmp_path, 13).fix_branch is None
+
+
+def test_bad_fix_branch_is_refused(tmp_path):
+    import json
+
+    init_run(tmp_path, 13, GRAPH, ["T1"])
+    path = run_dir(tmp_path, 13) / "state.json"
+    raw = json.loads(path.read_text())
+    raw["fix_branch"] = 7
+    path.write_text(json.dumps(raw))
+    with pytest.raises(RunStateError, match="unreadable"):
+        load(tmp_path, 13)

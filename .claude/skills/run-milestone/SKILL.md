@@ -52,16 +52,16 @@ For every agent node:
 4. On return: `get_usage` again (`pct_after`), then `wf usage <node> --pct-before <b> --pct-after <a> --tokens <total tokens from the task notification>`. Skip `wf usage` if either read had no `5-hour limit` window.
 5. Record the result (per kind below). A subagent that reports BLOCKED: `wf finish <node> --status escalated --note "<its reason>"`, notify, stop.
 
-Placeholders: `{N}`; `{task_id}`, `{issue}`, `{branch}`, `{k}` (task number) from the task graph; `{plan_path}`, `{spec_path}` from the task graph's `plan` / `spec`; `{package_path}`, `{verdict_path}` from `wf package`; `{report_path}`, `{triage_path}`, `{must_fix_path}`, `{final_verdict_path}` as set in the table (later nodes reuse them); `{date}` today (YYYY-MM-DD); `{steps_committed}` and `{findings}` as below, `(none)` when empty.
+Placeholders: `{N}`; `{task_id}`, `{issue}`, `{branch}`, `{k}` (task number) from the task graph; `{plan_path}`, `{spec_path}` from the task graph's `plan` / `spec`; `{package_path}`, `{verdict_path}` (and, for the final review, `{report_path}`) from `wf package`; `{triage_path}`, `{must_fix_path}`, `{final_verdict_path}` as set in the table (later nodes reuse them); `{date}` today (YYYY-MM-DD); `{steps_committed}` and `{findings}` as below, `(none)` when empty.
 
 | Node | Before dispatch | After |
 |---|---|---|
 | `T<k>.implement` | `{findings}`: the failed checks and log paths of the last gate, or the last task-review verdict's findings | `wf finish T<k>.implement --status done` |
 | `T<k>.task-review` | `wf package task-review --milestone <N> --task T<k>` | `wf ingest T<k>.task-review <verdict_path>`; `pass` → `wf finish … --status done`; `findings` → send back (below) |
-| `final-review` | On `milestone/m<N>` at `origin` head: `wf package final --milestone <N> --range $(git merge-base origin/main HEAD)..HEAD`; `{report_path}` = `docs/reviews/{date}-m<N>-final-review.md` | `wf ingest final-review <verdict_path>` (before any commit), then commit the report on `milestone/m<N>` (`docs: M<N> final review`), push, `wf post-final-review <milestone PR> --report <report_path>`, `wf finish final-review --status done` |
+| `final-review` | On `milestone/m<N>` at `origin` head: `wf package final --milestone <N> --range $(git merge-base origin/main HEAD)..HEAD` | `wf ingest final-review <verdict_path>` (before any commit), then commit the report on `milestone/m<N>` (`docs: M<N> final review`), push, `wf post-final-review <milestone PR> --report <report_path>`, `wf finish final-review --status done` |
 | `triage` | `{final_verdict_path}` = the ingested final verdict; `{triage_path}` / `{must_fix_path}` = `.workflow/work/m<N>/triage.json` / `must-fix.json` | `wf finish triage --status done`. Nothing must-fix → `wf finish batched-fix --status done --note "nothing must-fix"` and the same for `delta-review` |
-| `batched-fix` | `{branch}` = `m<N>-final-review-fixes`; `{delta_verdict_path}` = the last delta verdict or `(none)` | `wf finish batched-fix --status done`; keep the PR number and fix range it reports |
-| `delta-review` | On the fix branch at its pushed head: `wf package delta --milestone <N> --range <fix range> --findings <must_fix_path>` | `wf ingest delta-review <verdict_path>`; `pass` → done; `findings` → `wf finish delta-review --status failed` and `wf finish batched-fix --status failed --note "delta findings r<k>"` |
+| `batched-fix` | Start it with `wf start batched-fix --milestone <N> --branch m<N>-final-review-fixes` (this records the fix branch). `{branch}` = that branch; `{delta_verdict_path}` = the last delta verdict, `{findings}` = the last fix gate's failed checks, each or `(none)` | `wf finish batched-fix --status done`; keep the PR number and fix range it reports. Then, on the fix branch at its pushed head, `wf gate batched-fix --milestone <N>`. Exit 1 → `wf finish batched-fix --status failed --note "gates failed at <sha7>"` (the next round fixes them) |
+| `delta-review` | On the fix branch at its pushed head: `wf package delta --milestone <N> --range <fix range> --findings <must_fix_path>` | `wf ingest delta-review <verdict_path>`; `pass` → `wf finish delta-review --status done`, then merge the fix PR: `gh pr checks <fix PR> --watch`, `wf merge <fix PR> --milestone <N>` (it needs the `batched-fix` gate and this passing delta review for the PR's head); `findings` → `wf finish delta-review --status failed` and `wf finish batched-fix --status failed --note "delta findings r<k>"` |
 | `retro` | `uv run --project workflow wf status --milestone <N> > .workflow/work/m<N>/status.json`; `{status_path}` that file; `{baseline}` from the plan or `(not recorded)` | `wf finish retro --status done` |
 
 **Send back** after task-review findings: `wf finish T<k>.task-review --status failed --note "findings r<round>"`, `wf finish T<k>.gates --status failed`, `wf finish T<k>.implement --status failed --note "review findings"`. The next `wf next` dispatches implement again; its `wf start` enforces the 3-round budget, and the review's own `wf start` the 2-round budget.
@@ -75,10 +75,10 @@ Check out the task branch at its pushed head (`git switch <branch> && git pull -
 - `T<k>.gates`: `wf start T<k>.gates`; `wf gate T<k> --milestone <N>`. Exit 0 → `wf finish T<k>.gates --status done`. Exit 1 → `wf finish T<k>.gates --status failed --note "<failed checks>"` and `wf finish T<k>.implement --status failed --note "gates failed at <sha7>"`; logs are in the run's `logs/` folder.
 - `T<k>.merge`: find the PR (`gh pr list --head <branch> --json number`), wait for its checks (`gh pr checks <pr> --watch`), then `wf start T<k>.merge` and `wf merge <pr> --milestone <N>` (it finishes the node). Never `gh pr merge` directly.
 - `T<k>.deploy-watch`: `wf start T<k>.deploy-watch`, then `uv run --project workflow wf deploy-watch T<k>.deploy-watch --milestone <N>` **in the background** (`run_in_background`); it finishes the node. Exit 1 (red) or 3 (timeout): `wf escalate T<k>.deploy-watch --reason "build-deploy <conclusion>: <run_url>"`, notify, stop.
-- `final-gates`: on the fix branch (or `milestone/m<N>` if nothing was fixed), `wf start final-gates`; `wf gate final-gates --milestone <N> --base origin/main`. Exit 0 → done; exit 1 → `wf escalate final-gates --reason "<failed checks>"`, notify, stop.
+- `final-gates`: on `milestone/m<N>`, pulled after the fix PR merged, `wf start final-gates`; `wf gate final-gates --milestone <N> --base origin/main`. Exit 0 → done; exit 1 → `wf escalate final-gates --reason "<failed checks>"`, notify, stop.
 - `milestone-pr`: first post the outcomes. Write `.workflow/work/m<N>/outcomes.json` from the triage, one entry per finding id: must-fix → `"fixed in #<fix PR>"`, defer → `"deferred: <reason>"`, ask-author → `"ask-author: <reason>"`. Run `wf post-outcomes <milestone PR> --findings <final verdict> --outcomes <that file>`. Then `wf start milestone-pr`, `wf milestone-pr --milestone <N> --ready`, `wf finish milestone-pr --status done`.
 
-The milestone PR is `gh pr list --head milestone/m<N> --base main --json number`. The fix PR is not a task branch, so `wf merge` and the merge hook refuse it: leave it open and name it in the final notification for the author.
+The milestone PR is `gh pr list --head milestone/m<N> --base main --json number`. Issue PRs and the fix PR merge only through `wf merge`; the milestone PR never.
 
 ## Exits
 
@@ -87,4 +87,9 @@ The milestone PR is `gh pr list --head milestone/m<N> --base main --json number`
 
 ## The end
 
-When `wf next` says `done` (the tail ran in order: final-review → triage → batched-fix ⇄ delta-review, at most 2 rounds → final-gates → outcomes → milestone PR ready → retro), `PushNotification`: "M<N> ready for your verdict" with the milestone PR link and any open fix PR. Report in five lines: the PR, findings by decision, escalations, fix rounds used, the retro path. Then stop. The author reviews, posts a verdict and merges.
+When `wf next` says `done` (the tail ran in order: final-review → triage → batched-fix ⇄ delta-review, at most 2 rounds → final-gates → outcomes → milestone PR ready → retro), `PushNotification`: "M<N> ready for your verdict" with the milestone PR link. Report in five lines: the PR, findings by decision, escalations, fix rounds used, the retro path. Then stop. The author reviews, posts a verdict and merges.
+
+## Known gaps
+
+- **Task-review budget is checked late.** It is enforced when the next review starts, so after the last allowed review round finds problems, one more implement and gates round runs before `wf start` refuses the review and escalates.
+- **A red deploy escalates.** Spec §5.2 allows one fix round per red `build-deploy`; here a red or timed-out deploy-watch escalates to the author instead.

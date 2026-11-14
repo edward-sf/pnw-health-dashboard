@@ -8,7 +8,7 @@ from pathlib import Path
 
 from wf.config import Project
 from wf.github import Gh, Git
-from wf.state import RunState, latest_gate, run_dir
+from wf.state import RunState, latest_gate, run_dir, work_dir
 from wf.tasks import plan_section
 from wf.verdict import Finding, VerdictError, load_verdict
 
@@ -61,7 +61,7 @@ def _body(text: str, title_regex: str) -> str:
 def verdict_path(root: Path, state: RunState, node: str) -> Path:
     """Where the next review round of `node` should write its verdict."""
     rounds = sum(1 for r in state.reviews if r.node == node)
-    return run_dir(root, state.milestone) / "verdicts" / f"{node}-r{rounds + 1}.json"
+    return work_dir(root, state.milestone) / "verdicts" / f"{node}-r{rounds + 1}.json"
 
 
 def _write(root: Path, state: RunState, node: str, parts: list[tuple[str, str]]) -> Path:

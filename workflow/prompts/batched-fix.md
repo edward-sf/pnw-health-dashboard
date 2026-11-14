@@ -5,6 +5,7 @@ You fix every must-fix finding of milestone M{N}'s final review in one PR.
 ## Input
 
 - **Must-fix findings:** `{must_fix_path}` (verdict format). For a second round, also the delta-review verdict `{delta_verdict_path}`: its findings are what is still open.
+- **Failed checks** from the last gate on this branch (a round after a failed gate; may be empty): `{findings}`. Fix them first.
 - The final-review report `{report_path}`: the measurement and suggested fix for each finding.
 - The spec `{spec_path}` and plan `{plan_path}`: the global constraints still bind.
 - **Branch:** `{branch}` from `origin/milestone/m{N}`. Create it if it does not exist; otherwise check it out and pull.

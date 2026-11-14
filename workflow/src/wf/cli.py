@@ -15,7 +15,7 @@ from wf.config import ConfigError, Graph, load_graph, load_project
 from wf.deploy import watch_deploy
 from wf.gates import LoggedRunner, run_gates
 from wf.github import CommandError, SubprocessGh, SubprocessGit
-from wf.merge import MergeCheck, check_merge, merge_task, task_for_branch, view_pr
+from wf.merge import FIX_TASK, MergeCheck, check_merge, merge_task, task_for_branch, view_pr
 from wf.milestone_pr import (
     mark_ready,
     post_final_review,
@@ -96,7 +96,8 @@ def _parser() -> argparse.ArgumentParser:
     gate.add_argument(
         "--base", help="base ref to diff against (default: origin/<milestone branch>)"
     )
-    add("start", node=True)
+    start = add("start", node=True)
+    start.add_argument("--branch", help="batched-fix only: the fix PR's branch")
     fin = add("finish", node=True)
     fin.add_argument("--status", required=True, choices=["done", "failed", "escalated"])
     fin.add_argument("--note")
@@ -206,6 +207,12 @@ def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object
         project = load_project(args.project or root / "workflow/project.toml")
         path = final_package(root, state, plan, spec, args.range, git, SubprocessGh(), project)
         node = "final-review"
+        report = root / project.reviews_dir / f"{_now()[:10]}-m{args.milestone}-final-review.md"
+        return {
+            "path": str(path),
+            "verdict_path": str(verdict_path(root, state, node)),
+            "report_path": str(report),
+        }
     else:
         findings = load_verdict(args.findings).findings
         path = delta_package(root, state, args.range, findings, git)
@@ -242,6 +249,8 @@ def _task_of_pr(root: Path, state: st.RunState, gh: SubprocessGh, pr: int) -> st
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
     branch = str(view_pr(gh, pr, "headRefName").get("headRefName", ""))
+    if state.fix_branch and branch == state.fix_branch:
+        return FIX_TASK
     return task_for_branch(load_task_graph(root / state.task_graph), branch)
 
 
@@ -259,8 +268,9 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
     if task is None:
         raise st.RunStateError(f"PR {pr} is not on any task's branch")
     sha = merge_task(state, task, pr, gh)
-    st.finish(state, f"{task}.merge", "done", now, f"merged as {sha}")
-    st.save(root, state)
+    if task != FIX_TASK:  # the fix PR has no merge node of its own
+        st.finish(state, f"{task}.merge", "done", now, f"merged as {sha}")
+        st.save(root, state)
     return {"task": task, "sha": sha}
 
 
@@ -442,11 +452,15 @@ def _run(args: argparse.Namespace) -> object:
         st.save(root, state)
         return asdict(sample)
     if cmd == "start":
+        if args.branch is not None and args.node != FIX_TASK:
+            raise st.RunStateError(f"--branch is only for {FIX_TASK}")
         try:
             st.start_round(state, args.node, _budget(load_graph(graph_path), args.node), now)
             window = _window_from_last_decision(root, m, args.node)
             if window is not None:
                 state.window = window
+            if args.branch is not None:
+                state.fix_branch = args.branch
         except st.BudgetExhausted:
             st.save(root, state)  # keep the escalation record
             raise

@@ -14,6 +14,7 @@ from wf.state import RunState, latest_gate, latest_review
 _CHECK_FIELDS = "headRefOid,baseRefName,statusCheckRollup"
 ROLLUP_CHECK = "ci"
 MILESTONE_BASE = "milestone/*"
+FIX_TASK = "batched-fix"  # the batched-fix PR, reviewed by delta-review
 
 
 @dataclass(frozen=True)
@@ -62,11 +63,12 @@ def _check(state: RunState, task: str, pr: int, view: dict[str, Any]) -> MergeCh
         reasons.append(f"no gate record for {task} at {head}")
     elif not gate.passed:
         reasons.append(f"latest gate for {task} at {head} failed")
-    review = latest_review(state, task, head)
+    reviewed = "delta-review" if task == FIX_TASK else task
+    review = latest_review(state, reviewed, head)
     if review is None:
-        reasons.append(f"no review record for {task} at {head}")
+        reasons.append(f"no review record for {reviewed} at {head}")
     elif review.result != "pass":
-        reasons.append(f"latest review for {task} at {head} has findings")
+        reasons.append(f"latest review for {reviewed} at {head} has findings")
     ci = _ci_state(view.get("statusCheckRollup"))
     if ci is None:
         reasons.append(f"no '{ROLLUP_CHECK}' check on PR {pr}")

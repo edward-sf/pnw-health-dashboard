@@ -77,10 +77,16 @@ class RunState:
     escalations: list[Escalation] = field(default_factory=list)
     window: str | None = None
     task_graph: str = ""
+    fix_branch: str | None = None  # the batched-fix PR's branch, set by `wf start --branch`
 
 
 def run_dir(root: Path, milestone: int) -> Path:
     return root / ".workflow/runs" / f"m{milestone}"
+
+
+def work_dir(root: Path, milestone: int) -> Path:
+    """Files agents write (verdicts, triage): outside run state, which only wf writes."""
+    return root / ".workflow/work" / f"m{milestone}"
 
 
 def _state_path(root: Path, milestone: int) -> Path:
@@ -164,6 +170,7 @@ def _parse(raw: Any) -> RunState:
     _check(isinstance(raw.get("nodes"), dict))
     _check(raw.get("window") is None or isinstance(raw["window"], str))
     _check(isinstance(raw.get("task_graph"), str))
+    _check(raw.get("fix_branch") is None or isinstance(raw["fix_branch"], str))
     lists = {k: raw.get(k) for k in ("gates", "reviews", "usage", "escalations")}
     _check(all(isinstance(v, list) for v in lists.values()))
     return RunState(
@@ -175,6 +182,7 @@ def _parse(raw: Any) -> RunState:
         escalations=[_escalation(e) for e in lists["escalations"] or []],
         window=raw["window"],
         task_graph=raw["task_graph"],
+        fix_branch=raw.get("fix_branch"),
     )
 
 
