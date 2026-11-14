@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from wf.config import ConfigError, Graph, Pacing
-from wf.state import Escalation, RunState
+from wf.state import Escalation, RunState, RunStateError
 
 # ---------------------------------------------------------------- usage
 
@@ -177,7 +177,9 @@ def ready_nodes(state: RunState, graph: Graph, tasks: list[TaskInfo]) -> list[st
     for node in plan_order(graph, tasks):
         rec = state.nodes.get(node)
         task, name = _split(node)
-        if rec is None or rec.status not in ("pending", "failed"):
+        if rec is None:
+            raise RunStateError(f"state missing node {node}")
+        if rec.status not in ("pending", "failed"):
             continue
         if predecessors_done(task, name):
             ready.append(node)
@@ -230,7 +232,12 @@ class Blocked:
     escalations: list[Escalation] = field(default_factory=list)
 
 
-Decision = Dispatch | Pause | Done | Blocked
+@dataclass(frozen=True)
+class Waiting:
+    running: list[str]
+
+
+Decision = Dispatch | Pause | Done | Blocked | Waiting
 
 
 def _is_past(resets_at: str, now: str) -> bool:
@@ -264,7 +271,12 @@ def next_decision(
 ) -> Decision:
     ready = ready_nodes(state, graph, tasks)
     if not ready:
-        return Blocked(list(state.escalations)) if state.escalations else Done()
+        running = [n for n, r in state.nodes.items() if r.status == "running"]
+        if running:
+            return Waiting(running)
+        if all(r.status == "done" for r in state.nodes.values()):
+            return Done()
+        return Blocked(list(state.escalations))
 
     def model(node: str) -> str | None:
         return graph.model_for(_split(node)[1])
@@ -290,9 +302,6 @@ def next_decision(
     weekly_blocks = weekly is not None and not any(fits(weekly, e) for e in estimates.values())
     if weekly is not None and weekly_blocks:
         return Pause(until=weekly.resets_at, reason="no ready node fits the weekly window")
-    if fresh:
-        node = considered[0]
-        return Blocked(
-            [Escalation(node, "estimate exceeds a full window", now)],
-        )
+    if fresh and estimates[considered[0]] * pacing.margin > 100:
+        return Blocked([Escalation(considered[0], "estimate exceeds a full window", now)])
     return Pause(until=five.resets_at, reason="no ready node fits the 5-hour window")

@@ -15,6 +15,7 @@ from wf.schedule import (
     TaskInfo,
     TaskNode,
     Usage,
+    Waiting,
     Window,
     estimate,
     load_task_graph,
@@ -23,7 +24,7 @@ from wf.schedule import (
     ready_nodes,
     write_task_graph,
 )
-from wf.state import RunState, UsageSample, finish, init_run, run_dir
+from wf.state import RunState, RunStateError, UsageSample, finish, init_run, run_dir
 
 REPO = Path(__file__).resolve().parents[2]
 G = load_graph(REPO / "workflow/graph.toml")
@@ -145,6 +146,33 @@ def test_fresh_window_that_cannot_fit_first_node_is_blocked():
     d = next_decision(s, G, tasks, usage(0, FUTURE), PACING, NOW)
     assert isinstance(d, Blocked)
     assert d.escalations[0].reason == "estimate exceeds a full window"
+
+
+def test_fresh_window_merely_too_full_pauses():
+    s, tasks = run_with([("T1", 2, ())])
+    s.window = "OLD"
+    d = next_decision(s, G, tasks, usage(99, FUTURE), PACING, NOW)
+    assert d == Pause(until=FUTURE, reason="no ready node fits the 5-hour window")
+
+
+def test_running_node_with_nothing_ready_waits():
+    s, tasks = run_with([("T1", 1, ())])
+    s.nodes["T1.implement"].status = "running"
+    d = next_decision(s, G, tasks, Usage(None, None), PACING, NOW)
+    assert d == Waiting(["T1.implement"])
+
+
+def test_done_requires_every_node_done():
+    s, tasks = run_with([("T1", 1, ())])
+    s.nodes["T1.implement"].status = "escalated"
+    assert next_decision(s, G, tasks, Usage(None, None), PACING, NOW) != Done()
+
+
+def test_missing_node_in_state_is_an_error():
+    s, tasks = run_with([("T1", 1, ())])
+    del s.nodes["T1.gates"]
+    with pytest.raises(RunStateError, match="state missing node T1.gates"):
+        ready_nodes(s, G, tasks)
 
 
 def test_script_nodes_estimate_zero_and_always_fit():
@@ -306,3 +334,21 @@ def test_next_bad_usage_file_is_a_clean_error(tmp_path, bad, capsys):
     root = run_on_disk(tmp_path, task_graph(("T1", 1, ())))
     (root / "u.json").write_text(bad)
     assert cli(root, "next", "--milestone", "13", "--usage", str(root / "u.json")) == 2
+
+
+def test_cli_next_missing_node_exits_2(tmp_path, capsys):
+    root = run_on_disk(tmp_path, task_graph(("T1", 1, ()), ("T2", 1, ())))
+    write_task_graph(root / TG_REL, task_graph(("T1", 1, ()), ("T2", 1, ()), ("T3", 1, ())))
+    (root / "u.json").write_text(json.dumps(OK))
+    assert cli(root, "next", "--milestone", "13", "--usage", str(root / "u.json")) == 2
+    assert "state missing node T3." in capsys.readouterr().err
+
+
+def test_cli_next_reports_waiting(tmp_path, capsys):
+    root = run_on_disk(tmp_path, task_graph(("T1", 1, ())))
+    cli(root, "start", "T1.implement", "--milestone", "13")
+    capsys.readouterr()
+    (root / "u.json").write_text(json.dumps(OK))
+    assert cli(root, "next", "--milestone", "13", "--usage", str(root / "u.json")) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out == {"decision": "waiting", "running": ["T1.implement"]}

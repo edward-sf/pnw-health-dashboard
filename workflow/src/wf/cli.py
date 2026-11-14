@@ -18,6 +18,7 @@ from wf.schedule import (
     Dispatch,
     Done,
     TaskInfo,
+    Waiting,
     load_task_graph,
     next_decision,
     parse_usage,
@@ -94,6 +95,8 @@ def _decision_json(decision: Decision) -> dict[str, object]:
         return {"decision": "blocked", **asdict(decision)}
     if isinstance(decision, Done):
         return {"decision": "done"}
+    if isinstance(decision, Waiting):
+        return {"decision": "waiting", **asdict(decision)}
     return {"decision": "pause", **asdict(decision)}
 
 
