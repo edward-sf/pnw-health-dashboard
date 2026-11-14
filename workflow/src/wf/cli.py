@@ -12,6 +12,7 @@ from pathlib import Path
 
 from wf import state as st
 from wf.config import ConfigError, Graph, load_graph, load_project
+from wf.github import CommandError, SubprocessGh, SubprocessGit
 from wf.schedule import (
     Blocked,
     Decision,
@@ -23,6 +24,8 @@ from wf.schedule import (
     next_decision,
     parse_usage,
 )
+from wf.setup import setup_milestone
+from wf.tasks import PlanError, check_plan_file
 
 
 def _now() -> str:
@@ -65,6 +68,11 @@ def _parser() -> argparse.ArgumentParser:
     init = add("init")
     init.add_argument("--tasks", required=True, help="comma-separated task ids")
     init.add_argument("--task-graph", default="", help="repo-relative task graph path")
+    chk = sub.add_parser("check-plan")
+    chk.add_argument("plan", type=Path)
+    setup = add("setup")
+    setup.add_argument("--plan", type=Path, required=True, help="plan file, repo-relative")
+    setup.add_argument("--spec", type=Path, required=True, help="spec file, repo-relative")
     add("status")
     add("start", node=True)
     fin = add("finish", node=True)
@@ -149,10 +157,19 @@ def _steps(tasks: list[TaskInfo], node: str) -> int:
 
 def _run(args: argparse.Namespace) -> object:
     root: Path = args.root or _git_root()
-    m: int = args.milestone
+    m: int = getattr(args, "milestone", 0)
     cmd: str = args.command
     graph_path: Path = args.graph or root / "workflow/graph.toml"
     now = _now()
+    if cmd == "check-plan":
+        return {"problems": check_plan_file(args.plan)}
+    if cmd == "setup":
+        project = load_project(args.project or root / "workflow/project.toml")
+        result = setup_milestone(
+            project, root, m, args.plan, args.spec, SubprocessGh(), SubprocessGit(root),
+            load_graph(graph_path),
+        )  # fmt: skip
+        return asdict(result)
     if cmd == "init":
         tasks = [t for t in args.tasks.split(",") if t]
         if not tasks:
@@ -200,8 +217,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         result = _run(args)
-    except (st.RunStateError, ConfigError) as e:
+    except (st.RunStateError, ConfigError, PlanError, CommandError) as e:
         print(f"wf: {e}", file=sys.stderr)
         return 2
     print(json.dumps(result, indent=2))
-    return 0
+    problems = result.get("problems") if isinstance(result, dict) else None
+    return 2 if problems else 0
