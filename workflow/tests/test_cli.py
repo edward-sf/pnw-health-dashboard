@@ -214,6 +214,7 @@ def test_cli_check_merge_unknown_branch_is_not_ok(tmp_path, monkeypatch, capsys)
 
 def test_cli_merge_marks_merge_done(tmp_path, monkeypatch, capsys):
     gh = _merge_setup(tmp_path, monkeypatch, {})
+    run(tmp_path, "start", "T1.merge", "--milestone", "13")
     capsys.readouterr()
     assert run(tmp_path, "merge", "5", "--milestone", "13") == 0
     assert json.loads(capsys.readouterr().out) == {"task": "T1", "sha": "merge-5"}
@@ -223,13 +224,22 @@ def test_cli_merge_marks_merge_done(tmp_path, monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "done"
 
 
-def test_cli_merge_refused_exits_2_and_leaves_node_pending(tmp_path, monkeypatch, capsys):
+def test_cli_merge_refused_exits_2_and_leaves_node_running(tmp_path, monkeypatch, capsys):
     _merge_setup(tmp_path, monkeypatch, {"headRefOid": "bbb"})
+    run(tmp_path, "start", "T1.merge", "--milestone", "13")
     capsys.readouterr()
     assert run(tmp_path, "merge", "5", "--milestone", "13") == 2
     assert "not merging" in capsys.readouterr().err
     run(tmp_path, "status", "--milestone", "13")
-    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "pending"
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "running"
+
+
+def test_cli_merge_refuses_a_merge_node_that_is_not_running(tmp_path, monkeypatch, capsys):
+    gh = _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 2
+    assert "not running" in capsys.readouterr().err
+    assert not any(c[:2] == ["pr", "merge"] for c in gh.calls)
 
 
 def test_cli_deploy_watch_exit_codes_and_state(tmp_path, monkeypatch, capsys):
@@ -240,8 +250,13 @@ def test_cli_deploy_watch_exit_codes_and_state(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
     run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
     capsys.readouterr()
-    code = run(tmp_path, "--project", str(REPO / "workflow/project.toml"), "deploy-watch",
-               "T1.deploy-watch", "--milestone", "13", "--sha", "aaa")  # fmt: skip
+    args = ["--project", str(REPO / "workflow/project.toml"), "deploy-watch",
+            "T1.deploy-watch", "--milestone", "13", "--sha", "aaa"]  # fmt: skip
+    assert run(tmp_path, *args) == 2  # not started
+    assert "not running" in capsys.readouterr().err
+    assert not gh.calls
+    run(tmp_path, "start", "T1.deploy-watch", "--milestone", "13")
+    code = run(tmp_path, *args)
     assert code == 1
     run(tmp_path, "status", "--milestone", "13")
     out = capsys.readouterr().out
@@ -352,6 +367,26 @@ def test_cli_clear_an_escalated_node(tmp_path, capsys):
     assert run(tmp_path, "clear", "T1.implement", "--milestone", "13", "--note", "go on") == 0
     rec = json.loads(capsys.readouterr().out)
     assert (rec["status"], rec["rounds"], rec["note"]) == ("pending", 0, "author: go on")
+
+
+def test_cli_finish_refuses_an_escalated_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    run(tmp_path, "start", "T1.deploy-watch", "--milestone", "13")
+    run(tmp_path, "escalate", "T1.deploy-watch", "--milestone", "13", "--reason", "red")
+    capsys.readouterr()
+    code = run(tmp_path, "finish", "T1.deploy-watch", "--milestone", "13", "--status", "done",
+               "--note", "looks fine")  # fmt: skip
+    assert code == 2
+    assert "only the author" in capsys.readouterr().err
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.deploy-watch"]["status"] == "escalated"
+
+
+def test_cli_finish_refuses_a_pending_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "finish", "T1.implement", "--milestone", "13", "--status", "done") == 2
+    assert "not running" in capsys.readouterr().err
 
 
 def test_cli_clear_refuses_a_node_that_is_not_escalated(tmp_path, capsys):

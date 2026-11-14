@@ -12,11 +12,19 @@ trap 'echo "Blocked by .claude/hooks/guard-state.sh: hook error (unexpected fail
 
 input=$(cat)
 # Cheap pre-test on the raw input, so ordinary calls never need jq.
-grep -qF '.workflow/runs' <<<"$input" || exit 0
+grep -qE '\.workflow/runs|wf.{1,8}clear' <<<"$input" || exit 0
 command -v jq >/dev/null || {
   echo "Blocked by .claude/hooks/guard-state.sh: jq is not installed, so this call cannot be checked." >&2
   exit 2
 }
+
+# Clearing an escalation is the author's decision, made in their own terminal (no hook runs
+# there). From a Claude Code session it is always refused.
+clear_pattern='(^|[^[:alnum:]_-])wf[[:space:]]+clear([[:space:]]|$)'
+if [[ "$(jq -r '.tool_input.command // ""' <<<"$input")" =~ $clear_pattern ]]; then
+  echo "Blocked by .claude/hooks/guard-state.sh: 'wf clear' is the author's decision; they run it in their own terminal. Notify the author and stop." >&2
+  exit 2
+fi
 
 block() {
   echo "Blocked by .claude/hooks/guard-state.sh: $1 Run state in .workflow/runs/ is written only by 'uv run --project workflow wf <command>'." >&2

@@ -155,12 +155,44 @@ def test_start_round_refuses_non_pending_nodes(tmp_path):
 
 def test_finish_escalated_records_an_escalation(tmp_path):
     s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.implement", 3, NOW)
+    start_round(s, "T1.gates", 3, NOW)
     finish(s, "T1.implement", "escalated", NOW, "stuck")
     finish(s, "T1.gates", "escalated", NOW)
     assert [(e.node, e.reason) for e in s.escalations] == [
         ("T1.implement", "stuck"),
         ("T1.gates", "escalated"),
     ]
+
+
+def test_finish_refuses_an_escalated_node(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.deploy-watch", 1, NOW)
+    escalate(s, "T1.deploy-watch", "build-deploy failure", NOW)
+    for status in ("done", "failed", "escalated"):
+        with pytest.raises(RunStateError, match="escalated: only the author"):
+            finish(s, "T1.deploy-watch", status, NOW, "looks fine")
+    assert s.nodes["T1.deploy-watch"].status == "escalated"
+    assert len(s.escalations) == 1
+
+
+def test_finish_refuses_a_pending_node(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    for status in ("done", "failed", "escalated"):
+        with pytest.raises(RunStateError, match="not running"):
+            finish(s, "T1.implement", status, NOW)
+    assert s.nodes["T1.implement"].status == "pending"
+    assert s.escalations == []
+
+
+def test_finish_send_back_fails_a_done_node_but_never_redoes_it(tmp_path):
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.implement", 3, NOW)
+    finish(s, "T1.implement", "done", NOW)
+    finish(s, "T1.implement", "failed", NOW, "review findings")  # the send-back
+    assert s.nodes["T1.implement"].status == "failed"
+    with pytest.raises(RunStateError, match="not running"):
+        finish(s, "T1.implement", "done", NOW)
 
 
 def test_fix_branch_round_trips_and_old_state_loads_without_it(tmp_path):

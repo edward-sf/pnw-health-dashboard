@@ -231,10 +231,25 @@ def start_round(state: RunState, node: str, budget: int | None, now: str) -> Non
     rec.finished_at = None
 
 
+def require_running(state: RunState, node: str) -> NodeRecord:
+    rec = _record(state, node)
+    if rec.status != "running":
+        raise RunStateError(f"{node} is not running (status {rec.status}); `wf start` it first")
+    return rec
+
+
 def finish(
     state: RunState, node: str, status: NodeStatus, now: str, note: str | None = None
 ) -> None:
+    """Close the running round of `node`. A send-back may also fail a node that is done.
+
+    An escalated node is the author's: only `clear` moves it.
+    """
     rec = _record(state, node)
+    if rec.status == "escalated":
+        raise RunStateError(f"{node} is escalated: only the author's `wf clear` moves it")
+    if not (rec.status == "done" and status == "failed"):
+        require_running(state, node)
     rec.status = status
     rec.finished_at = now
     rec.note = note

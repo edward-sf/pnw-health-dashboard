@@ -265,7 +265,8 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **The state hook is a drift guard, not a security boundary.** It matches Bash commands by pattern, so a determined command can get around it.
 
 **Escalations**
-- **`wf clear`.** An escalated node stays escalated until the author clears it: `wf clear <node> --note <decision>` sets it back to pending, resets its rounds and records the note. The skill never runs it.
+- **`wf clear`.** An escalated node stays escalated until the author clears it: `uv run --project workflow wf clear <node> --milestone <N> --note "<decision>"` sets it back to pending, resets its rounds and records the note. The author runs it in their own terminal, where no hook applies. `guard-state.sh` blocks any Bash command containing `wf clear`, so a Claude Code session can neither clear an escalation nor stamp an `author:` note.
+- **`wf finish` only closes a running node.** It refuses a pending node and never moves an escalated one, so `clear` is the only way out of an escalation. A send-back may fail a node that is done.
 - **Retries and interruptions.** `start_round` accepts failed nodes, so a failed round can be retried inside its budget. `wf resume` refunds the round the interrupted attempt spent.
 
 **Dry run.** The live agent-dispatch dry run was deferred to the M11 replay (T11) and the M13 pilot. Implementers cannot dispatch subagents, so T9 proved the walker's transitions with a scripted CLI walk instead.

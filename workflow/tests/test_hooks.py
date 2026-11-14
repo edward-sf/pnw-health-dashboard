@@ -131,6 +131,37 @@ def test_state_bash_reads_allowed(cmd):
     assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
 
 
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf clear T1.deploy-watch --milestone 13 --note ok",
+        "cd /repo && uv run --project workflow wf clear final-gates --milestone 13 --note x",
+        "wf  clear T1.implement",
+        "echo hi\nwf clear T1.implement --milestone 13 --note x",
+    ],
+)
+def test_state_guard_blocks_wf_clear(cmd):
+    r = run_hook("guard-state.sh", bash(cmd))
+    assert r.returncode == 2 and "author" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf status --milestone 13",
+        "git clear-cache",
+        "echo wfclear",
+    ],
+)
+def test_state_guard_lets_other_wf_commands_through(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
+
+
+def test_state_guard_does_not_block_writing_about_wf_clear():
+    payload = {"tool_name": "Write", "tool_input": {"file_path": "a.md", "content": "wf clear"}}
+    assert run_hook("guard-state.sh", payload).returncode == 0
+
+
 def test_unrelated_edit_allowed():
     payload = {"tool_name": "Edit", "tool_input": {"file_path": f"{REPO}/web/src/a.ts"}}
     assert run_hook("guard-state.sh", payload).returncode == 0

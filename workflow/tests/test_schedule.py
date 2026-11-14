@@ -73,7 +73,7 @@ def task_graph(*tasks):
 
 def mark_done(s, *nodes):
     for n in nodes:
-        finish(s, n, "done", NOW)
+        s.nodes[n].status = "done"
 
 
 def test_independent_small_tasks_fill_the_window():
@@ -188,7 +188,7 @@ def test_no_ready_nodes_done_or_blocked():
     for n in s.nodes:
         s.nodes[n].status = "done"
     assert next_decision(s, G, tasks, Usage(None, None), PACING, NOW) == Done()
-    s.nodes["retro"].status = "escalated"
+    s.nodes["retro"].status = "running"
     finish(s, "retro", "escalated", NOW, "stuck")
     d = next_decision(s, G, tasks, Usage(None, None), PACING, NOW)
     assert isinstance(d, Blocked) and d.escalations[0].reason == "stuck"

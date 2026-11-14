@@ -277,6 +277,8 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
     task = _task_of_pr(root, state, gh, pr)
     if task is None:
         raise st.RunStateError(f"PR {pr} is not on any task's branch")
+    if task != FIX_TASK:
+        st.require_running(state, f"{task}.merge")
     sha = merge_task(state, task, pr, gh)
     if task != FIX_TASK:  # the fix PR has no merge node of its own
         st.finish(state, f"{task}.merge", "done", now, f"merged as {sha}")
@@ -285,6 +287,7 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
 
 
 def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
+    st.require_running(st.load(root, args.milestone), args.node)
     project = load_project(args.project or root / "workflow/project.toml")
     branch = project.milestone_branch.format(n=args.milestone)
     git = SubprocessGit(root)
