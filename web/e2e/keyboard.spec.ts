@@ -53,6 +53,11 @@ test("the explorer can be driven end to end from the keyboard", async ({ page },
   await expect(filter).toBeFocused();
   await expectFocusOutline(page, "filter measures");
   await page.keyboard.type("life");
+  // Enter takes the highlighted option, so wait for the filter to highlight the match.
+  await expect(page.getByRole("option", { name: "Life expectancy" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await page.keyboard.press("Enter");
   await expect(page.locator(".indicator-title")).toHaveText("Life expectancy");
   await expect(page.getByRole("button", { name: "Measure: Life expectancy" })).toBeFocused();
@@ -68,7 +73,11 @@ test("the explorer can be driven end to end from the keyboard", async ({ page },
   await page.keyboard.press("Shift+Tab"); // the County search is earlier in the toolbar
   await tabTo(page, search, "county search again", true);
   await page.keyboard.type("Yakima");
+  const yakima = page.getByRole("option", { name: "Yakima County, WA" });
+  await expect(yakima).toBeVisible();
   await page.keyboard.press("ArrowDown");
+  await expect(yakima).toHaveAttribute("aria-selected", "true");
+  await expect(search).toHaveAttribute("aria-activedescendant", (await yakima.getAttribute("id"))!);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog", { name: "County details" });
   const heading = dialog.getByRole("heading", { level: 2 });
@@ -92,8 +101,9 @@ test("the explorer can be driven end to end from the keyboard", async ({ page },
 
   // Theme: Dark.
   await tabTo(page, page.getByRole("button", { name: "Theme" }), "Theme", true);
+  // Opening a menu from the keyboard focuses its first item (Radix, as the ARIA menu button
+  // pattern asks), so one ArrowDown reaches Dark.
   await page.keyboard.press("Enter");
-  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitemradio", { name: "Light" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("menuitemradio", { name: "Dark" })).toBeFocused();
