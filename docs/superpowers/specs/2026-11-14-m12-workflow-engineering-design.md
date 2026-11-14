@@ -300,5 +300,6 @@ Where M12's build differs from the design above, and why. The rulings were made 
 
 **Known gaps**
 - **Verdict authorship is not proven.** `wf ingest` refuses a node that is not running, and a verdict file last written before the node's round started. That proves the verdict is fresh, not who wrote it: the orchestrating session could still write one during the round. The real guards are the skill's instruction ("never write or edit a verdict") and the hook-protected run state, which only `wf` writes.
+- **`wf resume` refunds without limit.** Each resume returns the interrupted round, so start-and-resume cycles never spend a budget. Restarts are the author's, so this is bounded in practice (final review M5, deferred).
 
 **Known minors, left to the final review's triage.** Run state has no file locking (the walker is serial). The merge hook fires on any command whose text merely mentions the merge phrase, and the state hook can false-positive on a heredoc that names the runs path with `>` (use a body file). The replay and the pilot in §5.10 are task T11 and M13.

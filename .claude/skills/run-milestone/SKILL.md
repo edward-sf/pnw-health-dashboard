@@ -74,7 +74,7 @@ Placeholders: `{N}`; `{task_id}`, `{issue}`, `{branch}`, `{k}` (task number) fro
 
 ## Script nodes
 
-Check out the task branch at its pushed head (`git switch <branch> && git pull --ff-only`) before `gates`.
+Check out the task branch at its pushed head (`git switch <branch> && git pull --ff-only`) before `gates`, with a clean tree: `wf gate` refuses uncommitted changes to tracked files.
 
 - `T<k>.gates`: `wf start T<k>.gates`; `wf gate T<k> --milestone <N>`. Exit 0 → `wf finish T<k>.gates --status done`. Exit 1 → `wf finish T<k>.gates --status failed --note "<failed checks>"` and `wf finish T<k>.implement --status failed --note "gates failed at <sha7>"`; logs are in the run's `logs/` folder.
 - `T<k>.merge`: find the PR (`gh pr list --head <branch> --json number`), wait for its checks (`gh pr checks <pr> --watch`), then `wf start T<k>.merge` and `wf merge <pr> --milestone <N>` (it finishes the node). Never `gh pr merge` directly.
