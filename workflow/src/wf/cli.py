@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from wf import state as st
+from wf.baseline import baseline
 from wf.config import ConfigError, Graph, load_graph, load_project
 from wf.deploy import watch_deploy
 from wf.gates import LoggedRunner, run_gates
@@ -145,6 +146,13 @@ def _parser() -> argparse.ArgumentParser:
     pos.add_argument(
         "--outcomes", type=Path, required=True, help="JSON object: finding id -> outcome"
     )
+    bl = add("baseline")
+    bl.add_argument("--since", required=True, help="ISO time; no zone means UTC")
+    bl.add_argument("--until", required=True, help="ISO time, exclusive; no zone means UTC")
+    bl.add_argument("--branch", required=True, help="the milestone branch")
+    bl.add_argument("--tasks", type=int, required=True, help="number of tasks in the milestone")
+    bl.add_argument("--fix-prs", default="", help="comma-separated post-final-review PR numbers")
+    bl.add_argument("--transcripts", type=Path, required=True, help="Claude Code project dir")
     use = add("usage", node=True)
     use.add_argument("--pct-before", type=float, required=True)
     use.add_argument("--pct-after", type=float, required=True)
@@ -415,6 +423,16 @@ def _run(args: argparse.Namespace) -> object:
         return _post_outcomes(args)
     if cmd == "deploy-watch":
         return _deploy_watch(root, args, now)
+    if cmd == "baseline":
+        try:
+            fix_prs = [int(n) for n in args.fix_prs.split(",") if n.strip()]
+            measured = baseline(
+                args.transcripts.expanduser(), args.since, args.until, SubprocessGh(),
+                args.branch, args.tasks, fix_prs, m,
+            )  # fmt: skip
+        except (ValueError, OSError) as e:
+            raise st.RunStateError(f"baseline failed: {e}") from e
+        return asdict(measured)
     state = st.load(root, m)
     if cmd == "check-merge":
         return _check_merge(root, state, args.pr)
