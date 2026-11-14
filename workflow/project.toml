@@ -5,7 +5,7 @@ main_branch = "main"
 milestone_branch = "milestone/m{n}"
 plans_dir = "docs/superpowers/plans"
 specs_dir = "docs/superpowers/specs"
-reviews_dir = "docs/superpowers/reviews"
+reviews_dir = "docs/reviews"
 roadmap = "docs/superpowers/plans/2026-11-10-roadmap.md"
 deploy_workflow = "build-deploy.yml"
 

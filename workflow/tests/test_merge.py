@@ -109,3 +109,25 @@ def test_merge_without_a_merge_commit_is_an_error():
 def test_garbled_pr_view_is_a_command_error():
     with pytest.raises(CommandError):
         check_merge(passing_state("aaa"), "T1", 5, FakeGh(canned={"pr view": "not json"}))
+
+
+def fix_state(sha, review_node="delta-review", result="pass", gate_task="batched-fix"):
+    s = RunState(milestone=13, nodes={}, fix_branch="m13-final-review-fixes")
+    s.gates.append(GateRecord(gate_task, sha, {"web": True}, True, NOW))
+    s.reviews.append(ReviewRecord(review_node, sha, review_node, result, "v.json", NOW))
+    return s
+
+
+def test_fix_pr_merges_on_its_gate_and_delta_review():
+    c = check_merge(fix_state("aaa"), "batched-fix", 9, FakeGh(pr_view=view("aaa")))
+    assert c.ok and c.reasons == []
+
+
+def test_fix_pr_needs_a_passing_delta_review_for_its_head():
+    gh = FakeGh(pr_view=view("aaa"))
+    findings = check_merge(fix_state("aaa", result="findings"), "batched-fix", 9, gh)
+    assert not findings.ok and any("review" in r for r in findings.reasons)
+    other = check_merge(fix_state("aaa", review_node="final-review"), "batched-fix", 9, gh)
+    assert not other.ok and any("delta-review" in r for r in other.reasons)
+    stale = check_merge(fix_state("aaa"), "batched-fix", 9, FakeGh(pr_view=view("bbb")))
+    assert not stale.ok and any("gate" in r for r in stale.reasons)

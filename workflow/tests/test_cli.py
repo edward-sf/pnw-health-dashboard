@@ -31,7 +31,7 @@ def test_cli_lifecycle(tmp_path, capsys):
     assert run(tmp_path, "status", "--milestone", "13") == 0
     state = json.loads(capsys.readouterr().out)
     assert state["nodes"]["T1.implement"]["status"] == "done"
-    assert state["nodes"]["T1.implement"]["rounds"] == 2
+    assert state["nodes"]["T1.implement"]["rounds"] == 1  # the resumed attempt is not counted
 
 
 def test_cli_budget_exhaustion_exits_2_and_escalates(tmp_path, capsys):
@@ -272,3 +272,74 @@ def test_cli_milestone_pr_fills_merged_pr_numbers(tmp_path, monkeypatch, capsys)
     assert code == 0
     edit = next(c for c in gh.calls if c[:2] == ["pr", "edit"])
     assert "- #410 — M13.T1 First (closes #300)" in edit[edit.index("--body") + 1]
+
+
+def _fix_setup(tmp_path, monkeypatch, view, review_result="pass"):
+    from wf import state as st
+
+    gh = _merge_setup(tmp_path, monkeypatch, {"headRefName": "m13-final-review-fixes", **view})
+    assert run(tmp_path, "start", "batched-fix", "--milestone", "13",
+               "--branch", "m13-final-review-fixes") == 0  # fmt: skip
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("batched-fix", "aaa", {"web": True}, True, "t"))
+    state.reviews.append(
+        st.ReviewRecord("delta-review", "aaa", "delta-review", review_result, "v", "t")
+    )
+    st.save(tmp_path, state)
+    return gh
+
+
+def test_cli_start_batched_fix_records_the_fix_branch(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["fix_branch"] == "m13-final-review-fixes"
+
+
+def test_cli_branch_is_only_for_batched_fix(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.implement", "--milestone", "13", "--branch", "x") == 2
+    assert "--branch" in capsys.readouterr().err
+
+
+def test_cli_check_merge_on_the_fix_branch(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "9", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"ok": True, "reasons": []}
+
+
+def test_cli_check_merge_on_the_fix_branch_needs_delta_pass(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {}, review_result="findings")
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "9", "--milestone", "13") == 1
+    reasons = json.loads(capsys.readouterr().out)["reasons"]
+    assert any("delta-review" in r for r in reasons)
+
+
+def test_cli_merge_on_the_fix_branch(tmp_path, monkeypatch, capsys):
+    gh = _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "9", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out)["task"] == "batched-fix"
+    merge = ["pr", "merge", "9", "--squash", "--delete-branch", "--match-head-commit", "aaa"]
+    assert merge in gh.calls
+
+
+def test_cli_package_final_names_the_report_under_reviews_dir(tmp_path, capsys, monkeypatch):
+    _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            return "[]"
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    capsys.readouterr()
+    args = ["--root", str(tmp_path), "--graph", str(REPO / "workflow/graph.toml"),
+            "--project", str(REPO / "workflow/project.toml")]  # fmt: skip
+    assert main([*args, "package", "final", "--milestone", "11", "--range", "HEAD..HEAD"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert Path(out["report_path"]).parent == tmp_path / "docs/reviews"
+    assert Path(out["report_path"]).name.endswith("-m11-final-review.md")
+    assert ".workflow/work/m11/verdicts/" in out["verdict_path"]
