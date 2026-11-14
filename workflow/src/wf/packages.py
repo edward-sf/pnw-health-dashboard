@@ -91,7 +91,7 @@ def _earlier_findings(root: Path, state: RunState, task: str) -> str:
         if r.task != task or not r.node.endswith(".task-review"):
             continue
         try:
-            found += load_verdict(Path(r.verdict_path)).findings
+            found += load_verdict(root / r.verdict_path).findings
         except VerdictError as e:
             notes.append(f"- (skipped an earlier review at {r.sha}: {e})")
     return "\n".join(filter(None, [_findings_md(found), *notes]))
@@ -150,7 +150,7 @@ def task_review_package(
     ])  # fmt: skip
 
 
-def _review_outcomes(state: RunState) -> str:
+def _review_outcomes(root: Path, state: RunState) -> str:
     out: list[str] = []
     minors: list[Finding] = []
     for r in state.reviews:
@@ -158,7 +158,7 @@ def _review_outcomes(state: RunState) -> str:
             continue
         line = f"- {r.task} at {r.sha}: {r.result}"
         try:
-            minors += [f for f in load_verdict(Path(r.verdict_path)).findings
+            minors += [f for f in load_verdict(root / r.verdict_path).findings
                        if f.severity == "minor"]  # fmt: skip
         except VerdictError as e:
             line += f" (verdict unreadable: {e})"
@@ -211,7 +211,7 @@ def final_package(
         ("Range", f"`{range_}`\n\n```\n{git.run(['diff', '--stat', range_]).rstrip()}\n```"),
         ("Review Focus", _body(plan, r"^review focus$")),
         ("Spec goals and anti-goals", spec_text),
-        ("Task review outcomes and deferred minors", _review_outcomes(state)),
+        ("Task review outcomes and deferred minors", _review_outcomes(root, state)),
         ("build-deploy history", _runs(gh, project, state.milestone)),
         ("Escalations", _escalations(state)),
         ("Rules", _rules("final-review", verdict_path(root, state, "final-review"), True, head)),

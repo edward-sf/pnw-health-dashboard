@@ -574,3 +574,33 @@ def test_cli_gates_budget_refuses_the_fourth_round(tmp_path, capsys):
     capsys.readouterr()
     assert run(tmp_path, "start", "T1.gates", "--milestone", "13") == 2
     assert "budget of 3 rounds" in capsys.readouterr().err
+
+
+def test_cli_verdict_paths_are_root_relative_so_packages_read_them_from_any_cwd(
+    tmp_path, capsys, monkeypatch
+):
+    _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            return json.dumps({"headRefOid": "head1"}) if args[:2] == ["pr", "view"] else "[]"
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
+    rel = ".workflow/work/m11/verdicts/T3.task-review-r1.json"
+    (tmp_path / rel).parent.mkdir(parents=True)
+    minor = {"id": "M1", "severity": "minor", "title": "Tidy", "file": None, "line": None,
+             "detail": "a deferred minor"}  # fmt: skip
+    (tmp_path / rel).write_text(json.dumps({"node": "T3.task-review", "task": "T3",
+                                            "sha": "head1", "result": "pass",
+                                            "findings": [minor]}))  # fmt: skip
+    monkeypatch.chdir(tmp_path)
+    capsys.readouterr()
+    assert run(tmp_path, "ingest", "T3.task-review", rel, "--milestone", "11", "--pr", "5") == 0
+    assert json.loads(capsys.readouterr().out)["verdict_path"] == rel
+    elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    assert _proj(tmp_path, "package", "final", "--milestone", "11", "--range", "HEAD..HEAD") == 0
+    text = Path(json.loads(capsys.readouterr().out)["path"]).read_text()
+    assert "verdict unreadable" not in text and "a deferred minor" in text

@@ -536,7 +536,8 @@ def _run(args: argparse.Namespace) -> object:
     if cmd == "package":
         return _package(root, args, state)
     if cmd == "ingest":
-        review = ingest(state, args.node, args.verdict, now, _head(root, state, args.node, args.pr))
+        head = _head(root, state, args.node, args.pr)
+        review = ingest(state, args.node, args.verdict, now, head, root)
         st.save(root, state)
         return asdict(review)
     if cmd == "next":

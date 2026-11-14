@@ -116,7 +116,20 @@ def _written_after(path: Path, started_at: str | None) -> bool:
     return mtime > datetime.fromisoformat(started_at).timestamp()
 
 
-def ingest(state: RunState, node: str, path: Path, now: str, head: str) -> ReviewRecord:
+def _stored(path: Path, root: Path | None) -> str:
+    """The path as kept in run state: relative to the repo root when under it."""
+    if root is None:
+        return str(path)
+    full = path.resolve()
+    try:
+        return str(full.relative_to(root.resolve()))
+    except ValueError:
+        return str(full)
+
+
+def ingest(
+    state: RunState, node: str, path: Path, now: str, head: str, root: Path | None = None
+) -> ReviewRecord:
     """Record a verdict for `node`, provided it names this node and the PR's current head.
 
     The node must be running and the file written after its round started. That proves the
@@ -134,6 +147,6 @@ def ingest(state: RunState, node: str, path: Path, now: str, head: str) -> Revie
     if verdict.sha != head:
         raise VerdictError(f"verdict sha {verdict.sha} is not the head {head}: review is stale")
     task = node.rpartition(".")[0] or node  # final and delta reviews are keyed by node name
-    record = ReviewRecord(task, verdict.sha, node, verdict.result, str(path), now)
+    record = ReviewRecord(task, verdict.sha, node, verdict.result, _stored(path, root), now)
     state.reviews.append(record)
     return record

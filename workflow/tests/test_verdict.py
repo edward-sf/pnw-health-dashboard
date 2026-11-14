@@ -134,3 +134,11 @@ def test_ingest_refuses_a_verdict_older_than_the_round(tmp_path):
         ingest(s, "T1.task-review", path, NOW, head="abc")
     os.utime(path, (started + 60, started + 60))
     assert ingest(s, "T1.task-review", path, NOW, head="abc").result == "pass"
+
+
+def test_ingest_stores_the_path_relative_to_root(tmp_path):
+    s = state_with_task(tmp_path)
+    path = write_json(tmp_path, verdict(sha="abc"))
+    assert (
+        ingest(s, "T1.task-review", path, NOW, head="abc", root=tmp_path).verdict_path == "v.json"
+    )
