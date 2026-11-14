@@ -22,7 +22,7 @@ Every `wf` command prints JSON on stdout. Exit 0 is success; anything else is li
 
 1. `wf status`. If it says there is no run state, the milestone has not been set up: stop and tell the author to run `wf setup` (after the plan gate).
 2. Read the task graph named by `task_graph` in the status: it gives each task's `issue`, `branch` and `steps`.
-3. **Restart:** for each node with `status: running` and no live subagent or background job of yours, `wf resume <node>`. When it is next dispatched, an implement or batched-fix node gets the steps already on its branch: `git log --oneline origin/milestone/m<N>..origin/<branch>` (one line per step, oldest first).
+3. **Restart:** in a new session, every node with `status: running` is interrupted: no subagent or background job of this session is working on it. `wf resume <node>` each one (it returns the round it spent), then let `wf next` dispatch it again; a resumed deploy-watch just polls again. If `final-review` is done, recover `{report_path}` with `ls docs/reviews/*-m<N>-final-review.md`, because its date may not be today's. When a resumed node is dispatched, an implement or batched-fix node gets the steps already on its branch: `git log --oneline origin/milestone/m<N>..origin/<branch>` (one line per step, oldest first).
 
 ## The loop
 

@@ -248,6 +248,7 @@ def resume(state: RunState, node: str, now: str) -> None:
     if rec.status != "running":
         raise RunStateError(f"{node} is not running (status {rec.status})")
     rec.status = "pending"
+    rec.rounds = max(0, rec.rounds - 1)  # the next start spends the round again
     rec.started_at = None
     rec.note = f"interrupted, resumed at {now}"
 

@@ -95,6 +95,8 @@ def test_resume_does_not_spend_a_round(tmp_path):
     start_round(s, "T1.implement", 3, NOW)
     resume(s, "T1.implement", NOW)
     assert s.nodes["T1.implement"].status == "pending"
+    assert s.nodes["T1.implement"].rounds == 0
+    start_round(s, "T1.implement", 3, NOW)
     assert s.nodes["T1.implement"].rounds == 1
 
 

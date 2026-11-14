@@ -31,7 +31,7 @@ def test_cli_lifecycle(tmp_path, capsys):
     assert run(tmp_path, "status", "--milestone", "13") == 0
     state = json.loads(capsys.readouterr().out)
     assert state["nodes"]["T1.implement"]["status"] == "done"
-    assert state["nodes"]["T1.implement"]["rounds"] == 2
+    assert state["nodes"]["T1.implement"]["rounds"] == 1  # the resumed attempt is not counted
 
 
 def test_cli_budget_exhaustion_exits_2_and_escalates(tmp_path, capsys):
