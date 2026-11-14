@@ -12,8 +12,17 @@ from pathlib import Path
 
 from wf import state as st
 from wf.config import ConfigError, Graph, load_graph, load_project
+from wf.deploy import watch_deploy
 from wf.gates import LoggedRunner, run_gates
 from wf.github import CommandError, SubprocessGh, SubprocessGit
+from wf.merge import MergeCheck, check_merge, merge_task, task_for_branch, view_pr
+from wf.milestone_pr import (
+    mark_ready,
+    post_final_review,
+    post_outcomes,
+    render_milestone_body,
+    render_outcomes,
+)
 from wf.packages import (
     delta_package,
     final_package,
@@ -32,7 +41,7 @@ from wf.schedule import (
     parse_usage,
 )
 from wf.setup import setup_milestone
-from wf.tasks import PlanError, check_plan_file
+from wf.tasks import PlanError, check_plan_file, parse_plan_tasks
 from wf.verdict import VerdictError, ingest, load_verdict
 
 
@@ -114,6 +123,24 @@ def _parser() -> argparse.ArgumentParser:
     ing = add("ingest", node=True)
     ing.add_argument("verdict", type=Path)
     ing.add_argument("--pr", type=int, help="PR number (default: found from the task's branch)")
+    cm = add("check-merge")
+    cm.add_argument("pr", type=int)
+    mg = add("merge")
+    mg.add_argument("pr", type=int)
+    dw = add("deploy-watch", node=True)
+    dw.add_argument("--sha", help="merged commit (default: origin/<milestone branch> after fetch)")
+    dw.add_argument("--timeout", type=int, default=1800, help="seconds to wait")
+    mp = add("milestone-pr")
+    mp.add_argument("--ready", action="store_true", help="mark the PR ready for review")
+    pfr = sub.add_parser("post-final-review")
+    pfr.add_argument("pr", type=int)
+    pfr.add_argument("--report", type=Path, required=True)
+    pos = sub.add_parser("post-outcomes")
+    pos.add_argument("pr", type=int)
+    pos.add_argument("--findings", type=Path, required=True, help="the final-review verdict file")
+    pos.add_argument(
+        "--outcomes", type=Path, required=True, help="JSON object: finding id -> outcome"
+    )
     use = add("usage", node=True)
     use.add_argument("--pct-before", type=float, required=True)
     use.add_argument("--pct-after", type=float, required=True)
@@ -210,6 +237,100 @@ def _head(root: Path, state: st.RunState, node: str, pr: int | None) -> str:
         raise CommandError(f"cannot read the head of PR {pr}") from e
 
 
+def _task_of_pr(root: Path, state: st.RunState, gh: SubprocessGh, pr: int) -> str | None:
+    if not state.task_graph:
+        raise st.RunStateError("run state has no task graph; re-run setup")
+    branch = str(view_pr(gh, pr, "headRefName").get("headRefName", ""))
+    return task_for_branch(load_task_graph(root / state.task_graph), branch)
+
+
+def _check_merge(root: Path, state: st.RunState, pr: int) -> object:
+    gh = SubprocessGh()
+    task = _task_of_pr(root, state, gh, pr)
+    if task is None:
+        return asdict(MergeCheck(False, [f"PR {pr} is not on any task's branch"]))
+    return asdict(check_merge(state, task, pr, gh))
+
+
+def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
+    gh = SubprocessGh()
+    task = _task_of_pr(root, state, gh, pr)
+    if task is None:
+        raise st.RunStateError(f"PR {pr} is not on any task's branch")
+    sha = merge_task(state, task, pr, gh)
+    st.finish(state, f"{task}.merge", "done", now, f"merged as {sha}")
+    st.save(root, state)
+    return {"task": task, "sha": sha}
+
+
+def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
+    project = load_project(args.project or root / "workflow/project.toml")
+    branch = project.milestone_branch.format(n=args.milestone)
+    git = SubprocessGit(root)
+    sha = args.sha
+    if not sha:
+        git.run(["fetch", "origin", branch])
+        sha = git.run(["rev-parse", f"origin/{branch}"]).strip()
+    result = watch_deploy(SubprocessGh(), project, branch, sha, timeout_s=args.timeout)
+    # The watch runs in the background while other commands write state: reload before saving.
+    state = st.load(root, args.milestone)
+    status: st.NodeStatus = "done" if result.conclusion == "success" else "failed"
+    st.finish(state, args.node, status, now, f"{result.conclusion}: {result.run_url or sha}")
+    st.save(root, state)
+    return {**asdict(result), "sha": sha}
+
+
+def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
+    if not state.task_graph:
+        raise st.RunStateError("run state has no task graph; re-run setup")
+    project = load_project(args.project or root / "workflow/project.toml")
+    graph = load_task_graph(root / state.task_graph)
+    try:
+        tasks = parse_plan_tasks((root / graph.plan).read_text())
+    except OSError as e:
+        raise st.RunStateError(f"cannot read plan {graph.plan}: {e.strerror}") from e
+    issues = {t.id: t.issue for t in graph.tasks.values() if t.issue is not None}
+    gh = SubprocessGh()
+    head = project.milestone_branch.format(n=args.milestone)
+    found = json.loads(
+        gh.run(
+            [
+                "pr",
+                "list",
+                "--head",
+                head,
+                "--base",
+                project.main_branch,
+                "--state",
+                "open",
+                "--json",
+                "number",
+            ]
+        )  # fmt: skip
+    )
+    if not found:
+        raise st.RunStateError(f"no open milestone PR from {head}; run setup")
+    pr = int(found[0]["number"])
+    body = str(view_pr(gh, pr, "body").get("body", ""))
+    new = render_milestone_body(state, tasks, issues, body)
+    gh.run(["pr", "edit", str(pr), "--body", new])
+    if args.ready:
+        mark_ready(gh, pr)
+    return {"pr": pr, "ready": bool(args.ready)}
+
+
+def _post_outcomes(args: argparse.Namespace) -> object:
+    findings = load_verdict(args.findings).findings
+    try:
+        outcomes = json.loads(args.outcomes.read_text())
+    except (OSError, ValueError) as e:
+        raise st.RunStateError(f"cannot read outcomes from {args.outcomes}") from e
+    if not isinstance(outcomes, dict):
+        raise st.RunStateError("outcomes must be a JSON object of finding id -> outcome")
+    post_outcomes(SubprocessGh(), args.pr, render_outcomes(findings, outcomes))
+    return {"posted": len(findings)}
+
+
 def _window_from_last_decision(root: Path, milestone: int, node: str) -> str | None:
     try:
         last = json.loads((st.run_dir(root, milestone) / "last-decision.json").read_text())
@@ -257,7 +378,20 @@ def _run(args: argparse.Namespace) -> object:
             raise st.RunStateError("--tasks needs at least one task id")
         state = st.init_run(root, m, load_graph(graph_path), tasks, args.task_graph)
         return asdict(state)
+    if cmd == "post-final-review":
+        post_final_review(SubprocessGh(), args.pr, args.report)
+        return {"posted": str(args.report)}
+    if cmd == "post-outcomes":
+        return _post_outcomes(args)
+    if cmd == "deploy-watch":
+        return _deploy_watch(root, args, now)
     state = st.load(root, m)
+    if cmd == "check-merge":
+        return _check_merge(root, state, args.pr)
+    if cmd == "merge":
+        return _merge(root, state, args.pr, now)
+    if cmd == "milestone-pr":
+        return _milestone_pr(root, args, state)
     if cmd == "status":
         return asdict(state)
     if cmd == "gate":
@@ -317,6 +451,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(json.dumps(result, indent=2))
     problems = result.get("problems") if isinstance(result, dict) else None
-    if isinstance(result, dict) and result.get("passed") is False:
+    if isinstance(result, dict) and (
+        result.get("passed") is False
+        or result.get("ok") is False
+        or result.get("conclusion") == "failure"
+    ):
         return 1
+    if isinstance(result, dict) and result.get("conclusion") == "timeout":
+        return 3
     return 2 if problems else 0
