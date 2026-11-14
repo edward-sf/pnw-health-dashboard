@@ -272,6 +272,20 @@ def test_merge_guard_blocks_when_lookup_fails(stubs):
     assert run_hook("guard-merge.sh", bash(MERGE), _env(stubs)).returncode == 2
 
 
+def test_merge_guard_refusals_do_not_report_a_hook_error(stubs):
+    _make_run(stubs)
+    out = json.dumps({"ok": False, "reasons": ["no gate record for T1 at abc"]})
+    refused = run_hook("guard-merge.sh", bash(MERGE), _env(stubs, UV_OUT=out, UV_EXIT="1"))
+    assert refused.returncode == 2 and "no gate record" in refused.stderr
+    assert "hook error" not in refused.stderr
+    errored = run_hook("guard-merge.sh", bash(MERGE), _env(stubs, UV_OUT="", UV_EXIT="2"))
+    assert errored.returncode == 2 and "hook error" not in errored.stderr
+    _script(Path(stubs["env"]["PATH"].split(":")[0]) / "gh", "exit 1\n")
+    lookup = run_hook("guard-merge.sh", bash(MERGE), _env(stubs))
+    assert lookup.returncode == 2 and "could not look up" in lookup.stderr
+    assert "hook error" not in lookup.stderr
+
+
 # fail closed
 
 
