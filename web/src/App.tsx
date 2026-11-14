@@ -4,6 +4,7 @@ import { Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import ErrorPage from "./data/ErrorPage";
 import { RouteErrorBoundary } from "./data/RouteErrorBoundary";
 import { type DataState, useData } from "./data/useData";
+import { PHONE_QUERY, useMediaQuery } from "./hooks/useMediaQuery";
 import { usePageTitle } from "./hooks/usePageTitle";
 import { useRouteFocus } from "./hooks/useRouteFocus";
 import { Explorer } from "./explorer/Explorer";
@@ -36,6 +37,8 @@ export default function App() {
   const explorerSearch = useLastExplorerSearch();
   const { pathname } = useLocation();
   useRouteFocus();
+  // On phones the theme button is drawn on the brand's row, above the nav; keep tab order the same.
+  const isPhone = useMediaQuery(PHONE_QUERY);
   return (
     <>
       <header className="site-header">
@@ -44,6 +47,7 @@ export default function App() {
             <MountainSnow className="site-mark" aria-hidden="true" />
             PNW Health Dashboard
           </h1>
+          {isPhone && <ThemeMenu />}
           <nav aria-label="Primary">
             <NavLink to={{ pathname: "/", search: explorerSearch }} end>
               Explorer
@@ -51,7 +55,7 @@ export default function App() {
             <NavLink to="/methodology">Methodology</NavLink>
             <NavLink to="/about">About</NavLink>
           </nav>
-          <ThemeMenu />
+          {!isPhone && <ThemeMenu />}
         </div>
       </header>
       <main>
