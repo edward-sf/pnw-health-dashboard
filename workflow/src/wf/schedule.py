@@ -297,6 +297,8 @@ def next_decision(
         est = node_estimate(state, graph, tasks, first, pacing)
         return Dispatch(first, model(first), est, "off")
 
+    if _is_past(five.resets_at, now):
+        five = Window(0.0, five.resets_at)  # the window has reset since this reading
     fresh = not same_window(state.window, five.resets_at) or _is_past(five.resets_at, now)
     considered = ready[:1] if fresh else ready
     weekly = usage.weekly

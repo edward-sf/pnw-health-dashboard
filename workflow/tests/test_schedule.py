@@ -140,6 +140,14 @@ def test_reset_in_the_past_counts_as_fresh():
     assert isinstance(d, Dispatch) and d.node == "T1.implement"
 
 
+def test_reset_in_the_past_counts_as_an_empty_window_even_at_99_percent():
+    """A stale reading after a long pause: the window has reset, so 99% is really 0%."""
+    s, tasks = run_with([("T1", 8, ()), ("T2", 2, ())])
+    s.window = PAST
+    d = next_decision(s, G, tasks, usage(99, PAST), PACING, NOW)
+    assert isinstance(d, Dispatch) and d.node == "T1.implement"
+
+
 def test_fresh_window_that_cannot_fit_first_node_is_blocked():
     s, tasks = run_with([("T1", 200, ())])
     s.window = "OLD"
