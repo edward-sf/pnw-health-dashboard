@@ -1029,7 +1029,7 @@
   }
 
   /* Race breakdown: text rows, each over a dot-and-interval mark on one shared axis. One neutral
-     ink for every group, so no group reads as better or worse by color. */
+     ink for every group, so no group reads as a verdict by color. */
   .panel-indicator .race-breakdown {
     margin-top: 0.875rem;
   }

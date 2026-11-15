@@ -104,7 +104,7 @@ function ModelResult({
           note={note}
         />
         <p className="model-range-note">
-          {`A difference beyond ±${formatValue(threshold_75, unit, d)} is flagged as somewhat better or worse, and beyond ±${formatValue(threshold_90, unit, d)} as notably. These ranges allow for the model's typical error and ${
+          {`A difference beyond ±${formatValue(threshold_75, unit, d)} is flagged as somewhat higher or lower, and beyond ±${formatValue(threshold_90, unit, d)} as notably. These ranges allow for the model's typical error and ${
             entry.se === null
               ? "a typical county's measurement uncertainty, since this county's estimate has no confidence interval."
               : "this county's own measurement uncertainty."

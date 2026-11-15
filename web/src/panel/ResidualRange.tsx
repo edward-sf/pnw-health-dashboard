@@ -40,9 +40,9 @@ export function rangeMeaning(
 
 function baseMeaning(residual: number, r: string, a: string, b: string, t75: number, t90: number): string {
   const abs = Math.abs(residual);
-  if (abs > t90) return `${r} is beyond ±${b}, the range for notably better or worse.`;
+  if (abs > t90) return `${r} is beyond ±${b}, the range for notably higher or lower.`;
   if (abs > t75) {
-    return `${r} is beyond ±${a} but within ±${b}, somewhat better or worse than expected.`;
+    return `${r} is beyond ±${a} but within ±${b}, somewhat higher or lower than expected.`;
   }
   return `${r} is within ±${a}, about as expected.`;
 }

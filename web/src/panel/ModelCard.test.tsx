@@ -28,7 +28,7 @@ test("King: comparison, badge, range sentence and factors", () => {
   expect(screen.getByText("Figures are rounded.")).toBeInTheDocument();
   expect(
     screen.getByText(
-      "A difference beyond ±2.4 years is flagged as somewhat better or worse, and beyond ±3.4 years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty.",
+      "A difference beyond ±2.4 years is flagged as somewhat higher or lower, and beyond ±3.4 years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty.",
     ),
   ).toBeInTheDocument();
   expect(
