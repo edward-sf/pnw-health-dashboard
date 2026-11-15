@@ -86,7 +86,7 @@ The hex values are starting values: the builder adjusts them as needed to pass t
 
 **Data colours are fixed (call).** Both ramps, the four model tier colours (`web/src/model/modelView.ts`, RdBu), `tierNone` and the hatch never move for the brand. When a brand colour is too close to one, the brand colour moves.
 
-**Mark.** A simple mountain with a sun, drawn as SVG on a small grid so it reads at 16px. Variants: on fir (header), on paper, and monochrome. The favicon is the mark alone.
+**Mark.** A simple mountain with a sun, drawn as SVG on a small grid so it reads at 16px. One variant, for a dark surface: on fir in the header, and as the favicon, which is the mark alone. On-paper and monochrome variants are out of scope until a surface needs them (author's decision, §12).
 
 **Type.** Figtree Variable for everything, self-hosted (call). Figures use `tabular-nums` wherever numbers align (already used in places). A modular type scale with named steps replaces ad-hoc sizes.
 
@@ -229,6 +229,7 @@ Deviations from this spec, with the PR that made each.
 - **Legend (#325).** The model legend uses compact rows inside the map stage so its six rows clear the Alaska inset frame.
 - **Sensitivity review (#326).** The legend test asserts the end labels are anchored to the first and last bins, because "More favorable" and "Less favorable" are wider than a swatch. The flip e2e asserts the first legend item in TIERS order ("Notably lower" for Life expectancy, "Notably higher" for Premature death). Tier sentences in `ResidualRange.tsx` and `ModelCard.tsx` also read "higher or lower than expected".
 - **Cross-browser check (#329).** Firefox and iOS Safari are opt-in Playwright projects behind `E2E_ALL_BROWSERS=1`, not part of PR `ci`. `firefox` runs `smoke|stage|brand` (it cannot emulate touch or a phone viewport, so `mobile` is excluded). `mobile-safari` runs `smoke|mobile|stage|brand`; its failures are test and emulation issues (#327, #328), and `styles.css` needed no fix.
+- **Mark variants (author's decision after the final review, M5).** Only the on-fir mark was built, and §4 is narrowed to it. Its mountain uses `--focus-on-fir` and its snow uses `--header-ink`, so retuning either token recolours the mark; the sun stays a literal. Give the mark its own tokens if it ever needs to diverge from them, or when an on-paper or monochrome variant is added.
 
 ## Appendix A — Sensitivity decision table
 
