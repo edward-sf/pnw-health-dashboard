@@ -218,6 +218,18 @@ The apply work changes the catalog (`indicators.yaml` labels, descriptions, dire
 - Whether the tagline drops on phones.
 - How #296 is fixed, provided the test waits on an observable condition.
 
+## 12. As built
+
+Deviations from this spec, with the PR that made each.
+
+- **Token values (#321).** `--fir` and `--fir-soft` moved off the starting values (fir `#0f3b2c`, fir-soft `#c6ecd8` light and `#173c2d` dark, dark fir `#06150f`) so every brand colour is at least ΔE 15 from every data colour in both themes. The radius scale (`--radius-sm/md/lg`) is plain `:root` tokens; Tailwind's defaults match, so the self-referencing `@theme inline` entries were dropped. `DATA_COLORS` lists only the hex tier fills, because the hatch is a `url()` pattern.
+- **Button and sweep (#322).** `Button` variants are `primary | secondary | ghost` and sizes `sm | md | icon`; `outline` callers moved to `secondary`. The raw-value guard needed `styles.css` swept in full, which added `--text-display`, `--text-fluid-title` and `--text-fluid-page`; odd sizes snap to the nearest scale step. The command filter's focus is a 2px `--focus` bottom border with a `--wash` tint, and `web/e2e/keyboard.spec.ts` accepts it.
+- **Explorer sweep (#323).** The explorer, map, panel, table and search sources already used tokens, so the widened guard passed without edits. SVG chart `fontSize` attributes and in-text link-style buttons were left alone.
+- **Header and brand surfaces (#324).** `ThemeMenu.tsx` gets header-ink styling. On phones the header is two rows (brand, then nav with the theme button at its right end), with no DOM reordering. The tagline hides below 720px, not 480px. The favicon PNG, Apple touch icon and preview image were rasterised from the mark with no committed generator. `404.html` writes the social URLs out with the default origin, since `public/` is not processed by Vite.
+- **Legend (#325).** The model legend uses compact rows inside the map stage so its six rows clear the Alaska inset frame.
+- **Sensitivity review (#326).** The legend test asserts the end labels are anchored to the first and last bins, because "More favorable" and "Less favorable" are wider than a swatch. The flip e2e asserts the first legend item in TIERS order ("Notably lower" for Life expectancy, "Notably higher" for Premature death). Tier sentences in `ResidualRange.tsx` and `ModelCard.tsx` also read "higher or lower than expected".
+- **Cross-browser check (#329).** Firefox and iOS Safari are opt-in Playwright projects behind `E2E_ALL_BROWSERS=1`, not part of PR `ci`. `firefox` runs `smoke|stage|brand` (it cannot emulate touch or a phone viewport, so `mobile` is excluded). `mobile-safari` runs `smoke|mobile|stage|brand`; its failures are test and emulation issues (#327, #328), and `styles.css` needed no fix.
+
 ## Appendix A — Sensitivity decision table
 
 Approved by the author with the M13 plan (2026-11-14).
