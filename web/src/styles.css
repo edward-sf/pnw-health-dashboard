@@ -557,20 +557,26 @@
       gap: 0.25rem 1rem;
     }
 
-    .map-stage .legend-bins {
-      gap: 0.25rem 0.75rem;
-    }
-
     /* A narrow stage leaves a small corner; a smaller legend keeps it clear of Alaska's frame. */
     @container (max-width: 800px) {
       .map-stage :is(.legend li, .legend-null, .legend-end) {
         font-size: var(--text-xs);
       }
+    }
 
-      .map-stage .legend-swatch {
-        width: 12px;
-        height: 12px;
-      }
+    /* The model legend is six rows tall; compact rows keep it above Alaska's frame. */
+    .map-stage .legend-model .legend-bins {
+      gap: 2px;
+    }
+
+    .map-stage .legend-model li {
+      font-size: var(--text-xs);
+      line-height: 1.2;
+    }
+
+    .map-stage .legend-model :is(.legend-swatch, svg) {
+      width: 12px;
+      height: 12px;
     }
 
     /* The title block's description already says this from 721px; it would crowd the corner. */
@@ -672,20 +678,48 @@
     border-top: 1px solid var(--line);
   }
 
-  /* The end labels stay beside the bins, which wrap among themselves. */
+  /* One ordered scale: the end labels sit in a row above the ramp, the low one over the first
+     swatch and the high one over the last; each swatch carries its range beneath it. */
   .legend-scale {
     display: flex;
-    align-items: baseline;
-    gap: 0.5rem 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .legend-ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
   }
 
   .legend-bins {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    flex-wrap: nowrap;
+    gap: 2px;
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  .legend-bins > li {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+
+  .legend-model .legend-bins {
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .legend-model .legend-bins > li {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.375rem;
   }
 
   .legend li,
@@ -697,6 +731,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .legend-range {
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
   .legend-swatch {
     display: inline-block;
     flex: none;
@@ -706,6 +745,11 @@
     border: 1px solid var(--swatch-border);
     border-radius: var(--radius-sm);
     box-sizing: border-box;
+  }
+
+  .legend-bins:not(ol) .legend-swatch {
+    width: 100%;
+    height: 14px;
   }
 
   .legend-end {

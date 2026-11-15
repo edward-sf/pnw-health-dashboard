@@ -237,3 +237,35 @@ for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
     expect(short).toEqual([]);
   });
 }
+
+for (const size of [{ width: 1440, height: 900 }, { width: 900, height: 800 }]) {
+  for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
+    test(`the legend is one row inside the stage, clear of Alaska, at ${size.width}×${size.height} on ${query}`, async ({
+      page,
+    }, testInfo) => {
+      onlyIn("chromium", testInfo.project.name);
+      await open(page, size, query);
+      const stage = (await page.locator(".map-stage").boundingBox())!;
+      const legend = (await page.locator(".map-stage .legend").boundingBox())!;
+      const frame = (await page.locator("rect.inset-frame").boundingBox())!;
+      expect(legend.x).toBeGreaterThanOrEqual(stage.x);
+      expect(legend.y).toBeGreaterThanOrEqual(stage.y);
+      expect(legend.x + legend.width).toBeLessThanOrEqual(stage.x + stage.width);
+      expect(legend.y + legend.height).toBeLessThanOrEqual(stage.y + stage.height);
+      const apart =
+        legend.x + legend.width <= frame.x ||
+        frame.x + frame.width <= legend.x ||
+        legend.y + legend.height <= frame.y ||
+        frame.y + frame.height <= legend.y;
+      expect(apart).toBe(true);
+      if (query.includes("show=expected")) return;
+      const swatches = await page.locator('[data-testid="legend-ramp"] .legend-swatch').evaluateAll((els) =>
+        els.map((e) => e.getBoundingClientRect()),
+      );
+      expect(swatches.length).toBeGreaterThanOrEqual(2);
+      for (const s of swatches) expect(Math.abs(s.top - swatches[0]!.top)).toBeLessThanOrEqual(2);
+      const low = (await page.locator('.legend-end[data-end="low"]').boundingBox())!;
+      expect(low.x + low.width).toBeLessThanOrEqual(swatches[0]!.left + swatches[0]!.width + 0.5);
+    });
+  }
+}
