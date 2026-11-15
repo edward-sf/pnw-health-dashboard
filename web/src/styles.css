@@ -741,6 +741,18 @@
     line-height: 1.25;
   }
 
+  /* The unit sits at the right end of the no-data row, so it costs no extra line. */
+  .legend-null:has(.legend-unit) {
+    flex: 1 1 100%;
+  }
+
+  .legend-unit {
+    margin-left: auto;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
   .legend-swatch {
     display: inline-block;
     flex: none;
