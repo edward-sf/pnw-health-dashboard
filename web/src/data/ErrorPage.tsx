@@ -27,7 +27,7 @@ export default function ErrorPage({ message, onRetry, pageHeading = false }: Pro
       <p role="alert">{message}</p>
       <Button
         type="button"
-        variant="outline"
+        variant="secondary"
         onClick={(e) => {
           const button = e.currentTarget;
           onRetry();
