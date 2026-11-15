@@ -1,12 +1,12 @@
-import { MountainSnow } from "lucide-react";
 import { useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation } from "react-router";
 import ErrorPage from "./data/ErrorPage";
 import { RouteErrorBoundary } from "./data/RouteErrorBoundary";
 import { type DataState, useData } from "./data/useData";
-import { PHONE_QUERY, useMediaQuery } from "./hooks/useMediaQuery";
 import { usePageTitle } from "./hooks/usePageTitle";
 import { useRouteFocus } from "./hooks/useRouteFocus";
+import { BrandMark } from "./brand/BrandMark";
+import { pageTitle, TAGLINE } from "./brand/brand";
 import { Explorer } from "./explorer/Explorer";
 import { About } from "./pages/About";
 import { Methodology } from "./pages/Methodology";
@@ -20,7 +20,7 @@ function useLastExplorerSearch(): string {
 }
 
 function ExplorerRoute({ state }: { state: DataState }) {
-  usePageTitle("PNW Health Dashboard");
+  usePageTitle(pageTitle());
   return (
     <>
       {state.status === "loading" && <p className="app-status">Loading data…</p>}
@@ -37,17 +37,15 @@ export default function App() {
   const explorerSearch = useLastExplorerSearch();
   const { pathname } = useLocation();
   useRouteFocus();
-  // On phones the theme button is drawn on the brand's row, above the nav; keep tab order the same.
-  const isPhone = useMediaQuery(PHONE_QUERY);
   return (
     <>
       <header className="site-header">
         <div className="site-header-inner">
-          <h1>
-            <MountainSnow className="site-mark" aria-hidden="true" />
-            PNW Health Dashboard
-          </h1>
-          {isPhone && <ThemeMenu />}
+          <div className="site-brand">
+            <BrandMark className="site-mark" />
+            <h1>PNW Health Atlas</h1>
+            <p className="site-tagline">{TAGLINE}</p>
+          </div>
           <nav aria-label="Primary">
             <NavLink to={{ pathname: "/", search: explorerSearch }} end>
               Explorer
@@ -55,7 +53,7 @@ export default function App() {
             <NavLink to="/methodology">Methodology</NavLink>
             <NavLink to="/about">About</NavLink>
           </nav>
-          {!isPhone && <ThemeMenu />}
+          <ThemeMenu />
         </div>
       </header>
       <main>

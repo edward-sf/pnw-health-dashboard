@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import ErrorPage from "../data/ErrorPage";
+import { pageTitle } from "../brand/brand";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { DataState } from "../data/useData";
 import { defaultTargetId, targetModel } from "../model/targetView";
@@ -29,7 +30,7 @@ const CONTENTS = [
 ] as const;
 
 export function Methodology({ state }: { state: DataState }) {
-  usePageTitle("Methodology · PNW Health Dashboard");
+  usePageTitle(pageTitle("Methodology"));
   useHashFocus(state.status === "ready");
   // Null until the reader picks an outcome; the default needs the loaded model's targets.
   const [picked, setTargetId] = useState<string | null>(null);
