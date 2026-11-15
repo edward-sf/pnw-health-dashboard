@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/figtree";
 
 /* `dark:` utilities follow the `dark` class on <html> (set by index.html and ThemeProvider). */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -11,15 +11,22 @@
    against --stage, which must match the palette's `stage` in src/color/palette.ts (also tested). */
 :root {
   color-scheme: light;
-  --paper: #f3f5f4;
+  --paper: #f2f5f1;
   --surface: #ffffff;
   --ink: #17252a;
   --ink-muted: #52626a;
   --line: #d6dcdb;
   /* Control borders: 3:1 or better against the surface (WCAG 1.4.11). */
   --line-strong: #7c8a8d;
-  --fir: #1f5c4a;
-  --fir-soft: #e2eee9;
+  /* Brand: fir is the header and brand surface, evergreen is the accent (links, selection,
+     primary), and fir-soft is the mint tint. The mark's sun colour is not a token: mark only. */
+  --fir: #0f3b2c;
+  --evergreen: #2b6b55;
+  --evergreen-ink: #ffffff;
+  --fir-soft: #c6ecd8;
+  --header-ink: #f2f5f1;
+  --focus: #0f3b2c;
+  --focus-on-fir: #8fcfb3;
   --wash: #e9edec;
   --alert: #b42318;
   --stage: #ffffff;
@@ -42,11 +49,19 @@
   --shadow-drawer: 0 -4px 24px rgb(23 37 42 / 18%);
   --shadow-pop: 0 8px 24px rgb(23 37 42 / 14%);
 
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-full: 9999px;
   --radius: 0.5rem;
   --header-height: 3.5rem;
   --gutter: 1.25rem;
-  /* Archivo's width axis: headings and figures run condensed, text runs at normal width. */
-  --condensed: 78%;
 }
 
 /* The dark theme: a dark blue-grey stage, lighter surfaces raised on it, and the same data colors.
@@ -59,8 +74,13 @@
   --ink-muted: #9aabb0;
   --line: #2f3b3f;
   --line-strong: #6e7f84;
-  --fir: #78c4a4;
-  --fir-soft: #1f3a31;
+  --fir: #06150f;
+  --evergreen: #78c4a4;
+  --evergreen-ink: #06150f;
+  --fir-soft: #173c2d;
+  --header-ink: #e4eae9;
+  --focus: #8fcfb3;
+  --focus-on-fir: #8fcfb3;
   --wash: #253034;
   --alert: #ff8a80;
   --stage: #161d20;
@@ -81,14 +101,14 @@
 }
 
 @theme inline {
-  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--paper);
   --color-foreground: var(--ink);
   --color-card: var(--surface);
   --color-card-foreground: var(--ink);
-  --color-primary: var(--ink);
-  --color-primary-foreground: var(--surface);
+  --color-primary: var(--evergreen);
+  --color-primary-foreground: var(--evergreen-ink);
   --color-secondary: var(--wash);
   --color-secondary-foreground: var(--ink);
   --color-muted: var(--wash);
@@ -98,12 +118,9 @@
   --color-destructive: var(--alert);
   --color-border: var(--line);
   --color-input: var(--line-strong);
-  --color-ring: var(--ink);
+  --color-ring: var(--focus);
   --color-fir: var(--fir);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
@@ -126,7 +143,7 @@
 
   /* The one focus indicator for every interactive element and focus target. */
   :focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -134,14 +151,13 @@
   h2,
   h3,
   h4 {
-    font-stretch: var(--condensed);
     font-weight: 650;
     line-height: 1.15;
     text-wrap: balance;
   }
 
   a {
-    color: var(--fir);
+    color: var(--evergreen);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
@@ -189,7 +205,7 @@
   .site-mark {
     width: 1.25rem;
     height: 1.25rem;
-    color: var(--fir);
+    color: var(--evergreen);
   }
 
   .site-header nav {
@@ -215,7 +231,7 @@
   }
 
   .site-header nav a[aria-current="page"] {
-    border-bottom-color: var(--fir);
+    border-bottom-color: var(--evergreen);
     color: var(--ink);
     font-weight: 650;
   }
@@ -754,7 +770,7 @@
 
   .table-county {
     cursor: pointer;
-    color: var(--fir);
+    color: var(--evergreen);
     font-weight: 500;
     text-align: left;
     text-decoration: underline;
@@ -870,7 +886,6 @@
   .panel-body h4 {
     margin: 0 0 0.375rem;
     font-size: 0.9375rem;
-    font-stretch: 100%;
     font-weight: 650;
   }
 
@@ -884,7 +899,6 @@
   .panel-value {
     margin: 0.125rem 0 0.25rem;
     font-size: 2.5rem;
-    font-stretch: var(--condensed);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     line-height: 1.05;
@@ -1188,7 +1202,7 @@
   }
 
   .similar-peer {
-    color: var(--fir);
+    color: var(--evergreen);
     text-align: left;
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -1444,7 +1458,7 @@
   .at-a-glance {
     padding: 1.25rem 1.25rem 0.5rem;
     border: 1px solid var(--line);
-    border-left: 3px solid var(--fir);
+    border-left: 3px solid var(--evergreen);
     border-radius: var(--radius-lg);
     background: var(--surface);
   }
