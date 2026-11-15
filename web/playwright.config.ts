@@ -29,6 +29,23 @@ export default defineConfig({
       },
       testMatch: /pages404\.spec\.ts/,
     },
+    // Opt-in cross-browser check: E2E_ALL_BROWSERS=1. PR ci does not run these.
+    ...(process.env.E2E_ALL_BROWSERS
+      ? [
+          {
+            name: "firefox",
+            use: { ...devices["Desktop Firefox"] },
+            // Not mobile.spec: it needs touch and a phone viewport, which Desktop Firefox lacks
+            // (Firefox cannot emulate mobile), so it fails by construction.
+            testMatch: /(smoke|stage|brand)\.spec\.ts/,
+          },
+          {
+            name: "mobile-safari",
+            use: { ...devices["iPhone 14"] },
+            testMatch: /(smoke|mobile|stage|brand)\.spec\.ts/,
+          },
+        ]
+      : []),
   ],
   webServer: [
     {
