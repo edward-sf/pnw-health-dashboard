@@ -24,7 +24,7 @@ test("King: comparison, badge, range sentence and factors", () => {
   expect(screen.getByText("Actual 80.8 years")).toBeInTheDocument();
   expect(screen.getByText("Expected 77.1 years")).toBeInTheDocument();
   expect(screen.getByText("Difference +3.7 years")).toBeInTheDocument();
-  expect(screen.getByText("Notably better than expected")).toBeInTheDocument();
+  expect(screen.getByText("Notably higher than expected")).toBeInTheDocument();
   expect(screen.getByText("Figures are rounded.")).toBeInTheDocument();
   expect(
     screen.getByText(
@@ -116,7 +116,7 @@ test("a county with no result shows no proxy note", () => {
 });
 
 const aleutians = { fips: "02016", name: "Aleutians West", state: "AK" };
-const NOTE = "Higher is worse for this measure, so a positive difference means worse than expected.";
+const NOTE = "Lower is more favorable for this measure, so a positive difference is less favorable than expected.";
 
 test("heads the card with the target label", () => {
   renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);

@@ -8,6 +8,10 @@ export const GROUPS: readonly { id: MeasureGroup; label: string }[] = [
   { id: "outcomes", label: "Outcomes" },
 ];
 
+/** The category as shown to people; the exported value `Behaviors` is a schema enum. */
+export const categoryLabel = (category: string): string =>
+  category === "Behaviors" ? "Health behaviors" : category;
+
 export function groupOf(category: string): MeasureGroup {
   if (category === "Demographics") return "demographics";
   if (category === "Outcomes") return "outcomes";

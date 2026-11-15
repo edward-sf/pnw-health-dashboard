@@ -265,7 +265,12 @@ for (const size of [{ width: 1440, height: 900 }, { width: 900, height: 800 }]) 
       expect(swatches.length).toBeGreaterThanOrEqual(2);
       for (const s of swatches) expect(Math.abs(s.top - swatches[0]!.top)).toBeLessThanOrEqual(2);
       const low = (await page.locator('.legend-end[data-end="low"]').boundingBox())!;
-      expect(low.x + low.width).toBeLessThanOrEqual(swatches[0]!.left + swatches[0]!.width + 0.5);
+      // "More/Less favorable" is wider than one swatch, so the label is anchored to the first
+      // bin's left edge rather than contained by it.
+      expect(Math.abs(low.x - swatches[0]!.left)).toBeLessThanOrEqual(0.5);
+      const high = (await page.locator('.legend-end[data-end="high"]').boundingBox())!;
+      const last = swatches[swatches.length - 1]!;
+      expect(Math.abs(high.x + high.width - (last.left + last.width))).toBeLessThanOrEqual(0.5);
     });
   }
 }

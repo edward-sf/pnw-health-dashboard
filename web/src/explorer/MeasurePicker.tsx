@@ -12,7 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Indicator } from "../types";
-import { GROUPS, groupOf, type MeasureGroup, measuresIn } from "./categories";
+import { categoryLabel, GROUPS, groupOf, type MeasureGroup, measuresIn } from "./categories";
 
 type Props = { indicators: Indicator[]; selectedId: string; onSelect: (id: string) => void };
 
@@ -84,7 +84,7 @@ export function MeasurePicker({ indicators, selectedId, onSelect }: Props) {
             <CommandList>
               <CommandEmpty>No measures match</CommandEmpty>
               {sections.map((s) => (
-                <CommandGroup key={s.heading} heading={s.heading}>
+                <CommandGroup key={s.heading} heading={categoryLabel(s.heading)}>
                   {s.items.map((ind) => (
                     <CommandItem key={ind.id} value={ind.label} onSelect={() => choose(ind.id)}>
                       <span className="flex-1">{ind.label}</span>

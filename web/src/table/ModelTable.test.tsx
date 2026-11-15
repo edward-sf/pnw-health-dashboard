@@ -50,7 +50,7 @@ test("shows actual, expected, signed difference and the result label", () => {
   expect(r).toHaveTextContent("80.8 years");
   expect(r).toHaveTextContent("77.1 years");
   expect(r).toHaveTextContent("+3.7 years");
-  expect(r).toHaveTextContent("Notably better than expected");
+  expect(r).toHaveTextContent("Notably higher than expected");
 });
 
 test("a county without enough data shows the label and empty numeric cells", () => {

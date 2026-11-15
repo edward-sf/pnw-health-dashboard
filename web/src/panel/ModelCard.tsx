@@ -92,7 +92,7 @@ function ModelResult({
               aria-hidden="true"
               style={{ background: tierFill(entry.flag, palette) }}
             />
-            {tierLabel(entry.flag)}
+            {tierLabel(entry.flag, target.direction)}
           </Badge>
         </p>
         <ResidualRange

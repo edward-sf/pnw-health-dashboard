@@ -58,6 +58,7 @@ function setup(
       <SimilarCounties
         data={modelData}
         unit="years"
+        direction="higher_is_better"
         features={FEATURES}
         indicators={INDICATORS}
         onSelect={onSelect}
@@ -92,7 +93,7 @@ test("Compared with expected shows actual, expected and flag; median row has no 
   expect(within(king).getByText("80.8 years")).toBeInTheDocument();
   expect(within(king).getByText("77.1 years")).toBeInTheDocument();
   expect(
-    within(king).getByText("Notably better than expected"),
+    within(king).getByText("Notably higher than expected"),
   ).toBeInTheDocument();
   const median = screen.getByRole("row", { name: /Peer median/ });
   expect(within(median).getByText("76.0 years")).toBeInTheDocument();

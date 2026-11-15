@@ -171,6 +171,7 @@ export function CountyPanel({
           <SimilarCounties
             data={peerData}
             unit={modelMode ? target.unit : indicator.unit}
+            direction={target.direction}
             features={peers.method.features}
             indicators={manifest.indicators}
             onSelect={onSelectCounty}

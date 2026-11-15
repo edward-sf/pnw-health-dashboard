@@ -32,8 +32,8 @@ export function rankSummary(
   const self = counties.find((c) => c.fips === fips);
   const ranked = counties.filter((c) => entries[c.fips]?.rank != null);
   const overall = `${ordinal(entry.rank)} of ${ranked.length} counties`;
-  if (!self || entry.state_rank === null) return `${overall} (1 = best)`;
+  if (!self || entry.state_rank === null) return `${overall} (1 = most favorable)`;
   const inState = ranked.filter((c) => c.state === self.state).length;
   const stateName = STATE_NAMES[self.state] ?? self.state;
-  return `${overall}, ${ordinal(entry.state_rank)} of ${inState} in ${stateName} (1 = best)`;
+  return `${overall}, ${ordinal(entry.state_rank)} of ${inState} in ${stateName} (1 = most favorable)`;
 }

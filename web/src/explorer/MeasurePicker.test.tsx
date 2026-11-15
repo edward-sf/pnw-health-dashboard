@@ -40,7 +40,7 @@ test("the list shows only the category's measures, under its headings", async ()
   await userEvent.click(trigger());
   const list = screen.getByRole("listbox");
   const headings = [...list.querySelectorAll("[cmdk-group-heading]")].map((h) => h.textContent);
-  expect(headings).toEqual(["Social & Economic", "Access", "Behaviors"]);
+  expect(headings).toEqual(["Social & Economic", "Access", "Health behaviors"]);
   expect(within(list).getByRole("option", { name: "Uninsured adults" })).toBeInTheDocument();
   expect(within(list).queryByRole("option", { name: "Diabetes" })).not.toBeInTheDocument();
   expect(within(list).queryByRole("option", { name: "Asian population" })).not.toBeInTheDocument();
