@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 /** Fails if the focused element has no visible focus outline. */
 async function expectFocusOutline(page: Page, step: string) {

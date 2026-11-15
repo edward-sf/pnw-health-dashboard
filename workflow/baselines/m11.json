@@ -1,0 +1,19 @@
+{
+  "milestone": 11,
+  "fix_prs_after_final_review": [
+    248,
+    250,
+    251
+  ],
+  "red_deploys_after_merge": 3,
+  "tokens_by_session": {
+    "d876724f-189a-488f-ac71-be03472ecc70": 6892401
+  },
+  "tokens_per_task": 861550.125,
+  "notes": [
+    "session d876724f-189a-488f-ac71-be03472ecc70 first at 2026-11-13T16:22:29.757000+00:00, 21 subagents",
+    "cache_read_input_tokens (not counted above): 171892946",
+    "unparseable lines skipped: 0",
+    "red deploys counted from the first run on milestone/m11 (2026-11-13T16:41:30Z); 15 runs"
+  ]
+}

@@ -194,3 +194,6 @@ web/src/types/generated/
 web/playwright-report/
 web/test-results/
 *.tsbuildinfo
+
+# Workflow run state (written only by wf)
+/.workflow/

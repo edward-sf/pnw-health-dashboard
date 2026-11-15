@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reviewer verdict",
+  "description": "Written by a reviewer, read by `wf ingest`. `blocking` is derived: true when any finding is critical or important.",
+  "type": "object",
+  "required": ["node", "sha", "result", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "node": {"type": "string", "description": "The node reviewed, e.g. T3.task-review, final-review or delta-review."},
+    "task": {"type": ["string", "null"], "description": "Task id such as T3; null for final and delta reviews."},
+    "sha": {"type": "string", "description": "The PR head the review was made against."},
+    "result": {"enum": ["pass", "findings"], "description": "pass: no critical or important findings. findings: at least one finding."},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "title", "detail"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "description": "C1, I1, M1 ..."},
+          "severity": {"enum": ["critical", "important", "minor"]},
+          "title": {"type": "string"},
+          "file": {"type": ["string", "null"]},
+          "line": {"type": ["integer", "null"]},
+          "detail": {"type": "string"}
+        }
+      }
+    }
+  }
+}

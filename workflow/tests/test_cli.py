@@ -1,0 +1,624 @@
+import json
+from pathlib import Path
+
+import pytest
+
+from wf.cli import main
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def run(tmp_path, *args):
+    graph = str(REPO / "workflow/graph.toml")
+    return main(["--root", str(tmp_path), "--graph", graph, *args])
+
+
+def test_cli_expected_error_is_one_line(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "status", "--milestone", "13"]) == 2
+    err = capsys.readouterr().err
+    assert err.startswith("wf: ") and "Traceback" not in err and err.count("\n") == 1
+
+
+def test_cli_lifecycle(tmp_path, capsys):
+    assert run(tmp_path, "init", "--milestone", "13", "--tasks", "T1,T2") == 0
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.implement", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out)["rounds"] == 1
+    assert run(tmp_path, "resume", "T1.implement", "--milestone", "13") == 0
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.implement", "--milestone", "13") == 0
+    capsys.readouterr()
+    assert run(tmp_path, "finish", "T1.implement", "--milestone", "13", "--status", "done") == 0
+    capsys.readouterr()
+    assert run(tmp_path, "status", "--milestone", "13") == 0
+    state = json.loads(capsys.readouterr().out)
+    assert state["nodes"]["T1.implement"]["status"] == "done"
+    assert state["nodes"]["T1.implement"]["rounds"] == 1  # the resumed attempt is not counted
+
+
+def test_cli_budget_exhaustion_exits_2_and_escalates(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    for _ in range(2):
+        assert run(tmp_path, "start", "T1.task-review", "--milestone", "13") == 0
+        run(tmp_path, "finish", "T1.task-review", "--milestone", "13", "--status", "failed")
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.task-review", "--milestone", "13") == 2
+    assert "budget" in capsys.readouterr().err
+    run(tmp_path, "status", "--milestone", "13")
+    state = json.loads(capsys.readouterr().out)
+    assert state["nodes"]["T1.task-review"]["status"] == "escalated"
+
+
+def test_cli_escalate(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "escalate", "T1.merge", "--milestone", "13", "--reason", "stuck") == 0
+    capsys.readouterr()
+    run(tmp_path, "status", "--milestone", "13")
+    state = json.loads(capsys.readouterr().out)
+    assert state["escalations"][0]["reason"] == "stuck"
+    assert state["nodes"]["T1.merge"]["status"] == "escalated"
+
+
+# ---------------------------------------------------------------- package and ingest
+
+
+def _repo_with_run(tmp_path):
+    import shutil
+    import subprocess
+
+    from wf.schedule import TaskGraph, TaskNode, write_task_graph
+
+    plan = "docs/plan.md"
+    spec = "docs/spec.md"
+    (tmp_path / "docs").mkdir()
+    shutil.copy(
+        REPO / "docs/superpowers/plans/2026-11-13-m11-explorer-redesign.md", tmp_path / plan
+    )
+    shutil.copy(
+        REPO / "docs/superpowers/specs/2026-11-13-m11-explorer-redesign-design.md", tmp_path / spec
+    )
+    node = TaskNode("T3", 7, "Toolbar", 3, (), (), (), (), "7-toolbar")
+    graph = TaskGraph(11, plan, spec, "sha", ("T3",), {"T3": node})
+    write_task_graph(tmp_path / "docs/plan.tasks.json", graph)
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run([*git, "-C", str(tmp_path), "add", "."], check=True)
+    subprocess.run([*git, "-C", str(tmp_path), "commit", "-qm", "x"], check=True)
+    run(
+        tmp_path,
+        "init",
+        "--milestone",
+        "11",
+        "--tasks",
+        "T3",
+        "--task-graph",
+        "docs/plan.tasks.json",
+    )
+
+
+def test_cli_package_task_review_prints_paths(tmp_path, capsys, monkeypatch):
+    _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            assert args == ["pr", "view", "5", "--json", "headRefOid"]
+            return json.dumps({"headRefOid": "c" * 40})
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    capsys.readouterr()
+    assert run(tmp_path, "package", "task-review", "--milestone", "11", "--task", "T3",
+               "--base", "HEAD", "--pr", "5") == 0  # fmt: skip
+    out = json.loads(capsys.readouterr().out)
+    assert out["path"].endswith("packages/T3.task-review.md")
+    assert out["verdict_path"].endswith("verdicts/T3.task-review-r1.json")
+    text = Path(out["path"]).read_text()
+    assert "### Task 3:" in text and 'exactly `"sha": "' + "c" * 40 + '"`' in text
+
+
+def test_cli_ingest_with_pr_records_and_stale_sha_exits_2(tmp_path, capsys, monkeypatch):
+    _repo_with_run(tmp_path)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
+
+    class Gh:
+        def run(self, args):
+            assert args == ["pr", "view", "5", "--json", "headRefOid"]
+            return json.dumps({"headRefOid": "head1"})
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    v = tmp_path / "v.json"
+    verdict = {
+        "node": "T3.task-review",
+        "task": "T3",
+        "sha": "head1",
+        "result": "pass",
+        "findings": [],
+    }
+    v.write_text(json.dumps(verdict))
+    capsys.readouterr()
+    assert run(tmp_path, "ingest", "T3.task-review", str(v), "--milestone", "11", "--pr", "5") == 0
+    assert json.loads(capsys.readouterr().out)["sha"] == "head1"
+    verdict["sha"] = "old"
+    v.write_text(json.dumps(verdict))
+    assert run(tmp_path, "ingest", "T3.task-review", str(v), "--milestone", "11", "--pr", "5") == 2
+    err = capsys.readouterr().err
+    assert err.startswith("wf: ") and "stale" in err and err.count("\n") == 1
+    v.write_text("{}")
+    assert run(tmp_path, "ingest", "T3.task-review", str(v), "--milestone", "11", "--pr", "5") == 2
+    capsys.readouterr()
+    assert run(tmp_path, "status", "--milestone", "11") == 0
+    assert len(json.loads(capsys.readouterr().out)["reviews"]) == 1
+
+
+def test_cli_ingest_finds_the_pr_from_the_tasks_branch(tmp_path, capsys, monkeypatch):
+    _repo_with_run(tmp_path)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
+    seen = []
+
+    class Gh:
+        def run(self, args):
+            seen.append(args)
+            if args[:2] == ["pr", "list"]:
+                return json.dumps([{"number": 42}])
+            return json.dumps({"headRefOid": "head1"})
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    v = tmp_path / "v.json"
+    v.write_text(json.dumps(
+        {"node": "T3.task-review", "task": "T3", "sha": "head1", "result": "pass", "findings": []}
+    ))  # fmt: skip
+    assert run(tmp_path, "ingest", "T3.task-review", str(v), "--milestone", "11") == 0
+    assert seen[0] == ["pr", "list", "--head", "7-toolbar", "--json", "number"]
+    assert seen[1] == ["pr", "view", "42", "--json", "headRefOid"]
+
+
+def _merge_setup(tmp_path, monkeypatch, view):
+    from wf import cli
+    from wf import state as st
+    from wf.github import FakeGh
+    from wf.schedule import TaskGraph, TaskNode, write_task_graph
+
+    node = TaskNode("T1", 300, "First", 3, (), (), (), (), "300-first")
+    write_task_graph(
+        tmp_path / "tg.json", TaskGraph(13, "plan.md", "spec.md", "x", ("T1",), {"T1": node})
+    )
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1", "--task-graph", "tg.json")
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("T1", "aaa", {"web": True}, True, "t"))
+    state.reviews.append(st.ReviewRecord("T1", "aaa", "T1.task-review", "pass", "v", "t"))
+    st.save(tmp_path, state)
+    gh = FakeGh(pr_view={"headRefName": "300-first", "headRefOid": "aaa",
+                         "baseRefName": "milestone/m13",
+                         "statusCheckRollup": [{"name": "ci", "conclusion": "SUCCESS"}],
+                         **view})  # fmt: skip
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    return gh
+
+
+def test_cli_check_merge_exit_codes(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"ok": True, "reasons": []}
+
+
+def test_cli_check_merge_not_ok_and_unknown_branch(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefOid": "bbb"})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 1
+    assert json.loads(capsys.readouterr().out)["ok"] is False
+
+
+def test_cli_check_merge_unknown_branch_is_not_ok(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefName": "other"})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "5", "--milestone", "13") == 1
+    assert "not on any task" in json.loads(capsys.readouterr().out)["reasons"][0]
+
+
+def test_cli_merge_marks_merge_done(tmp_path, monkeypatch, capsys):
+    gh = _merge_setup(tmp_path, monkeypatch, {})
+    run(tmp_path, "start", "T1.merge", "--milestone", "13")
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"task": "T1", "sha": "merge-5"}
+    merge = ["pr", "merge", "5", "--squash", "--delete-branch", "--match-head-commit", "aaa"]
+    assert merge in gh.calls
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "done"
+
+
+def test_cli_merge_refused_exits_2_and_leaves_node_running(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {"headRefOid": "bbb"})
+    run(tmp_path, "start", "T1.merge", "--milestone", "13")
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 2
+    assert "not merging" in capsys.readouterr().err
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.merge"]["status"] == "running"
+
+
+def test_cli_merge_refuses_a_merge_node_that_is_not_running(tmp_path, monkeypatch, capsys):
+    gh = _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "5", "--milestone", "13") == 2
+    assert "not running" in capsys.readouterr().err
+    assert not any(c[:2] == ["pr", "merge"] for c in gh.calls)
+
+
+def test_cli_deploy_watch_exit_codes_and_state(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf.github import FakeGh
+
+    gh = FakeGh(run_lists=[[{"headSha": "aaa", "status": "completed", "conclusion": "failure"}]])
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    args = ["--project", str(REPO / "workflow/project.toml"), "deploy-watch",
+            "T1.deploy-watch", "--milestone", "13", "--sha", "aaa"]  # fmt: skip
+    assert run(tmp_path, *args) == 2  # not started
+    assert "not running" in capsys.readouterr().err
+    assert not gh.calls
+    run(tmp_path, "start", "T1.deploy-watch", "--milestone", "13")
+    code = run(tmp_path, *args)
+    assert code == 1
+    run(tmp_path, "status", "--milestone", "13")
+    out = capsys.readouterr().out
+    state = json.loads(out[out.rindex('{\n  "milestone"') :])
+    assert state["nodes"]["T1.deploy-watch"]["status"] == "failed"
+
+
+def test_cli_milestone_pr_fills_merged_pr_numbers(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf.github import FakeGh
+
+    _merge_setup(tmp_path, monkeypatch, {})
+    (tmp_path / "plan.md").write_text(
+        '```toml workflow-tasks\n[[task]]\nid = "T1"\ntitle = "First"\nsteps = 3\n```\n'
+    )
+    template = (REPO / ".github/PULL_REQUEST_TEMPLATE/milestone.md").read_text()
+    gh = FakeGh(
+        pr_view={"body": template},
+        canned={
+            "pr list --head milestone/m13": '[{"number": 77}]',
+            "pr list --state merged --head 300-first": '[{"number": 410}]',
+        },
+    )
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    capsys.readouterr()
+    code = run(tmp_path, "--project", str(REPO / "workflow/project.toml"),
+               "milestone-pr", "--milestone", "13")  # fmt: skip
+    assert code == 0
+    edit = next(c for c in gh.calls if c[:2] == ["pr", "edit"])
+    assert "- #410 — M13.T1 First (closes #300)" in edit[edit.index("--body") + 1]
+
+
+def _fix_setup(tmp_path, monkeypatch, view, review_result="pass"):
+    from wf import state as st
+
+    gh = _merge_setup(tmp_path, monkeypatch, {"headRefName": "m13-final-review-fixes", **view})
+    assert run(tmp_path, "start", "batched-fix", "--milestone", "13",
+               "--branch", "m13-final-review-fixes") == 0  # fmt: skip
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("batched-fix", "aaa", {"web": True}, True, "t"))
+    state.reviews.append(
+        st.ReviewRecord("delta-review", "aaa", "delta-review", review_result, "v", "t")
+    )
+    st.save(tmp_path, state)
+    return gh
+
+
+def test_cli_start_batched_fix_records_the_fix_branch(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["fix_branch"] == "m13-final-review-fixes"
+
+
+def test_cli_branch_is_only_for_batched_fix(tmp_path, monkeypatch, capsys):
+    _merge_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.implement", "--milestone", "13", "--branch", "x") == 2
+    assert "--branch" in capsys.readouterr().err
+
+
+def test_cli_check_merge_on_the_fix_branch(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "9", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out) == {"ok": True, "reasons": []}
+
+
+def test_cli_check_merge_on_the_fix_branch_needs_delta_pass(tmp_path, monkeypatch, capsys):
+    _fix_setup(tmp_path, monkeypatch, {}, review_result="findings")
+    capsys.readouterr()
+    assert run(tmp_path, "check-merge", "9", "--milestone", "13") == 1
+    reasons = json.loads(capsys.readouterr().out)["reasons"]
+    assert any("delta-review" in r for r in reasons)
+
+
+def test_cli_merge_on_the_fix_branch(tmp_path, monkeypatch, capsys):
+    gh = _fix_setup(tmp_path, monkeypatch, {})
+    capsys.readouterr()
+    assert run(tmp_path, "merge", "9", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out)["task"] == "batched-fix"
+    merge = ["pr", "merge", "9", "--squash", "--delete-branch", "--match-head-commit", "aaa"]
+    assert merge in gh.calls
+
+
+def test_cli_package_final_names_the_report_under_reviews_dir(tmp_path, capsys, monkeypatch):
+    _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            return "[]"
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    capsys.readouterr()
+    args = ["--root", str(tmp_path), "--graph", str(REPO / "workflow/graph.toml"),
+            "--project", str(REPO / "workflow/project.toml")]  # fmt: skip
+    assert main([*args, "package", "final", "--milestone", "11", "--range", "HEAD..HEAD"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert Path(out["report_path"]).parent == tmp_path / "docs/reviews"
+    assert Path(out["report_path"]).name.endswith("-m11-final-review.md")
+    assert ".workflow/work/m11/verdicts/" in out["verdict_path"]
+
+
+def test_cli_clear_an_escalated_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    run(tmp_path, "escalate", "T1.implement", "--milestone", "13", "--reason", "stuck")
+    capsys.readouterr()
+    assert run(tmp_path, "clear", "T1.implement", "--milestone", "13", "--note", "go on") == 0
+    rec = json.loads(capsys.readouterr().out)
+    assert (rec["status"], rec["rounds"], rec["note"]) == ("pending", 0, "author: go on")
+
+
+def test_cli_finish_refuses_an_escalated_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    run(tmp_path, "start", "T1.deploy-watch", "--milestone", "13")
+    run(tmp_path, "escalate", "T1.deploy-watch", "--milestone", "13", "--reason", "red")
+    capsys.readouterr()
+    code = run(tmp_path, "finish", "T1.deploy-watch", "--milestone", "13", "--status", "done",
+               "--note", "looks fine")  # fmt: skip
+    assert code == 2
+    assert "only the author" in capsys.readouterr().err
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["T1.deploy-watch"]["status"] == "escalated"
+
+
+def test_cli_finish_refuses_a_pending_node(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "finish", "T1.implement", "--milestone", "13", "--status", "done") == 2
+    assert "not running" in capsys.readouterr().err
+
+
+def test_cli_clear_refuses_a_node_that_is_not_escalated(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "clear", "T1.implement", "--milestone", "13", "--note", "x") == 2
+    assert "not escalated" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- done needs a record
+
+
+def _git_run(tmp_path, tasks=("T1", "T2")):
+    """A git repo with a branch per task and the milestone branch, plus a run over them."""
+    import subprocess
+
+    from wf.schedule import TaskGraph, TaskNode, write_task_graph
+
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(tmp_path)]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+    nodes = {}
+    for i, t in enumerate(tasks):
+        nodes[t] = TaskNode(t, 300 + i, t, 2, (), (), (), (), f"{300 + i}-{t.lower()}")
+        subprocess.run([*git, "branch", f"{300 + i}-{t.lower()}"], check=True)
+    subprocess.run([*git, "branch", "milestone/m13"], check=True)
+    write_task_graph(tmp_path / "tg.json", TaskGraph(13, "p", "s", "x", tuple(tasks), nodes))
+    run(tmp_path, "init", "--milestone", "13", "--tasks", ",".join(tasks), "--task-graph",
+        "tg.json")  # fmt: skip
+    head = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True)
+    return head.stdout.strip()
+
+
+def _proj(tmp_path, *args):
+    return run(tmp_path, "--project", str(REPO / "workflow/project.toml"), *args)
+
+
+def test_cli_walk_with_no_records_stops_at_the_first_gates_node(tmp_path, capsys):
+    """The final review's walk: dispatch, start, finish done, repeat. Now refused at gates."""
+    _git_run(tmp_path)
+    usage = tmp_path / "usage.json"
+    usage.write_text(json.dumps({"plan": {"status": "unavailable"}}))
+    walked = []
+    for _ in range(20):
+        capsys.readouterr()
+        assert _proj(tmp_path, "next", "--milestone", "13", "--usage", str(usage)) == 0
+        decision = json.loads(capsys.readouterr().out)
+        assert decision["decision"] == "dispatch"
+        node = decision["node"]
+        walked.append(node)
+        assert run(tmp_path, "start", node, "--milestone", "13") == 0
+        capsys.readouterr()
+        if _proj(tmp_path, "finish", node, "--milestone", "13", "--status", "done") != 0:
+            break
+    assert walked == ["T1.implement", "T1.gates"]
+    assert "no passing gate record" in capsys.readouterr().err
+
+
+def test_cli_finish_gates_done_reads_the_task_branch_head(tmp_path, capsys):
+    from wf import state as st
+
+    head = _git_run(tmp_path)
+    run(tmp_path, "start", "T1.gates", "--milestone", "13")
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("T1", head, {"web": True}, True, "t"))
+    st.save(tmp_path, state)
+    capsys.readouterr()
+    assert run(tmp_path, "finish", "T1.gates", "--milestone", "13", "--status", "done") == 0
+
+
+def test_cli_finish_final_gates_done_reads_the_milestone_branch_head(tmp_path, capsys):
+    from wf import state as st
+
+    head = _git_run(tmp_path)
+    run(tmp_path, "start", "final-gates", "--milestone", "13")
+    capsys.readouterr()
+    assert _proj(tmp_path, "finish", "final-gates", "--milestone", "13", "--status", "done") == 2
+    assert f"no passing gate record at {head}" in capsys.readouterr().err
+    state = st.load(tmp_path, 13)
+    state.gates.append(st.GateRecord("final-gates", head, {"web": True}, True, "t"))
+    st.save(tmp_path, state)
+    assert _proj(tmp_path, "finish", "final-gates", "--milestone", "13", "--status", "done") == 0
+
+
+def test_cli_finish_task_review_done_needs_a_pass_for_the_pr_head(tmp_path, monkeypatch, capsys):
+    from wf import state as st
+
+    _merge_setup(tmp_path, monkeypatch, {})  # PR head aaa, a pass review at aaa
+    run(tmp_path, "start", "T1.task-review", "--milestone", "13")
+    capsys.readouterr()
+    args = ["finish", "T1.task-review", "--milestone", "13", "--status", "done", "--pr", "5"]
+    assert run(tmp_path, *args) == 0
+    state = st.load(tmp_path, 13)
+    state.nodes["T1.task-review"].status = "running"
+    state.reviews[-1].result = "findings"
+    st.save(tmp_path, state)
+    assert run(tmp_path, *args) == 2
+    assert "no passing review record at aaa" in capsys.readouterr().err
+
+
+def test_cli_delta_review_done_when_nothing_is_must_fix(tmp_path, capsys):
+    from wf import state as st
+
+    _git_run(tmp_path)
+    run(tmp_path, "start", "delta-review", "--milestone", "13")
+    capsys.readouterr()
+    fin = ["finish", "delta-review", "--milestone", "13", "--status", "done"]
+    assert run(tmp_path, *fin) == 2  # no must-fix list: a review is needed
+    must_fix = st.work_dir(tmp_path, 13) / "must-fix.json"
+    must_fix.parent.mkdir(parents=True)
+    must_fix.write_text(json.dumps(
+        {"node": "final-review", "task": None, "sha": "x", "result": "pass", "findings": []}
+    ))  # fmt: skip
+    assert run(tmp_path, *fin) == 0
+
+
+@pytest.mark.parametrize("node", ["T1.merge", "T1.deploy-watch", "milestone-pr"])
+def test_cli_command_nodes_finish_only_failed_or_escalated(tmp_path, capsys, node):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    run(tmp_path, "start", node, "--milestone", "13")
+    capsys.readouterr()
+    assert run(tmp_path, "finish", node, "--milestone", "13", "--status", "done") == 2
+    assert "done only through" in capsys.readouterr().err
+    assert run(tmp_path, "finish", node, "--milestone", "13", "--status", "failed") == 0
+
+
+def test_cli_milestone_pr_ready_finishes_the_node(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf.github import FakeGh
+
+    _merge_setup(tmp_path, monkeypatch, {})
+    (tmp_path / "plan.md").write_text(
+        '```toml workflow-tasks\n[[task]]\nid = "T1"\ntitle = "First"\nsteps = 3\n```\n'
+    )
+    template = (REPO / ".github/PULL_REQUEST_TEMPLATE/milestone.md").read_text()
+    gh = FakeGh(
+        pr_view={"body": template}, canned={"pr list --head milestone/m13": '[{"number": 77}]'}
+    )
+    monkeypatch.setattr(cli, "SubprocessGh", lambda: gh)
+    capsys.readouterr()
+    assert _proj(tmp_path, "milestone-pr", "--milestone", "13", "--ready") == 2  # not started
+    assert "not running" in capsys.readouterr().err and not gh.calls
+    run(tmp_path, "start", "milestone-pr", "--milestone", "13")
+    assert _proj(tmp_path, "milestone-pr", "--milestone", "13", "--ready") == 0
+    capsys.readouterr()
+    run(tmp_path, "status", "--milestone", "13")
+    assert json.loads(capsys.readouterr().out)["nodes"]["milestone-pr"]["status"] == "done"
+
+
+def test_cli_next_logs_each_reading_and_usage_total_sums_them(tmp_path, capsys):
+    _git_run(tmp_path)
+    usage = tmp_path / "usage.json"
+
+    def reading(pct, resets):
+        usage.write_text(json.dumps({"plan": {"status": "ok", "windows": [
+            {"label": "5-hour limit", "percentUsed": pct, "resetsAt": resets}]}}))  # fmt: skip
+
+    for pct in (10, 25):
+        reading(pct, "2099-01-01T00:00:00Z")
+        assert _proj(tmp_path, "next", "--milestone", "13", "--usage", str(usage)) == 0
+    usage.write_text(json.dumps({"plan": {"status": "unavailable"}}))  # not logged
+    assert _proj(tmp_path, "next", "--milestone", "13", "--usage", str(usage)) == 0
+    capsys.readouterr()
+    assert run(tmp_path, "usage-total", "--milestone", "13") == 0
+    out = json.loads(capsys.readouterr().out)
+    assert (out["readings"], out["windows"], out["pct_used"]) == (2, 1, 15.0)
+
+
+def test_cli_usage_total_with_no_readings(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    capsys.readouterr()
+    assert run(tmp_path, "usage-total", "--milestone", "13") == 0
+    assert json.loads(capsys.readouterr().out)["pct_used"] is None
+
+
+def test_cli_gates_budget_refuses_the_fourth_round(tmp_path, capsys):
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    for _ in range(3):
+        assert run(tmp_path, "start", "T1.gates", "--milestone", "13") == 0
+        run(tmp_path, "finish", "T1.gates", "--milestone", "13", "--status", "failed")
+    capsys.readouterr()
+    assert run(tmp_path, "start", "T1.gates", "--milestone", "13") == 2
+    assert "budget of 3 rounds" in capsys.readouterr().err
+
+
+def test_cli_verdict_paths_are_root_relative_so_packages_read_them_from_any_cwd(
+    tmp_path, capsys, monkeypatch
+):
+    _repo_with_run(tmp_path)
+
+    class Gh:
+        def run(self, args):
+            return json.dumps({"headRefOid": "head1"}) if args[:2] == ["pr", "view"] else "[]"
+
+    monkeypatch.setattr("wf.cli.SubprocessGh", Gh)
+    run(tmp_path, "start", "T3.task-review", "--milestone", "11")
+    rel = ".workflow/work/m11/verdicts/T3.task-review-r1.json"
+    (tmp_path / rel).parent.mkdir(parents=True)
+    minor = {"id": "M1", "severity": "minor", "title": "Tidy", "file": None, "line": None,
+             "detail": "a deferred minor"}  # fmt: skip
+    (tmp_path / rel).write_text(json.dumps({"node": "T3.task-review", "task": "T3",
+                                            "sha": "head1", "result": "pass",
+                                            "findings": [minor]}))  # fmt: skip
+    monkeypatch.chdir(tmp_path)
+    capsys.readouterr()
+    assert run(tmp_path, "ingest", "T3.task-review", rel, "--milestone", "11", "--pr", "5") == 0
+    assert json.loads(capsys.readouterr().out)["verdict_path"] == rel
+    elsewhere = tmp_path.parent / f"{tmp_path.name}-elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    assert _proj(tmp_path, "package", "final", "--milestone", "11", "--range", "HEAD..HEAD") == 0
+    text = Path(json.loads(capsys.readouterr().out)["path"]).read_text()
+    assert "verdict unreadable" not in text and "a deferred minor" in text
+
+
+def test_cli_deploy_watch_without_a_node_only_reports(tmp_path, monkeypatch, capsys):
+    from wf import cli
+    from wf import state as st
+    from wf.github import FakeGh
+
+    run(tmp_path, "init", "--milestone", "13", "--tasks", "T1")
+    path = st.run_dir(tmp_path, 13) / "state.json"
+    before = path.read_text()
+    args = ["deploy-watch", "--milestone", "13", "--sha", "aaa"]
+    for conclusion, code in (("failure", 1), ("success", 0)):
+        runs = [[{"headSha": "aaa", "status": "completed", "conclusion": conclusion}]]
+        monkeypatch.setattr(cli, "SubprocessGh", lambda runs=runs: FakeGh(run_lists=runs))
+        capsys.readouterr()
+        assert _proj(tmp_path, *args) == code
+        assert json.loads(capsys.readouterr().out)["conclusion"] == conclusion
+    assert path.read_text() == before

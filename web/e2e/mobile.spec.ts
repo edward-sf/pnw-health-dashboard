@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 /** The share of the viewport the drawer covers, from its top edge to the bottom of the screen. */
 async function drawerShare(page: Page) {
