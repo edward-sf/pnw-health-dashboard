@@ -262,6 +262,11 @@
     text-decoration: none;
   }
 
+  /* The links fill the header's height, so an outset ring would leave it; draw it inside. */
+  .site-header nav a:focus-visible {
+    outline-offset: -2px;
+  }
+
   .site-header nav a:hover {
     border-bottom-color: var(--focus-on-fir);
   }
@@ -732,6 +737,18 @@
   }
 
   .legend-range {
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
+  /* The unit sits at the right end of the no-data row, so it costs no extra line. */
+  .legend-null:has(.legend-unit) {
+    flex: 1 1 100%;
+  }
+
+  .legend-unit {
+    margin-left: auto;
+    color: var(--ink-muted);
     font-size: var(--text-xs);
     line-height: 1.25;
   }
@@ -1309,6 +1326,7 @@
     /* Two rows: the brand, then the nav with the theme button at its right end. The button is
        after the nav in the DOM, so tab order matches. */
     .site-header-inner {
+      column-gap: 0;
       padding-top: 0.5rem;
     }
 
@@ -1317,8 +1335,7 @@
     }
 
     .site-header nav {
-      flex: 1;
-      min-width: 0;
+      gap: 0;
       margin-left: -0.75rem;
     }
 

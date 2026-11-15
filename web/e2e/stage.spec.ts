@@ -274,3 +274,72 @@ for (const size of [{ width: 1440, height: 900 }, { width: 900, height: 800 }]) 
     });
   }
 }
+
+async function indicatorIds(page: Page): Promise<string[]> {
+  const res = await page.request.get("./data/manifest.json");
+  const manifest = (await res.json()) as { indicators: { id: string }[] };
+  return manifest.indicators.map((i) => i.id);
+}
+
+// Every measure's legend stays clear of the Alaska frame and inside the stage, wherever the
+// range labels wrap (the per-100k and years ranges are the widest).
+for (const size of [{ width: 900, height: 800 }, { width: 1100, height: 800 }, { width: 721, height: 800 }]) {
+  test(`every measure's legend is clear of Alaska at ${size.width}×${size.height}`, async ({ page }, testInfo) => {
+    onlyIn("chromium", testInfo.project.name);
+    test.setTimeout(180_000);
+    const ids = await indicatorIds(page);
+    expect(ids.length).toBeGreaterThan(30);
+    const bad: string[] = [];
+    for (const id of ids) {
+      await open(page, size, `?i=${id}`);
+      const stage = (await page.locator(".map-stage").boundingBox())!;
+      const legend = (await page.locator(".map-stage .legend").boundingBox())!;
+      const frame = (await page.locator("rect.inset-frame").boundingBox())!;
+      const apart =
+        legend.x + legend.width <= frame.x ||
+        frame.x + frame.width <= legend.x ||
+        legend.y + legend.height <= frame.y ||
+        frame.y + frame.height <= legend.y;
+      const inside =
+        legend.x >= stage.x &&
+        legend.y >= stage.y &&
+        legend.x + legend.width <= stage.x + stage.width &&
+        legend.y + legend.height <= stage.y + stage.height;
+      if (!apart || !inside) bad.push(id);
+    }
+    expect(bad).toEqual([]);
+  });
+}
+
+// Range labels neither collide nor run past the legend, down to a 320px phone.
+for (const size of [{ width: 320, height: 640 }, { width: 721, height: 800 }]) {
+  test(`legend ranges stay apart and inside the legend at ${size.width}px`, async ({ page }, testInfo) => {
+    onlyIn("chromium", testInfo.project.name);
+    test.setTimeout(180_000);
+    const ids = await indicatorIds(page);
+    const bad: string[] = [];
+    for (const id of ids) {
+      await open(page, size, `?i=${id}`);
+      const found = await page.evaluate(() => {
+        const legend = document.querySelector(".legend")!.getBoundingClientRect();
+        const rs = [...document.querySelectorAll(".legend-range")].map((e) => {
+          const range = document.createRange();
+          range.selectNodeContents(e);
+          return [...range.getClientRects()].map((r) => ({ l: r.left, r: r.right, t: r.top, b: r.bottom }));
+        });
+        const boxes = rs.flat();
+        const problems: string[] = [];
+        for (const b of boxes) if (b.r > legend.right + 0.5 || b.l < legend.left - 0.5) problems.push("outside");
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) {
+            const x = Math.min(boxes[i]!.r, boxes[j]!.r) - Math.max(boxes[i]!.l, boxes[j]!.l);
+            const y = Math.min(boxes[i]!.b, boxes[j]!.b) - Math.max(boxes[i]!.t, boxes[j]!.t);
+            if (x > 0.5 && y > 0.5) problems.push("overlap");
+          }
+        return problems;
+      });
+      if (found.length) bad.push(`${id}: ${[...new Set(found)].join(",")}`);
+    }
+    expect(bad).toEqual([]);
+  });
+}

@@ -50,3 +50,17 @@ test("with no ends there are no end labels", () => {
   render(<Legend scale={mk(null)} unit="percent" />);
   expect(document.querySelector("[data-end]")).toBeNull();
 });
+
+test("per-100k ranges state the unit once and counts use compact bounds", () => {
+  const bins = [
+    { min: 3315.3, max: 6422.1, color: "#111" },
+    { min: 6465.4, max: 7762.3, color: "#222" },
+  ];
+  const { unmount } = render(<Legend scale={{ fill: () => "#000", bins, ends: null }} unit="rate_per_100k" />);
+  expect(screen.getByText("3,315.3 – 6,422.1")).toBeInTheDocument();
+  expect(screen.getAllByText(/per 100k/i)).toHaveLength(1);
+  unmount();
+  const counts = [{ min: 41049, max: 98902, color: "#111" }];
+  render(<Legend scale={{ fill: () => "#000", bins: counts, ends: null }} unit="count" />);
+  expect(screen.getByText("41K – 98.9K")).toBeInTheDocument();
+});

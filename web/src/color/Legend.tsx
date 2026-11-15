@@ -1,7 +1,17 @@
 import { HatchSwatch } from "./HatchSwatch";
 import type { Unit } from "../types";
-import { formatValue } from "./formatValue";
+import { formatBound, formatTick, formatValue } from "./formatValue";
 import type { ColorScale } from "./makeColorScale";
+
+// Per-100k and years ranges would wrap to several lines per swatch with the unit repeated on
+// both bounds, so those state it once under the ramp. Dollars and counts use compact bounds.
+const UNIT_NOTE: Partial<Record<Unit, string>> = { years: "years", rate_per_100k: "per 100k" };
+
+function formatLegendBound(v: number, unit: Unit): string {
+  if (unit === "dollars" || unit === "count") return formatTick(v, unit);
+  if (unit === "percent") return formatValue(v, unit);
+  return formatBound(v, unit);
+}
 
 type Props = { scale: ColorScale; unit: Unit };
 
@@ -25,7 +35,7 @@ export function Legend({ scale, unit }: Props) {
             <li key={b.color}>
               <span className="legend-swatch" style={{ background: b.color }} aria-hidden="true" />
               <span className="legend-range">
-                {formatValue(b.min, unit)} – {formatValue(b.max, unit)}
+                {formatLegendBound(b.min, unit)} – {formatLegendBound(b.max, unit)}
               </span>
             </li>
           ))}
@@ -34,6 +44,7 @@ export function Legend({ scale, unit }: Props) {
       <div className="legend-null">
         <HatchSwatch />
         <span>{formatValue(null, unit)}</span>
+        {UNIT_NOTE[unit] && <span className="legend-unit">{UNIT_NOTE[unit]}</span>}
       </div>
     </div>
   );
