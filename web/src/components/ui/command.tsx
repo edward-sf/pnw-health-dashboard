@@ -7,7 +7,7 @@ function Command({ className, ...props }: ComponentProps<typeof CommandPrimitive
   return (
     <CommandPrimitive
       data-slot="command"
-      className={cn("flex h-full w-full flex-col overflow-hidden bg-card text-card-foreground", className)}
+      className={cn("flex h-full w-full flex-col overflow-hidden text-card-foreground", className)}
       {...props}
     />
   );
@@ -15,12 +15,12 @@ function Command({ className, ...props }: ComponentProps<typeof CommandPrimitive
 
 function CommandInput({ className, ...props }: ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div data-slot="command-input-wrapper" className="flex items-center gap-2 border-b border-border px-3">
+    <div data-slot="command-input-wrapper" className="flex items-center gap-2 border-b border-border px-3 focus-within:border-b-2 focus-within:border-(--focus) focus-within:bg-muted">
       <SearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
-          "flex h-10 w-full bg-transparent py-3 text-base placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex h-10 w-full bg-transparent outline-none py-3 text-base placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           className,
         )}
         {...props}

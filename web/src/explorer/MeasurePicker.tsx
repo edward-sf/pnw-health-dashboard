@@ -70,7 +70,7 @@ export function MeasurePicker({ indicators, selectedId, onSelect }: Props) {
         <PopoverTrigger asChild>
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             className="measure-trigger justify-between"
             aria-label={`Measure: ${label}`}
           >

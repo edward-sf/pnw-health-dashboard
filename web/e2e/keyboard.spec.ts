@@ -1,11 +1,15 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
-/** Fails if the focused element has no visible focus outline. */
+/** Fails if the focused element has no visible focus outline. A command input shows focus as its wrapper's 2px bottom border instead. */
 async function expectFocusOutline(page: Page, step: string) {
   const outline = await page.evaluate(() => {
     const el = document.activeElement;
-    return el && el !== document.body ? getComputedStyle(el).outlineStyle : "none";
+    if (!el || el === document.body) return "none";
+    const own = getComputedStyle(el).outlineStyle;
+    const wrapper = el.closest("[data-slot='command-input-wrapper']");
+    if (own === "none" && wrapper && parseFloat(getComputedStyle(wrapper).borderBottomWidth) >= 2) return "wrapper";
+    return own;
   });
   expect(outline, `no focus outline at: ${step}`).not.toBe("none");
 }
