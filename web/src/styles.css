@@ -262,6 +262,11 @@
     text-decoration: none;
   }
 
+  /* The links fill the header's height, so an outset ring would leave it; draw it inside. */
+  .site-header nav a:focus-visible {
+    outline-offset: -2px;
+  }
+
   .site-header nav a:hover {
     border-bottom-color: var(--focus-on-fir);
   }
@@ -1317,8 +1322,6 @@
     }
 
     .site-header nav {
-      flex: 1;
-      min-width: 0;
       margin-left: -0.75rem;
     }
 

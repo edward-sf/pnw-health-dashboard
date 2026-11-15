@@ -61,6 +61,22 @@ test("the header fits at 320px wide", async ({ page }) => {
     return hits;
   });
   expect(overlap).toEqual([]);
+  // The nav box is narrower than its links at this width, so compare the links and the button.
+  const itemHits = await page.evaluate(() => {
+    const items = [
+      ...document.querySelectorAll(".site-header nav a, .site-header .theme-menu"),
+    ].map((el) => ({ name: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
+    const hits: string[] = [];
+    items.forEach((a, i) =>
+      items.slice(i + 1).forEach((b) => {
+        const x = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const y = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (x > 0.5 && y > 0.5) hits.push(`${a.name}/${b.name}`);
+      }),
+    );
+    return hits;
+  });
+  expect(itemHits).toEqual([]);
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -84,5 +100,44 @@ for (const theme of ["light", "dark"] as const) {
       };
     });
     expect(outline).toBe(token);
+  });
+}
+
+for (const vp of [
+  { width: 320, height: 640 },
+  { width: 375, height: 812 },
+  { width: 1280, height: 800 },
+]) {
+  test(`the header link focus ring stays inside the header and viewport at ${vp.width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(vp);
+    await page.goto("./");
+    for (const name of ["Explorer", "Methodology", "About"]) {
+      const link = page.getByRole("banner").getByRole("link", { name });
+      await link.focus();
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Shift+Tab");
+      await expect(link).toBeFocused();
+      const m = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement;
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        const w = parseFloat(cs.outlineWidth);
+        const o = parseFloat(cs.outlineOffset);
+        const head = document.querySelector(".site-header")!.getBoundingClientRect();
+        return {
+          top: r.top - o - w,
+          bottom: r.bottom + o + w,
+          left: r.left - o - w,
+          right: r.right + o + w,
+          head: { top: head.top, bottom: head.bottom },
+        };
+      });
+      expect(m.top, name).toBeGreaterThanOrEqual(Math.max(0, m.head.top) - 0.01);
+      expect(m.bottom, name).toBeLessThanOrEqual(m.head.bottom + 0.01);
+      expect(m.left, name).toBeGreaterThanOrEqual(-0.01);
+      expect(m.right, name).toBeLessThanOrEqual(vp.width + 0.01);
+    }
   });
 }
