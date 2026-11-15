@@ -281,6 +281,11 @@
     margin-left: auto;
   }
 
+  /* On phones the button fills the nav row, so an outset ring would run below the header. */
+  .site-header .theme-menu:focus-visible {
+    outline-offset: -2px;
+  }
+
   .about-profiles {
     display: flex;
     gap: 0.5rem;

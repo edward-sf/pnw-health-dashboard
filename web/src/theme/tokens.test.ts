@@ -83,11 +83,11 @@ describe.each(Object.keys(TOKENS) as Theme[])("%s tokens", (theme) => {
     atLeast("--evergreen-ink", "--evergreen", 4.5);
     atLeast("--evergreen", "--surface", 4.5);
     atLeast("--evergreen", "--paper", 4.5);
-    for (const bg of ["--surface", "--paper", "--wash"]) atLeast("--focus", bg, 3);
+    for (const bg of ["--surface", "--paper", "--wash", "--fir-soft"]) atLeast("--focus", bg, 3);
   });
 
   test("brand colours are visibly apart from every data colour", () => {
-    for (const name of ["--fir", "--evergreen", "--fir-soft"]) {
+    for (const name of ["--fir", "--evergreen", "--fir-soft", "--focus", "--focus-on-fir"]) {
       for (const c of DATA_COLORS) {
         expect(deltaE76(t(name), c), `${name} vs ${c}`).toBeGreaterThanOrEqual(15);
       }

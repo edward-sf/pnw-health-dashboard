@@ -88,8 +88,8 @@ test("direction note is appended to the screen-reader text only when given", () 
     return t;
   };
   expect(text(null)).toBe("+3.7 years is beyond ±3.4 years, the range for notably higher or lower.");
-  expect(text("Higher is worse for this measure, so a positive difference means worse than expected.")).toBe(
-    "+3.7 years is beyond ±3.4 years, the range for notably higher or lower. Higher is worse for this measure, so a positive difference means worse than expected.",
+  expect(text("Lower is more favorable for this measure, so a positive difference is less favorable than expected.")).toBe(
+    "+3.7 years is beyond ±3.4 years, the range for notably higher or lower. Lower is more favorable for this measure, so a positive difference is less favorable than expected.",
   );
 });
 

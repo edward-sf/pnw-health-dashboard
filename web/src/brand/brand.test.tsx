@@ -31,6 +31,20 @@ test("404.html carries the same icon, theme-color and social tags as index.html"
   expect(notFound.tags).toEqual(index.tags);
 });
 
+test("404.html's literal origin and base match vite.config.ts and brand.ts", () => {
+  const config = readFileSync("vite.config.ts", "utf8");
+  const origin = /VITE_SITE_ORIGIN \?\?= "([^"]+)"/.exec(config)?.[1];
+  const base = /base: "([^"]+)"/.exec(config)?.[1];
+  expect(origin).toMatch(/^https:\/\//);
+  expect(base).toMatch(/^\/.*\/$/);
+  expect(readFileSync("src/brand/brand.ts", "utf8")).toContain(`?? "${origin}"`);
+  const urls = [...readFileSync("public/404.html", "utf8").matchAll(/content="(https?:[^"]+)"/g)].map(
+    (m) => m[1]!,
+  );
+  expect(urls.length).toBe(3);
+  for (const url of urls) expect(url.startsWith(`${origin}${base}`), url).toBe(true);
+});
+
 test("the old site name is gone from web, the README and CONTRIBUTING", () => {
   const files = [
     "index.html",

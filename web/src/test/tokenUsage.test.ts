@@ -2,18 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 
-/** The directories swept onto the token scale; later tasks add to this list. */
-export const SWEPT: readonly string[] = [
-  "src/components/ui",
-  "src/explorer",
-  "src/map",
-  "src/panel",
-  "src/table",
-  "src/search",
-  "src/pages",
-  "src/brand",
-  "src/App.tsx",
-];
+/** All of src is on the token scale; the only exceptions are named in EXEMPT. */
+const ROOT = "src";
 
 const RAW_HEX = /#[0-9a-fA-F]{3,8}\b/;
 const ARBITRARY_SIZE =
@@ -31,7 +21,16 @@ function tsxFiles(dir: string): string[] {
   });
 }
 
-test.each(SWEPT.flatMap(tsxFiles))("%s uses tokens, not raw values", (file) => {
+const FILES = tsxFiles(ROOT);
+
+test("the guard sweeps every component directory", () => {
+  const dirs = new Set(FILES.map((f) => f.split("/")[1]));
+  for (const dir of ["theme", "data", "model", "color", "brand", "panel", "components"]) {
+    expect(dirs, dir).toContain(dir);
+  }
+});
+
+test.each(FILES)("%s uses tokens, not raw values", (file) => {
   const source = readFileSync(file, "utf8");
   expect(source).not.toMatch(RAW_HEX);
   expect(source).not.toMatch(ARBITRARY_SIZE);
