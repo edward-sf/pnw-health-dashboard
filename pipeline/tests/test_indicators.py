@@ -256,3 +256,18 @@ def test_race_group_labels_in_display_order() -> None:
         ("tom", "Two or more races"),
     ]
     assert list(RACE_GROUP_LABELS) == list(get_args(RaceGroup))
+
+
+def test_sensitivity_review_descriptions() -> None:
+    by_id = {i.id: i for i in load_catalog()}
+    assert by_id["injury_deaths"].description == (
+        "Deaths from intentional and unintentional injury per 100,000 population."
+    )
+    assert by_id["pct_female"].description == (
+        "Percent of the total population whose sex is recorded as female "
+        "in the American Community Survey."
+    )
+    assert by_id["pct_limited_english"].description == (
+        'Percent of the population 5 and over who speak English less than "very well", '
+        "in the American Community Survey's wording."
+    )

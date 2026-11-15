@@ -123,6 +123,18 @@ test("model mode: change the outcome", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("model legend tier names flip when the outcome's direction does", async ({ page }) => {
+  await page.goto("./?i=life_expectancy&show=expected");
+  const firstTier = page.locator(".legend-model .legend-bins li").first();
+  await expect(firstTier).toContainText("Notably lower");
+  await page.getByRole("button", { name: "Measure: Life expectancy" }).click();
+  await page.getByRole("option", { name: /^Premature death/ }).click();
+  await expect(firstTier).toContainText("Notably higher");
+  await page.getByRole("button", { name: /^Measure: Premature death/ }).click();
+  await page.getByRole("option", { name: "Life expectancy", exact: true }).click();
+  await expect(firstTier).toContainText("Notably lower");
+});
+
 test("select a similar county", async ({ page }) => {
   await page.goto("./?c=53033");
   const panel = page.getByRole("dialog", { name: "County details" });

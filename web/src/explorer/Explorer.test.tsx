@@ -336,7 +336,7 @@ test("Compared with expected: hovering King shows the tier tooltip", () => {
     pointerType: "mouse",
   });
   expect(screen.getByRole("tooltip")).toHaveTextContent(
-    "King, WA: notably better than expected (+3.7 years)",
+    "King, WA: notably higher than expected (+3.7 years)",
   );
 });
 
@@ -549,7 +549,7 @@ test("the table, tooltip and card follow the selected target", async () => {
   expect(
     screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByText(/Higher is worse for this measure/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Lower is more favorable for this measure/).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/\+1,800 per 100k/).length).toBeGreaterThan(0);
 });
 

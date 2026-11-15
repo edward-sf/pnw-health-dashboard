@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { Link } from "react-router";
 import { formatValue } from "../color/formatValue";
-import { modelDigits, tierLabel } from "../model/modelView";
+import { type Direction, modelDigits, tierLabel } from "../model/modelView";
 import type { Unit } from "../types";
 import type { Indicator } from "../types/generated/manifest";
 import type { PeerData, PeerRow } from "./buildPeerRows";
@@ -37,6 +37,8 @@ function basis(features: readonly string[], indicators: readonly Indicator[]): s
 type Props = {
   data: PeerData;
   unit: Unit;
+  /** The model outcome's direction, which fixes the wording of each tier. */
+  direction: Direction;
   /** Ordered feature ids that define similarity; the first three are named, the rest counted. */
   features: readonly string[];
   /** Manifest indicators, used to turn feature ids into labels. */
@@ -44,7 +46,7 @@ type Props = {
   onSelect: (fips: string) => void;
 };
 
-export function SimilarCounties({ data, unit, features, indicators, onSelect }: Props) {
+export function SimilarCounties({ data, unit, direction, features, indicators, onSelect }: Props) {
   const headingId = useId();
   const model = data.kind === "model";
   const rows: readonly PeerRow[] = data.rows;
@@ -94,7 +96,7 @@ export function SimilarCounties({ data, unit, features, indicators, onSelect }: 
               </th>
               <td>{fmt(r.value)}</td>
               {r.kind === "model" && <td>{fmt(r.expected)}</td>}
-              {r.kind === "model" && <td>{tierLabel(r.flag)}</td>}
+              {r.kind === "model" && <td>{tierLabel(r.flag, direction)}</td>}
             </tr>
           ))}
           <tr className="similar-median">

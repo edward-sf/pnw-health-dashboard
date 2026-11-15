@@ -286,7 +286,7 @@ export function Explorer({ data }: { data: AppData }) {
               tooltipFor={(fips) => {
                 const p = paths.find((x) => x.fips === fips);
                 if (compared) {
-                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit);
+                  return modelTooltip(p?.name ?? fips, p?.state ?? "", countyModel(model, fips), model.unit, model.direction);
                 }
                 return `${p?.name ?? fips}, ${p?.state ?? ""}: ${formatValue(entries?.[fips]?.v ?? null, indicator.unit)}`;
               }}
@@ -296,7 +296,7 @@ export function Explorer({ data }: { data: AppData }) {
             />
             {isPhone && showToggle}
             {compared ? (
-              <ModelLegend counts={counts} />
+              <ModelLegend counts={counts} direction={model.direction} />
             ) : (
               <Legend scale={scale} unit={indicator.unit} />
             )}

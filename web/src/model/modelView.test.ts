@@ -29,10 +29,15 @@ test("tierRank", () => {
   expect(tierRank("insufficient_data")).toBeNull();
 });
 
-test("labels", () => {
-  expect(tierLabel("notably_worse")).toBe("Notably worse than expected");
-  expect(tierLabel("none")).toBe("About as expected");
-  expect(tierLabel("insufficient_data")).toBe("Not enough data");
+test("labels follow the outcome's direction", () => {
+  expect(tierLabel("notably_better", "higher_is_better")).toBe("Notably higher than expected");
+  expect(tierLabel("notably_better", "higher_is_worse")).toBe("Notably lower than expected");
+  expect(tierLabel("somewhat_worse", "higher_is_worse")).toBe("Somewhat higher than expected");
+  expect(tierLabel("somewhat_worse", "higher_is_better")).toBe("Somewhat lower than expected");
+  for (const d of ["higher_is_better", "higher_is_worse"] as const) {
+    expect(tierLabel("none", d)).toBe("About as expected");
+    expect(tierLabel("insufficient_data", d)).toBe("Not enough data");
+  }
 });
 
 test("fills are distinct, differ from the hatch base, and insufficient_data is the hatch", () => {
@@ -70,18 +75,18 @@ test("tierCounts", () => {
 });
 
 test("modelTooltip", () => {
-  expect(modelTooltip("King", "WA", countyModel(model, "53033"), "years")).toBe(
-    "King, WA: notably better than expected (+3.7 years)",
+  expect(modelTooltip("King", "WA", countyModel(model, "53033"), "years", "higher_is_better")).toBe(
+    "King, WA: notably higher than expected (+3.7 years)",
   );
-  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"), "years")).toBe(
+  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"), "years", "higher_is_better")).toBe(
     "Chugach, AK: not enough data for the model",
   );
 });
 
 test("modelTooltip formats the difference in the target's unit", () => {
   expect(
-    modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k"),
-  ).toBe("Aleutians West, AK: notably worse than expected (+1,800 per 100k)");
+    modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k", "higher_is_worse"),
+  ).toBe("Aleutians West, AK: notably higher than expected (+1,800 per 100k)");
 });
 
 test("hasModelResult is false for insufficient data or any null field", () => {

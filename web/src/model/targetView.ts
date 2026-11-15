@@ -20,9 +20,9 @@ export function targetModel(model: ModelFile, id: string): TargetModel {
   return target;
 }
 
-/** For higher_is_worse targets, the sentence saying a positive difference is worse; otherwise null. */
+/** For higher_is_worse targets, the sentence saying a positive difference is less favorable; otherwise null. */
 export function directionNote(target: TargetModel): string | null {
   return target.direction === "higher_is_worse"
-    ? "Higher is worse for this measure, so a positive difference means worse than expected."
+    ? "Lower is more favorable for this measure, so a positive difference is less favorable than expected."
     : null;
 }

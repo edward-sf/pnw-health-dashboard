@@ -43,8 +43,8 @@ test("neutral uses blues, darker is higher, no better/worse ends", () => {
   expect(s.ends).toBeNull();
 });
 test("ends follow direction", () => {
-  expect(scale("higher_is_worse", vs).ends).toEqual({ low: "Better", high: "Worse" });
-  expect(scale("higher_is_better", vs).ends).toEqual({ low: "Worse", high: "Better" });
+  expect(scale("higher_is_worse", vs).ends).toEqual({ low: "More favorable", high: "Less favorable" });
+  expect(scale("higher_is_better", vs).ends).toEqual({ low: "Less favorable", high: "More favorable" });
 });
 test("null is hatched, zero is colored", () => {
   const s = scale("higher_is_worse", [0, 1, 2, 3, null]);

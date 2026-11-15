@@ -25,7 +25,7 @@ function build(n: number, rank: number, stateRank: number) {
 test("formats overall and state rank with spelled-out state", () => {
   const { counties, entries } = build(6, 12, 3);
   expect(rankSummary("00000", entries, counties)).toBe(
-    "12th of 6 counties, 3rd of 3 in Washington (1 = best)",
+    "12th of 6 counties, 3rd of 3 in Washington (1 = most favorable)",
   );
 });
 
@@ -34,7 +34,7 @@ test("denominators exclude nulls", () => {
   entries["00001"] = e(null, null);
   entries["00004"] = e(null, null);
   expect(rankSummary("00000", entries, counties)).toBe(
-    "1st of 4 counties, 1st of 2 in Washington (1 = best)",
+    "1st of 4 counties, 1st of 2 in Washington (1 = most favorable)",
   );
 });
 

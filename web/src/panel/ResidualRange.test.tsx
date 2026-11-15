@@ -37,8 +37,8 @@ test("screen-reader text gives the meaning for each of the three cases", () => {
     unmount();
     return t;
   };
-  expect(text(3.7)).toBe("+3.7 years is beyond ±3.4 years, the range for notably better or worse.");
-  expect(text(2.6)).toBe("+2.6 years is beyond ±2.4 years but within ±3.4 years, somewhat better or worse than expected.");
+  expect(text(3.7)).toBe("+3.7 years is beyond ±3.4 years, the range for notably higher or lower.");
+  expect(text(2.6)).toBe("+2.6 years is beyond ±2.4 years but within ±3.4 years, somewhat higher or lower than expected.");
   expect(text(-0.5)).toBe("−0.5 years is within ±2.4 years, about as expected.");
 });
 
@@ -74,7 +74,7 @@ test("screen-reader text uses the target's unit", () => {
     <ResidualRange residual={1800} threshold75={1200} threshold90={1700} flag="notably_worse" unit="rate_per_100k" />,
   );
   expect(container.querySelector(".visually-hidden")!.textContent).toBe(
-    "+1,800 per 100k is beyond ±1,700 per 100k, the range for notably better or worse.",
+    "+1,800 per 100k is beyond ±1,700 per 100k, the range for notably higher or lower.",
   );
 });
 
@@ -87,9 +87,9 @@ test("direction note is appended to the screen-reader text only when given", () 
     unmount();
     return t;
   };
-  expect(text(null)).toBe("+3.7 years is beyond ±3.4 years, the range for notably better or worse.");
+  expect(text(null)).toBe("+3.7 years is beyond ±3.4 years, the range for notably higher or lower.");
   expect(text("Higher is worse for this measure, so a positive difference means worse than expected.")).toBe(
-    "+3.7 years is beyond ±3.4 years, the range for notably better or worse. Higher is worse for this measure, so a positive difference means worse than expected.",
+    "+3.7 years is beyond ±3.4 years, the range for notably higher or lower. Higher is worse for this measure, so a positive difference means worse than expected.",
   );
 });
 

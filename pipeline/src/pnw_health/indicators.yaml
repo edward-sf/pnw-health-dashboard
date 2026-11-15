@@ -273,7 +273,7 @@
   year: 2025
   category: Outcomes
   direction: higher_is_worse
-  description: Number of deaths due to injury per 100,000 population.
+  description: Deaths from intentional and unintentional injury per 100,000 population.
   race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: primary_care_physicians
@@ -417,7 +417,7 @@
   year: 2024
   category: Demographics
   direction: neutral
-  description: Percent of the total population that is female.
+  description: Percent of the total population whose sex is recorded as female in the American Community Survey.
   profile: age_sex
 
 - id: pct_hispanic
@@ -562,6 +562,6 @@
   year: 2024
   category: Demographics
   direction: neutral
-  description: Percent of the population 5 and over who speak English less than very well.
+  description: Percent of the population 5 and over who speak English less than "very well", in the American Community Survey's wording.
   profile: other
   universe: Population 5 and over

@@ -3,6 +3,8 @@ import { HATCH_FILL } from "../color/makeColorScale";
 import type { Palette } from "../color/palette";
 import type { CountyModel, Flag, TargetModel, Unit } from "../types";
 
+export type Direction = TargetModel["direction"];
+
 export const TIERS: readonly Flag[] = [
   "notably_worse",
   "somewhat_worse",
@@ -11,13 +13,25 @@ export const TIERS: readonly Flag[] = [
   "notably_better",
 ];
 
-const LABELS: Record<Flag, string> = {
-  notably_worse: "Notably worse than expected",
-  somewhat_worse: "Somewhat worse than expected",
-  none: "About as expected",
-  somewhat_better: "Somewhat better than expected",
-  notably_better: "Notably better than expected",
-  insufficient_data: "Not enough data",
+// A tier says where the county sits against the model's estimate; which way is favorable
+// depends on the outcome's direction (colour and the legend caption carry that).
+const LABELS: Record<Direction, Record<Flag, string>> = {
+  higher_is_better: {
+    notably_better: "Notably higher than expected",
+    somewhat_better: "Somewhat higher than expected",
+    none: "About as expected",
+    somewhat_worse: "Somewhat lower than expected",
+    notably_worse: "Notably lower than expected",
+    insufficient_data: "Not enough data",
+  },
+  higher_is_worse: {
+    notably_better: "Notably lower than expected",
+    somewhat_better: "Somewhat lower than expected",
+    none: "About as expected",
+    somewhat_worse: "Somewhat higher than expected",
+    notably_worse: "Notably higher than expected",
+    insufficient_data: "Not enough data",
+  },
 };
 
 // The colored tiers are data, the same in every theme; "none" is a neutral from the palette.
@@ -33,7 +47,7 @@ export const TIER_FILLS: Record<Exclude<Flag, "none">, string> = {
 export const modelDigits = (unit: Unit, fallback?: number): number | undefined =>
   unit === "rate_per_100k" ? 0 : fallback;
 
-export const tierLabel = (flag: Flag): string => LABELS[flag];
+export const tierLabel = (flag: Flag, direction: Direction): string => LABELS[direction][flag];
 export const tierFill = (flag: Flag, palette: Palette): string =>
   flag === "none" ? palette.tierNone : TIER_FILLS[flag];
 
@@ -92,9 +106,15 @@ export function hasModelResult(entry: CountyModel): entry is CompleteModel {
   );
 }
 
-export function modelTooltip(name: string, state: string, entry: CountyModel, unit: Unit): string {
+export function modelTooltip(
+  name: string,
+  state: string,
+  entry: CountyModel,
+  unit: Unit,
+  direction: Direction,
+): string {
   if (!hasModelResult(entry) || entry.residual === null) {
     return `${name}, ${state}: not enough data for the model`;
   }
-  return `${name}, ${state}: ${tierLabel(entry.flag).toLowerCase()} (${formatSigned(entry.residual, unit, modelDigits(unit))})`;
+  return `${name}, ${state}: ${tierLabel(entry.flag, direction).toLowerCase()} (${formatSigned(entry.residual, unit, modelDigits(unit))})`;
 }
