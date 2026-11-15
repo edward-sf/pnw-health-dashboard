@@ -82,11 +82,12 @@ test("the header fits at 320px wide", async ({ page }) => {
     const top = (sel: string) => document.querySelector(sel)?.getBoundingClientRect().top ?? -1;
     return {
       link: top(".site-header nav a"),
-      button: top(".site-header .theme-menu button"),
+      button: top(".site-header .theme-menu"),
       header: document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0,
     };
   });
-  expect(rows.button).toBeLessThan(rows.link + 4);
+  expect(rows.link).toBeGreaterThanOrEqual(0);
+  expect(Math.abs(rows.button - rows.link)).toBeLessThanOrEqual(1);
   expect(rows.header).toBeLessThanOrEqual(80);
 });
 
@@ -119,17 +120,23 @@ for (const vp of [
   { width: 375, height: 812 },
   { width: 1280, height: 800 },
 ]) {
-  test(`the header link focus ring stays inside the header and viewport at ${vp.width}px`, async ({
+  test(`the header focus rings stay inside the header and viewport at ${vp.width}px`, async ({
     page,
   }) => {
     await page.setViewportSize(vp);
     await page.goto("./");
-    for (const name of ["Explorer", "Methodology", "About"]) {
-      const link = page.getByRole("banner").getByRole("link", { name });
-      await link.focus();
+    const banner = page.getByRole("banner");
+    for (const [role, name] of [
+      ["link", "Explorer"],
+      ["link", "Methodology"],
+      ["link", "About"],
+      ["button", "Theme"],
+    ] as const) {
+      const control = banner.getByRole(role, { name });
+      await control.focus();
       await page.keyboard.press("Tab");
       await page.keyboard.press("Shift+Tab");
-      await expect(link).toBeFocused();
+      await expect(control).toBeFocused();
       const m = await page.evaluate(() => {
         const el = document.activeElement as HTMLElement;
         const cs = getComputedStyle(el);

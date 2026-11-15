@@ -7,8 +7,8 @@ export type ModelSortKey = "name" | "state" | "actual" | "expected" | "differenc
 
 /**
  * Sort model rows. The "result" key orders by tier, then by the residual signed
- * so that larger is better (negated for higher_is_worse targets), so ascending
- * runs worst to best within and across tiers for every target.
+ * so that larger is more favorable (negated for higher_is_worse targets), so
+ * ascending runs least to most favorable within and across tiers for every target.
  */
 export function sortModelRows(
   rows: ModelRow[],
