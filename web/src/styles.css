@@ -1335,6 +1335,7 @@
     }
 
     .site-header nav {
+      gap: 0;
       margin-left: -0.75rem;
     }
 
