@@ -77,6 +77,17 @@ test("the header fits at 320px wide", async ({ page }) => {
     return hits;
   });
   expect(itemHits).toEqual([]);
+  // Two rows: the theme button sits in the nav links' row, and the header keeps its height.
+  const rows = await page.evaluate(() => {
+    const top = (sel: string) => document.querySelector(sel)?.getBoundingClientRect().top ?? -1;
+    return {
+      link: top(".site-header nav a"),
+      button: top(".site-header .theme-menu button"),
+      header: document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0,
+    };
+  });
+  expect(rows.button).toBeLessThan(rows.link + 4);
+  expect(rows.header).toBeLessThanOrEqual(80);
 });
 
 for (const theme of ["light", "dark"] as const) {

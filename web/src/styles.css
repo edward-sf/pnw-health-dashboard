@@ -1326,6 +1326,7 @@
     /* Two rows: the brand, then the nav with the theme button at its right end. The button is
        after the nav in the DOM, so tab order matches. */
     .site-header-inner {
+      column-gap: 0;
       padding-top: 0.5rem;
     }
 
