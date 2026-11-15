@@ -3,7 +3,14 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 
 /** The directories swept onto the token scale; later tasks add to this list. */
-export const SWEPT: readonly string[] = ["src/components/ui"];
+export const SWEPT: readonly string[] = [
+  "src/components/ui",
+  "src/explorer",
+  "src/map",
+  "src/panel",
+  "src/table",
+  "src/search",
+];
 
 const RAW_HEX = /#[0-9a-fA-F]{3,8}\b/;
 const ARBITRARY_SIZE =
