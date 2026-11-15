@@ -5,7 +5,7 @@ import type { ColorScale } from "./makeColorScale";
 
 // Per-100k and years ranges would wrap to several lines per swatch with the unit repeated on
 // both bounds, so those state it once under the ramp. Dollars and counts use compact bounds.
-const UNIT_NOTE: Partial<Record<Unit, string>> = { years: "Years", rate_per_100k: "Per 100k" };
+const UNIT_NOTE: Partial<Record<Unit, string>> = { years: "years", rate_per_100k: "per 100k" };
 
 function formatLegendBound(v: number, unit: Unit): string {
   if (unit === "dollars" || unit === "count") return formatTick(v, unit);
