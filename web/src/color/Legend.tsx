@@ -10,18 +10,26 @@ export function Legend({ scale, unit }: Props) {
   return (
     <div className="legend">
       <div className="legend-scale">
-        {ends && <span className="legend-end">{ends.low}</span>}
-        <ul className="legend-bins">
+        {ends && (
+          <div className="legend-ends">
+            <span className="legend-end" data-end="low">
+              {ends.low}
+            </span>
+            <span className="legend-end" data-end="high">
+              {ends.high}
+            </span>
+          </div>
+        )}
+        <ul className="legend-bins" data-testid="legend-ramp">
           {bins.map((b) => (
             <li key={b.color}>
               <span className="legend-swatch" style={{ background: b.color }} aria-hidden="true" />
-              <span>
+              <span className="legend-range">
                 {formatValue(b.min, unit)} – {formatValue(b.max, unit)}
               </span>
             </li>
           ))}
         </ul>
-        {ends && <span className="legend-end">{ends.high}</span>}
       </div>
       <div className="legend-null">
         <HatchSwatch />

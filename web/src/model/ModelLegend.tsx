@@ -6,8 +6,8 @@ import { TIERS, tierFill, tierLabel } from "./modelView";
 export function ModelLegend({ counts }: { counts: Record<Flag, number> }) {
   const palette = usePalette();
   return (
-    <div className="legend">
-      <ul className="legend-bins">
+    <div className="legend legend-model">
+      <ol className="legend-bins">
         {TIERS.map((flag) => (
           <li key={flag}>
             <span
@@ -26,7 +26,7 @@ export function ModelLegend({ counts }: { counts: Record<Flag, number> }) {
             {tierLabel("insufficient_data")} ({counts.insufficient_data})
           </span>
         </li>
-      </ul>
+      </ol>
       <p className="legend-note">
         Compared with what the model expects for counties nationwide with a similar social and
         economic profile.
