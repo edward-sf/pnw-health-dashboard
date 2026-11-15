@@ -1,8 +1,11 @@
 import { Link } from "react-router";
+import { GitHubIcon, LinkedInIcon } from "../brand/BrandIcons";
+import { pageTitle } from "../brand/brand";
+import { buttonVariants } from "@/components/ui/button";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export function About() {
-  usePageTitle("About · PNW Health Dashboard");
+  usePageTitle(pageTitle("About"));
   return (
     <section className="about">
       <h2 tabIndex={-1} data-page-heading>
@@ -76,9 +79,24 @@ export function About() {
       <h3>Author</h3>
       <p>
         Edward Simpson-Fitzgibbon.{" "}
-        <a href="https://github.com/edward-sf">GitHub</a>
-        {" · "}
-        <a href="https://www.linkedin.com/in/edward-sf">LinkedIn</a>
+      </p>
+      <p className="about-profiles">
+        <a
+          href="https://github.com/edward-sf"
+          className={buttonVariants({ variant: "secondary", size: "icon" })}
+          aria-label="GitHub profile"
+          title="GitHub profile"
+        >
+          <GitHubIcon />
+        </a>
+        <a
+          href="https://www.linkedin.com/in/edward-sf"
+          className={buttonVariants({ variant: "secondary", size: "icon" })}
+          aria-label="LinkedIn profile"
+          title="LinkedIn profile"
+        >
+          <LinkedInIcon />
+        </a>
       </p>
       <p>
         <a href="https://github.com/edward-sf/pnw-health-dashboard">Source code</a> is available

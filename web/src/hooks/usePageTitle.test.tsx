@@ -12,12 +12,12 @@ afterEach(() => {
 });
 
 test("sets document.title", () => {
-  render(<Page title="About · PNW Health Dashboard" />);
-  expect(document.title).toBe("About · PNW Health Dashboard");
+  render(<Page title="About · PNW Health Atlas" />);
+  expect(document.title).toBe("About · PNW Health Atlas");
 });
 
 test("updates document.title when the title changes", () => {
-  const { rerender } = render(<Page title="PNW Health Dashboard" />);
-  rerender(<Page title="Methodology · PNW Health Dashboard" />);
-  expect(document.title).toBe("Methodology · PNW Health Dashboard");
+  const { rerender } = render(<Page title="PNW Health Atlas" />);
+  rerender(<Page title="Methodology · PNW Health Atlas" />);
+  expect(document.title).toBe("Methodology · PNW Health Atlas");
 });

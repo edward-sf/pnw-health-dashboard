@@ -21,8 +21,8 @@ test("has the page heading and every section heading", () => {
 test("links to the author, repo, licence and the four data sources", () => {
   renderAbout();
   const href = (name: string | RegExp) => screen.getByRole("link", { name }).getAttribute("href");
-  expect(href("GitHub")).toBe("https://github.com/edward-sf");
-  expect(href("LinkedIn")).toBe("https://www.linkedin.com/in/edward-sf");
+  expect(href("GitHub profile")).toBe("https://github.com/edward-sf");
+  expect(href("LinkedIn profile")).toBe("https://www.linkedin.com/in/edward-sf");
   expect(href("Source code")).toBe("https://github.com/edward-sf/pnw-health-dashboard");
   expect(href("MIT license")).toBe("https://github.com/edward-sf/pnw-health-dashboard/blob/main/LICENSE");
   expect(href("CDC PLACES")).toBe("https://www.cdc.gov/places/");
@@ -80,4 +80,14 @@ test("Built with names the front-end libraries", () => {
   renderAbout();
   const text = document.body.textContent ?? "";
   for (const name of ["Tailwind", "Radix", "shadcn", "Lucide"]) expect(text).toContain(name);
+});
+
+test("the profile links are icon buttons with no visible GitHub or LinkedIn text", () => {
+  renderAbout();
+  for (const name of ["GitHub profile", "LinkedIn profile"]) {
+    const link = screen.getByRole("link", { name });
+    expect(link.querySelector("svg")).not.toBeNull();
+    expect(link.textContent).toBe("");
+    expect(link).toHaveAttribute("title", name);
+  }
 });

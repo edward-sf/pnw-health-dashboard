@@ -10,17 +10,24 @@ export const SWEPT: readonly string[] = [
   "src/panel",
   "src/table",
   "src/search",
+  "src/pages",
+  "src/brand",
+  "src/App.tsx",
 ];
 
 const RAW_HEX = /#[0-9a-fA-F]{3,8}\b/;
 const ARBITRARY_SIZE =
   /\b(?:rounded|text|p|px|py|m|mx|my|gap|w|h)-\[[\d.]+(?:px|rem)\]/;
 
+/** The mark's sun is a literal: "sun is mark-only", so it is not a token. */
+const EXEMPT = new Set([join("src", "brand", "BrandMark.tsx")]);
+
 function tsxFiles(dir: string): string[] {
+  if (statSync(dir).isFile()) return [dir];
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return tsxFiles(path);
-    return path.endsWith(".tsx") && !/\.test\.tsx$/.test(path) ? [path] : [];
+    return path.endsWith(".tsx") && !/\.test\.tsx$/.test(path) && !EXEMPT.has(path) ? [path] : [];
   });
 }
 

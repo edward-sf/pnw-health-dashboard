@@ -123,6 +123,7 @@
   --color-input: var(--line-strong);
   --color-ring: var(--focus);
   --color-fir: var(--fir);
+  --color-header-ink: var(--header-ink);
 
   --radius-xl: calc(var(--radius) + 4px);
 }
@@ -175,8 +176,8 @@
   /* ---------- App shell ---------- */
 
   .site-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
+    background: var(--fir);
+    color: var(--header-ink);
   }
 
   .site-header-inner,
@@ -195,10 +196,19 @@
     min-height: var(--header-height);
   }
 
-  .site-header h1 {
+  /* On the fir surface the page's dark focus ring would vanish; use the mint one. */
+  .site-header :focus-visible {
+    outline-color: var(--focus-on-fir);
+  }
+
+  .site-brand {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .site-brand h1 {
     margin: 0;
     font-size: var(--text-lg);
     font-weight: 700;
@@ -206,9 +216,32 @@
   }
 
   .site-mark {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--evergreen);
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .site-tagline {
+    margin: 0;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--focus-on-fir);
+    font-size: var(--text-sm);
+    line-height: 1.2;
+  }
+
+  /* Phones keep the wordmark and nav; the tagline stays for screen readers. */
+  @media (max-width: 719px) {
+    .site-tagline {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   .site-header nav {
@@ -223,25 +256,29 @@
     min-height: 2.75rem;
     padding: 0 0.75rem;
     border-bottom: 2px solid transparent;
-    color: var(--ink-muted);
+    color: var(--header-ink);
     font-size: var(--text-sm);
     font-weight: 500;
     text-decoration: none;
   }
 
   .site-header nav a:hover {
-    color: var(--ink);
+    border-bottom-color: var(--focus-on-fir);
   }
 
   .site-header nav a[aria-current="page"] {
-    border-bottom-color: var(--evergreen);
-    color: var(--ink);
+    border-bottom-color: var(--focus-on-fir);
     font-weight: 650;
   }
 
   /* The theme switch, at the header's right end. */
   .site-header .theme-menu {
     margin-left: auto;
+  }
+
+  .about-profiles {
+    display: flex;
+    gap: 0.5rem;
   }
 
   main {
@@ -1225,20 +1262,23 @@
       --gutter: 1rem;
     }
 
+    /* Two rows: the brand, then the nav with the theme button at its right end. The button is
+       after the nav in the DOM, so tab order matches. */
     .site-header-inner {
-      padding-top: 0.625rem;
+      padding-top: 0.5rem;
+    }
+
+    .site-brand {
+      flex-basis: 100%;
     }
 
     .site-header nav {
-      flex-basis: 100%;
+      flex: 1;
+      min-width: 0;
       margin-left: -0.75rem;
     }
 
-    /* Beside the brand on the first row, so the nav keeps the second row to itself. It comes
-       before the nav in the DOM on phones (App.tsx), so tab order matches. Its 44px target
-       overhangs the row instead of making it taller than the brand. */
     .site-header .theme-menu {
-      margin-block: -0.625rem -0.75rem;
       margin-right: -0.5rem;
     }
 

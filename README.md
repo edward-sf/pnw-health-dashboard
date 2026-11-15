@@ -1,4 +1,6 @@
-# PNW Health Dashboard
+# PNW Health Atlas
+
+County health across Washington, Oregon, Idaho and Alaska.
 
 Explore public health data for the 149 counties of Washington, Oregon, Idaho and Alaska, and see how each county compares with what a model expects on life expectancy, premature death or injury deaths, given its social and economic profile.
 
