@@ -88,6 +88,8 @@ cd pipeline && uv run pnw-health schema --root ..
 cd web && npm ci && npm test && npm run lint && npm run typecheck
 ```
 
+Web UI follows the design guide, [docs/design-system.md](docs/design-system.md): tokens only, no raw colours, font sizes or radii.
+
 ## Dependency overrides
 
 `web/package.json` has `"overrides"` entries that pin a transitive dependency outside its parents' ranges. Each pins an exact version, not a range, so a fresh `npm install` can't pull in a release nobody has audited, and each has a removal condition. When it's met, delete the override, run `npm install`, and check that `npm audit` and `npm run lint` still pass.
