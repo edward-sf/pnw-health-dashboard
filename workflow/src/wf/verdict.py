@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from wf.state import ReviewRecord, RunState, RunStateError
+from wf.state import ReviewRecord, RunState, require_running
 
 Severity = Literal["critical", "important", "minor"]
 _SEVERITIES = ("critical", "important", "minor")
@@ -105,16 +106,47 @@ def load_verdict(path: Path) -> Verdict:
     return parse_verdict(raw)
 
 
-def ingest(state: RunState, node: str, path: Path, now: str, head: str) -> ReviewRecord:
-    """Record a verdict for `node`, provided it names this node and the PR's current head."""
-    if node not in state.nodes:
-        raise RunStateError(f"unknown node '{node}'")
+def _written_after(path: Path, started_at: str | None) -> bool:
+    if started_at is None:
+        return False
+    try:
+        mtime = path.stat().st_mtime
+    except OSError as e:
+        raise VerdictError(f"cannot read verdict {path}: {e.strerror}") from e
+    return mtime > datetime.fromisoformat(started_at).timestamp()
+
+
+def _stored(path: Path, root: Path | None) -> str:
+    """The path as kept in run state: relative to the repo root when under it."""
+    if root is None:
+        return str(path)
+    full = path.resolve()
+    try:
+        return str(full.relative_to(root.resolve()))
+    except ValueError:
+        return str(full)
+
+
+def ingest(
+    state: RunState, node: str, path: Path, now: str, head: str, root: Path | None = None
+) -> ReviewRecord:
+    """Record a verdict for `node`, provided it names this node and the PR's current head.
+
+    The node must be running and the file written after its round started. That proves the
+    verdict is fresh, not who wrote it (spec section 11, known gaps).
+    """
+    rec = require_running(state, node)
+    if not _written_after(path, rec.started_at):
+        raise VerdictError(
+            f"verdict {path} was written before {node} started at {rec.started_at}: "
+            "a reviewer must write a fresh one"
+        )
     verdict = load_verdict(path)
     if verdict.node != node:
         raise VerdictError(f"verdict is for node '{verdict.node}', not '{node}'")
     if verdict.sha != head:
         raise VerdictError(f"verdict sha {verdict.sha} is not the head {head}: review is stale")
     task = node.rpartition(".")[0] or node  # final and delta reviews are keyed by node name
-    record = ReviewRecord(task, verdict.sha, node, verdict.result, str(path), now)
+    record = ReviewRecord(task, verdict.sha, node, verdict.result, _stored(path, root), now)
     state.reviews.append(record)
     return record

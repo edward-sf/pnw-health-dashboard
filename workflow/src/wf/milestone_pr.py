@@ -10,7 +10,7 @@ from wf.state import Escalation, GateRecord, RunState
 from wf.tasks import PlanTask
 from wf.verdict import Finding
 
-OUTCOME_DEFAULT = "ask author"
+OUTCOME_DEFAULT = "no outcome recorded"  # a missing outcome is never guessed
 
 
 def _fill(template: str, title: str, content: str) -> str:

@@ -115,6 +115,36 @@ def test_state_bash_writes_blocked(cmd):
     assert run_hook("guard-state.sh", bash(cmd)).returncode == 2
 
 
+WF = "uv run --project workflow wf status --milestone 13"
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf status --milestone 99 > .workflow/runs/m99/state.json",
+        f"{WF}; rm -rf .workflow/runs/m13",
+        f"{WF} && rm .workflow/runs/m13/state.json",
+        f"{WF} | tee .workflow/runs/m13/state.json",
+        f"{WF}\nrm -rf .workflow/runs/m13",
+        "uv run --project workflow wf status $(rm -rf .workflow/runs/m13)",
+        "uv run --project workflow wf status `rm -rf .workflow/runs/m13`",
+    ],
+)
+def test_state_wf_prefix_does_not_cover_chained_writes(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 2
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf gate T1 --milestone 13 --base .workflow/runs/m13/x",
+        "uv run --project workflow wf gate T1 --milestone 13 --base .workflow/runs/x 2>&1 | tail",
+    ],
+)
+def test_state_wf_commands_naming_the_runs_path_are_allowed(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
+
+
 @pytest.mark.parametrize(
     "cmd",
     [
@@ -129,6 +159,37 @@ def test_state_bash_writes_blocked(cmd):
 )
 def test_state_bash_reads_allowed(cmd):
     assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf clear T1.deploy-watch --milestone 13 --note ok",
+        "cd /repo && uv run --project workflow wf clear final-gates --milestone 13 --note x",
+        "wf  clear T1.implement",
+        "echo hi\nwf clear T1.implement --milestone 13 --note x",
+    ],
+)
+def test_state_guard_blocks_wf_clear(cmd):
+    r = run_hook("guard-state.sh", bash(cmd))
+    assert r.returncode == 2 and "author" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "uv run --project workflow wf status --milestone 13",
+        "git clear-cache",
+        "echo wfclear",
+    ],
+)
+def test_state_guard_lets_other_wf_commands_through(cmd):
+    assert run_hook("guard-state.sh", bash(cmd)).returncode == 0
+
+
+def test_state_guard_does_not_block_writing_about_wf_clear():
+    payload = {"tool_name": "Write", "tool_input": {"file_path": "a.md", "content": "wf clear"}}
+    assert run_hook("guard-state.sh", payload).returncode == 0
 
 
 def test_unrelated_edit_allowed():
@@ -209,6 +270,20 @@ def test_merge_guard_url_argument_passes_resolved_number(stubs):
 def test_merge_guard_blocks_when_lookup_fails(stubs):
     _script(Path(stubs["env"]["PATH"].split(":")[0]) / "gh", "exit 1\n")
     assert run_hook("guard-merge.sh", bash(MERGE), _env(stubs)).returncode == 2
+
+
+def test_merge_guard_refusals_do_not_report_a_hook_error(stubs):
+    _make_run(stubs)
+    out = json.dumps({"ok": False, "reasons": ["no gate record for T1 at abc"]})
+    refused = run_hook("guard-merge.sh", bash(MERGE), _env(stubs, UV_OUT=out, UV_EXIT="1"))
+    assert refused.returncode == 2 and "no gate record" in refused.stderr
+    assert "hook error" not in refused.stderr
+    errored = run_hook("guard-merge.sh", bash(MERGE), _env(stubs, UV_OUT="", UV_EXIT="2"))
+    assert errored.returncode == 2 and "hook error" not in errored.stderr
+    _script(Path(stubs["env"]["PATH"].split(":")[0]) / "gh", "exit 1\n")
+    lookup = run_hook("guard-merge.sh", bash(MERGE), _env(stubs))
+    assert lookup.returncode == 2 and "could not look up" in lookup.stderr
+    assert "hook error" not in lookup.stderr
 
 
 # fail closed

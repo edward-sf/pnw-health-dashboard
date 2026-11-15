@@ -77,6 +77,14 @@ def test_transitive_dependency_covers_overlap():
     assert check_plan(ts) == []
 
 
+def test_dependency_listed_after_its_dependent_covers_overlap():
+    """T1 depends on T2 but comes first in plan order: still no overlap problem."""
+    ts = [pt("T1", depends_on=["T2"], files=["a.txt"]), pt("T2", files=["a.txt"])]
+    assert check_plan(ts) == []
+    ts = [pt("T1", depends_on=["T3"], files=["a.txt"]), pt("T3", ["T2"]), pt("T2", files=["a.txt"])]
+    assert check_plan(ts) == []
+
+
 def test_topo_order_keeps_plan_order_for_ties():
     ts = [pt("T1"), pt("T4", ["T1"]), pt("T3", ["T2"]), pt("T2", ["T1"])]
     assert topo_order(ts) == ["T1", "T4", "T2", "T3"]

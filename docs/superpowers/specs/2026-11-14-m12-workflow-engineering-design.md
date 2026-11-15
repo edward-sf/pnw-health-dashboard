@@ -265,8 +265,11 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **The state hook is a drift guard, not a security boundary.** It matches Bash commands by pattern, so a determined command can get around it.
 
 **Escalations**
-- **`wf clear`.** An escalated node stays escalated until the author clears it: `wf clear <node> --note <decision>` sets it back to pending, resets its rounds and records the note. The skill never runs it.
+- **`wf clear`.** An escalated node stays escalated until the author clears it: `uv run --project workflow wf clear <node> --milestone <N> --note "<decision>"` sets it back to pending, resets its rounds and records the note. The author runs it in their own terminal, where no hook applies. `guard-state.sh` blocks any Bash command containing `wf clear`, so a Claude Code session can neither clear an escalation nor stamp an `author:` note.
+- **`wf finish` only closes a running node.** It refuses a pending node and never moves an escalated one, so `clear` is the only way out of an escalation. A send-back may fail a node that is done.
+- **Done needs a record.** `wf finish --status done` checks the record the node exists to produce: a passing gate record at the task branch head (`gates`) or milestone branch head (`final-gates`), a `pass` review record at the reviewed head (`task-review`, `delta-review`), and a verdict ingested this round (`final-review`). `merge`, `deploy-watch` and `milestone-pr` are done only through `wf merge`, `wf deploy-watch` and `wf milestone-pr --ready`. When triage finds nothing must-fix, `delta-review` may finish without a review, provided no fix branch was started and the must-fix list is empty. Agent nodes that produce commits finish `done` when running.
 - **Retries and interruptions.** `start_round` accepts failed nodes, so a failed round can be retried inside its budget. `wf resume` refunds the round the interrupted attempt spent.
+- **`ask-author` findings wait for the merge gate.** They do not escalate the run. The run posts the final review, fixes the must-fix findings, defers the rest, and lists every `ask-author` finding in the outcome comment; the author decides them at the milestone merge, with their verdict.
 
 **Dry run.** The live agent-dispatch dry run was deferred to the M11 replay (T11) and the M13 pilot. Implementers cannot dispatch subagents, so T9 proved the walker's transitions with a scripted CLI walk instead.
 
@@ -276,8 +279,13 @@ Where M12's build differs from the design above, and why. The rulings were made 
 - **Oversized estimates.** A node is blocked outright only when its estimate times the margin exceeds a whole window. One that merely does not fit what is left pauses until the reset.
 - **Unavailable usage.** When `get_usage` is unavailable or not applicable, the walker dispatches the earliest ready node without a fit check and records `pacing: off` for that decision.
 
+**Pilot measurement (§5.10)**
+- **Target 3 uses the baseline's method.** The retro runs `wf baseline` for the milestone with M11's flags and compares with `workflow/baselines/m11.json` (861,550 tokens per task, about 21.5M cache reads per task). The per-node `tokens` from task notifications are a different counter and leave out the orchestrating session, so they only rank nodes.
+- **Whole-run window use.** `wf next` logs every `get_usage` reading it is given, and `wf usage-total` sums the 5-hour-window percent across them, orchestration included. The skill calls `get_usage` only at a session's start and after agent nodes, since script nodes spend no tokens.
+
 **Loops and budgets (§5.2)**
 - **Red deploys escalate.** The design gave deploy-watch one fix round per red run. As built, a red or timed-out `build-deploy` escalates to the author, who decides the fix.
+- **Milestone pushes are watched too.** After the final-review report push, the fix-PR merge and the retro push, the skill runs `wf deploy-watch --milestone <N>` with no node: it watches the milestone head and changes no state. A red run escalates the node that pushed (`final-gates` for the fix-PR merge), inside the batched-fix budget rather than a node of its own.
 - **One late round on review budget.** The task-review budget is checked when the next review starts, so after the last allowed review round finds problems, one more implement and gates round runs before `wf start` refuses the review and escalates.
 - **The fix PR is merged by the graph.** `wf start batched-fix --branch <b>` records the fix branch. `wf merge` maps that branch to a `batched-fix` gate record and a `delta-review` record, so the fix PR merges under the same record rules as an issue PR.
 - **Merge hardening.** `wf merge` passes `--match-head-commit`, so a push between the record check and the merge is refused. The merge hook resolves the PR number and base with one `gh pr view` and blocks if that lookup fails. `wf check-merge` finds the task by matching the PR's head branch to the task graph.
@@ -289,5 +297,9 @@ Where M12's build differs from the design above, and why. The rulings were made 
 **CI and e2e (§5.5)**
 - **The e2e job is in PR `ci`** (#295), and `ci` needs it. New or changed specs are repeated 3 times at 4x CPU throttle (`E2E_CPU_THROTTLE`), in the gate and in CI. e2e also still runs on milestone pushes in `build-deploy`, and the job runs on pushes too, which duplicates that.
 - **A `workflow` job** runs `ruff`, `mypy` and `pytest` for the engine, and is in `ci`'s `needs`.
+
+**Known gaps**
+- **Verdict authorship is not proven.** `wf ingest` refuses a node that is not running, and a verdict file last written before the node's round started. That proves the verdict is fresh, not who wrote it: the orchestrating session could still write one during the round. The real guards are the skill's instruction ("never write or edit a verdict") and the hook-protected run state, which only `wf` writes.
+- **`wf resume` refunds without limit.** Each resume returns the interrupted round, so start-and-resume cycles never spend a budget. Restarts are the author's, so this is bounded in practice (final review M5, deferred).
 
 **Known minors, left to the final review's triage.** Run state has no file locking (the walker is serial). The merge hook fires on any command whose text merely mentions the merge phrase, and the state hook can false-positive on a heredoc that names the runs path with `>` (use a body file). The replay and the pilot in §5.10 are task T11 and M13.

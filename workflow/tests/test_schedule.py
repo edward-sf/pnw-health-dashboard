@@ -73,7 +73,7 @@ def task_graph(*tasks):
 
 def mark_done(s, *nodes):
     for n in nodes:
-        finish(s, n, "done", NOW)
+        s.nodes[n].status = "done"
 
 
 def test_independent_small_tasks_fill_the_window():
@@ -140,6 +140,14 @@ def test_reset_in_the_past_counts_as_fresh():
     assert isinstance(d, Dispatch) and d.node == "T1.implement"
 
 
+def test_reset_in_the_past_counts_as_an_empty_window_even_at_99_percent():
+    """A stale reading after a long pause: the window has reset, so 99% is really 0%."""
+    s, tasks = run_with([("T1", 8, ()), ("T2", 2, ())])
+    s.window = PAST
+    d = next_decision(s, G, tasks, usage(99, PAST), PACING, NOW)
+    assert isinstance(d, Dispatch) and d.node == "T1.implement"
+
+
 def test_fresh_window_that_cannot_fit_first_node_is_blocked():
     s, tasks = run_with([("T1", 200, ())])
     s.window = "OLD"
@@ -188,7 +196,7 @@ def test_no_ready_nodes_done_or_blocked():
     for n in s.nodes:
         s.nodes[n].status = "done"
     assert next_decision(s, G, tasks, Usage(None, None), PACING, NOW) == Done()
-    s.nodes["retro"].status = "escalated"
+    s.nodes["retro"].status = "running"
     finish(s, "retro", "escalated", NOW, "stuck")
     d = next_decision(s, G, tasks, Usage(None, None), PACING, NOW)
     assert isinstance(d, Blocked) and d.escalations[0].reason == "stuck"
@@ -361,3 +369,25 @@ def test_same_window_tolerates_jitter():
     assert not same_window("2026-11-14T21:00:00Z", "2026-11-14T21:06:00Z")
     assert not same_window(None, "2026-11-14T21:00:00Z")
     assert same_window("garbage", "garbage") and not same_window("garbage", "other")
+
+
+def test_window_total_within_one_window_is_last_minus_first():
+    from wf.schedule import window_total
+
+    readings = [(NOW, Window(10, FUTURE)), (NOW, Window(25, FUTURE)), (NOW, Window(40, FUTURE))]
+    assert window_total(readings) == (30.0, 1)
+
+
+def test_window_total_counts_a_later_window_from_its_reset():
+    from wf.schedule import window_total
+
+    a, b = "2026-11-14T12:00:00Z", "2026-11-14T17:00:00Z"
+    readings = [
+        ("2026-11-14T08:00:00Z", Window(10, a)),
+        ("2026-11-14T11:00:00Z", Window(70, a)),
+        ("2026-11-14T13:00:00Z", Window(70, a)),  # taken after a's reset: stale, skipped
+        ("2026-11-14T13:01:00Z", Window(5, b)),
+        ("2026-11-14T15:00:00Z", Window(30, b)),
+    ]
+    assert window_total(readings) == (60.0 + 30.0, 2)
+    assert window_total([]) == (0.0, 0)

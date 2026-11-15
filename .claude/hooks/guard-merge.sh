@@ -56,7 +56,9 @@ repo=${repo//\"/}; repo=${repo//\'/}
 view=(gh pr view)
 [[ -n "$pr" ]] && view+=("$pr")
 [[ -n "$repo" ]] && view+=(--repo "$repo")
-resolved=$("${view[@]}" --json number,baseRefName --jq '"\(.number) \(.baseRefName)"' 2>/dev/null) ||
+# `trap - ERR` in each substitution whose failure is handled: `set -E` would otherwise fire the
+# fail-closed trap inside it and print a false "hook error" before the real reason.
+resolved=$(trap - ERR; "${view[@]}" --json number,baseRefName --jq '"\(.number) \(.baseRefName)"' 2>/dev/null) ||
   block "could not look up PR ${pr:-for the current branch}."
 read -r number base <<<"$resolved"
 [[ "$number" =~ ^[0-9]+$ ]] || block "could not resolve PR ${pr:-for the current branch} to a number."
@@ -69,9 +71,9 @@ if [[ "$base" == milestone/* ]]; then
     root=${CLAUDE_PROJECT_DIR:-.}
     if [[ -f "$root/.workflow/runs/m$m/state.json" ]]; then
       status=0
-      check=$(cd "$root" && uv run --project workflow wf check-merge "$number" --milestone "$m" 2>&1) || status=$?
+      check=$(trap - ERR; cd "$root" && uv run --project workflow wf check-merge "$number" --milestone "$m" 2>&1) || status=$?
       if (( status != 0 )); then
-        reasons=$(jq -r '.reasons // [] | join("; ")' <<<"$check" 2>/dev/null) || reasons=""
+        reasons=$(trap - ERR; jq -r '.reasons // [] | join("; ")' <<<"$check" 2>/dev/null) || reasons=""
         block "wf check-merge refused PR $number: ${reasons:-${check:-exit $status}}."
       fi
     fi

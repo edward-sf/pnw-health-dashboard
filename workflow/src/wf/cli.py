@@ -38,9 +38,11 @@ from wf.schedule import (
     TaskGraph,
     TaskInfo,
     Waiting,
+    Window,
     load_task_graph,
     next_decision,
     parse_usage,
+    window_total,
 )
 from wf.setup import setup_milestone
 from wf.tasks import PlanError, check_plan_file, parse_plan_tasks
@@ -102,6 +104,7 @@ def _parser() -> argparse.ArgumentParser:
     fin = add("finish", node=True)
     fin.add_argument("--status", required=True, choices=["done", "failed", "escalated"])
     fin.add_argument("--note")
+    fin.add_argument("--pr", type=int, help="task-review: PR number (default: from the branch)")
     add("resume", node=True)
     clr = add("clear", node=True)
     clr.add_argument("--note", required=True, help="the author's decision")
@@ -132,11 +135,16 @@ def _parser() -> argparse.ArgumentParser:
     cm.add_argument("pr", type=int)
     mg = add("merge")
     mg.add_argument("pr", type=int)
-    dw = add("deploy-watch", node=True)
+    dw = add("deploy-watch")
+    dw.add_argument(
+        "node", nargs="?", help="the running node to finish (omit to watch the milestone head only)"
+    )
     dw.add_argument("--sha", help="merged commit (default: origin/<milestone branch> after fetch)")
     dw.add_argument("--timeout", type=int, default=1800, help="seconds to wait")
     mp = add("milestone-pr")
-    mp.add_argument("--ready", action="store_true", help="mark the PR ready for review")
+    mp.add_argument(
+        "--ready", action="store_true", help="mark the PR ready for review (finishes the node)"
+    )
     pfr = sub.add_parser("post-final-review")
     pfr.add_argument("pr", type=int)
     pfr.add_argument("--report", type=Path, required=True)
@@ -157,6 +165,7 @@ def _parser() -> argparse.ArgumentParser:
     use.add_argument("--pct-before", type=float, required=True)
     use.add_argument("--pct-after", type=float, required=True)
     use.add_argument("--tokens", type=int)
+    add("usage-total")
     return p
 
 
@@ -185,6 +194,10 @@ def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) ->
         usage = parse_usage(json.loads(text))
     except (OSError, ValueError, AttributeError) as e:
         raise st.RunStateError(f"cannot read usage JSON from {src}") from e
+    if usage.five_hour is not None:  # every reading, for the retro's whole-run total
+        reading = {"at": now, **asdict(usage.five_hour)}
+        with _readings(root, args.milestone).open("a") as log:
+            log.write(json.dumps(reading) + "\n")
     project = load_project(args.project or root / "workflow/project.toml")
     graph = load_graph(args.graph or root / "workflow/graph.toml")
     decision = next_decision(state, graph, _tasks(root, state), usage, project.pacing, now)
@@ -197,6 +210,35 @@ def _next(root: Path, args: argparse.Namespace, state: st.RunState, now: str) ->
     out = _decision_json(decision)
     (st.run_dir(root, args.milestone) / "last-decision.json").write_text(json.dumps(out) + "\n")
     return out
+
+
+def _readings(root: Path, milestone: int) -> Path:
+    return st.run_dir(root, milestone) / "usage-readings.jsonl"
+
+
+def _usage_total(root: Path, milestone: int) -> object:
+    """The 5-hour-window percent used across every reading `wf next` was given."""
+    readings: list[tuple[str, Window]] = []
+    try:
+        lines = _readings(root, milestone).read_text().splitlines()
+    except FileNotFoundError:
+        lines = []
+    except OSError as e:
+        raise st.RunStateError(f"cannot read usage readings: {e.strerror}") from e
+    for line in lines:
+        try:
+            raw = json.loads(line)
+            readings.append((str(raw["at"]), Window(float(raw["pct_used"]), str(raw["resets_at"]))))
+        except (ValueError, KeyError, TypeError):
+            continue  # a torn last line from an interrupted write
+    total, windows = window_total(readings)
+    return {
+        "readings": len(readings),
+        "windows": windows,
+        "pct_used": total if readings else None,
+        "first_at": readings[0][0] if readings else None,
+        "last_at": readings[-1][0] if readings else None,
+    }
 
 
 def _package(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
@@ -255,6 +297,43 @@ def _head(root: Path, state: st.RunState, node: str, pr: int | None) -> str:
         raise CommandError(f"cannot read the head of PR {pr}") from e
 
 
+def _branch_head(root: Path, branch: str) -> str:
+    return SubprocessGit(root).run(["rev-parse", "--verify", f"{branch}^{{commit}}"]).strip()
+
+
+def _nothing_to_fix(root: Path, state: st.RunState) -> bool:
+    """No fix branch was started and triage's must-fix list is empty."""
+    if state.fix_branch is not None:
+        return False
+    try:
+        return not load_verdict(st.work_dir(root, state.milestone) / "must-fix.json").findings
+    except VerdictError:
+        return False
+
+
+def _check_done(root: Path, args: argparse.Namespace, state: st.RunState) -> None:
+    """Resolve the head the node's record must be for, as `gate` and `ingest` do, and check it."""
+    node: str = args.node
+    st.require_running(state, node)
+    task, _, kind = node.rpartition(".")
+    head: str | None = None
+    nothing = False
+    if kind == "gates":
+        graph = load_task_graph(root / state.task_graph) if state.task_graph else None
+        info = graph.tasks.get(task) if graph else None
+        if info is None or not info.branch:
+            raise st.RunStateError(f"no branch recorded for {task}")
+        head = _branch_head(root, info.branch)
+    elif kind == "final-gates":
+        project = load_project(args.project or root / "workflow/project.toml")
+        head = _branch_head(root, project.milestone_branch.format(n=state.milestone))
+    elif kind == "delta-review" and _nothing_to_fix(root, state):
+        nothing = True
+    elif kind in ("task-review", "delta-review"):
+        head = _head(root, state, node, args.pr)
+    st.check_done(state, node, head, nothing)
+
+
 def _task_of_pr(root: Path, state: st.RunState, gh: SubprocessGh, pr: int) -> str | None:
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
@@ -277,6 +356,8 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
     task = _task_of_pr(root, state, gh, pr)
     if task is None:
         raise st.RunStateError(f"PR {pr} is not on any task's branch")
+    if task != FIX_TASK:
+        st.require_running(state, f"{task}.merge")
     sha = merge_task(state, task, pr, gh)
     if task != FIX_TASK:  # the fix PR has no merge node of its own
         st.finish(state, f"{task}.merge", "done", now, f"merged as {sha}")
@@ -285,6 +366,8 @@ def _merge(root: Path, state: st.RunState, pr: int, now: str) -> object:
 
 
 def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
+    if args.node:
+        st.require_running(st.load(root, args.milestone), args.node)
     project = load_project(args.project or root / "workflow/project.toml")
     branch = project.milestone_branch.format(n=args.milestone)
     git = SubprocessGit(root)
@@ -293,6 +376,8 @@ def _deploy_watch(root: Path, args: argparse.Namespace, now: str) -> object:
         git.run(["fetch", "origin", branch])
         sha = git.run(["rev-parse", f"origin/{branch}"]).strip()
     result = watch_deploy(SubprocessGh(), project, branch, sha, timeout_s=args.timeout)
+    if not args.node:
+        return {**asdict(result), "sha": sha}
     # The watch runs in the background while other commands write state: reload before saving.
     state = st.load(root, args.milestone)
     status: st.NodeStatus = "done" if result.conclusion == "success" else "failed"
@@ -317,9 +402,11 @@ def _merged_prs(gh: SubprocessGh, graph: TaskGraph) -> dict[str, int]:
     return prs
 
 
-def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> object:
+def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState, now: str) -> object:
     if not state.task_graph:
         raise st.RunStateError("run state has no task graph; re-run setup")
+    if args.ready:
+        st.require_running(state, "milestone-pr")
     project = load_project(args.project or root / "workflow/project.toml")
     graph = load_task_graph(root / state.task_graph)
     try:
@@ -354,6 +441,8 @@ def _milestone_pr(root: Path, args: argparse.Namespace, state: st.RunState) -> o
     gh.run(["pr", "edit", str(pr), "--body", new])
     if args.ready:
         mark_ready(gh, pr)
+        st.finish(state, "milestone-pr", "done", now, f"#{pr} ready for review")
+        st.save(root, state)
     return {"pr": pr, "ready": bool(args.ready)}
 
 
@@ -439,7 +528,7 @@ def _run(args: argparse.Namespace) -> object:
     if cmd == "merge":
         return _merge(root, state, args.pr, now)
     if cmd == "milestone-pr":
-        return _milestone_pr(root, args, state)
+        return _milestone_pr(root, args, state, now)
     if cmd == "status":
         return asdict(state)
     if cmd == "gate":
@@ -453,11 +542,14 @@ def _run(args: argparse.Namespace) -> object:
     if cmd == "package":
         return _package(root, args, state)
     if cmd == "ingest":
-        review = ingest(state, args.node, args.verdict, now, _head(root, state, args.node, args.pr))
+        head = _head(root, state, args.node, args.pr)
+        review = ingest(state, args.node, args.verdict, now, head, root)
         st.save(root, state)
         return asdict(review)
     if cmd == "next":
         return _next(root, args, state, now)
+    if cmd == "usage-total":
+        return _usage_total(root, m)
     if cmd == "usage":
         _budget(load_graph(graph_path), args.node)  # validates the node name
         sample = st.UsageSample(
@@ -485,6 +577,8 @@ def _run(args: argparse.Namespace) -> object:
             st.save(root, state)  # keep the escalation record
             raise
     elif cmd == "finish":
+        if args.status == "done":
+            _check_done(root, args, state)
         st.finish(state, args.node, args.status, now, args.note)
     elif cmd == "resume":
         st.resume(state, args.node, now)

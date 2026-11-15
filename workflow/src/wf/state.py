@@ -231,10 +231,60 @@ def start_round(state: RunState, node: str, budget: int | None, now: str) -> Non
     rec.finished_at = None
 
 
+def require_running(state: RunState, node: str) -> NodeRecord:
+    rec = _record(state, node)
+    if rec.status == "escalated":
+        raise RunStateError(f"{node} is escalated: only the author's `wf clear` moves it")
+    if rec.status != "running":
+        raise RunStateError(f"{node} is not running (status {rec.status}); `wf start` it first")
+    return rec
+
+
+# Nodes that only their own command may finish `done`; `wf finish` may still fail or escalate them.
+DONE_BY_COMMAND = {
+    "merge": "wf merge",
+    "deploy-watch": "wf deploy-watch",
+    "milestone-pr": "wf milestone-pr --ready",
+}
+
+
+def check_done(state: RunState, node: str, head: str | None, nothing_to_fix: bool = False) -> None:
+    """Refuse `wf finish <node> --status done` unless the record that proves it exists.
+
+    `head` is the commit the record must be for: the task branch (gates), the milestone branch
+    (final-gates) or the reviewed head (task-review, delta-review). `nothing_to_fix` lets
+    delta-review finish without a review when triage found nothing must-fix.
+    """
+    rec = require_running(state, node)
+    task, _, kind = node.rpartition(".")
+    key = task or kind  # milestone nodes key their records by node name
+    if kind in DONE_BY_COMMAND:
+        raise RunStateError(f"{node} is done only through `{DONE_BY_COMMAND[kind]}`")
+    if kind in ("gates", "final-gates"):
+        gate = latest_gate(state, key, head or "")
+        if gate is None or not gate.passed:
+            raise RunStateError(f"{node}: no passing gate record at {head}; run `wf gate`")
+    elif kind in ("task-review", "delta-review"):
+        if kind == "delta-review" and nothing_to_fix:
+            return
+        review = latest_review(state, key, head or "")
+        if review is None or review.node != node or review.result != "pass":
+            raise RunStateError(f"{node}: no passing review record at {head}; `wf ingest` it")
+    elif kind == "final-review":
+        if not any(r.node == node and r.at >= (rec.started_at or "") for r in state.reviews):
+            raise RunStateError(f"{node}: no verdict ingested this round; `wf ingest` it")
+
+
 def finish(
     state: RunState, node: str, status: NodeStatus, now: str, note: str | None = None
 ) -> None:
+    """Close the running round of `node`. A send-back may also fail a node that is done.
+
+    An escalated node is the author's: only `clear` moves it.
+    """
     rec = _record(state, node)
+    if not (rec.status == "done" and status == "failed"):
+        require_running(state, node)
     rec.status = status
     rec.finished_at = now
     rec.note = note

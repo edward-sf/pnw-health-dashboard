@@ -16,6 +16,7 @@ after = []
 [nodes.gates]
 kind = "script"
 per_task = true
+budget = 3  # one gate run per implement round
 after = ["implement"]
 
 [nodes.task-review]

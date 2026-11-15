@@ -55,7 +55,7 @@ main ◄──(milestone PR, author reviews, merge commit)── milestone/m1 �
 Agents can run a milestone from an approved plan to a ready milestone PR with the orchestrated graph in [`workflow/`](workflow/README.md): `wf setup`, then `/run-milestone <N>`. It stops for the author at named gates and never merges into `main`. The graph's rules sit on top of this document, not instead of it.
 
 - **Plans carry a `workflow-tasks` block.** It lists each task's id, title, step count, dependencies and files, and `uv run --project workflow wf check-plan <plan>` checks it. A plan with a missing block, an unknown dependency, a cycle or an undeclared file overlap cannot be set up.
-- **PR `ci` runs e2e.** It builds the site and runs the Playwright suite, and repeats new or changed e2e specs under CPU throttling. `ci` needs it to pass.
+- **PR `ci` runs e2e.** It builds the site and runs the Playwright suite, and repeats new or changed e2e specs under CPU throttling. `ci` needs it to pass. E2E specs must import `test` and `expect` from `./fixtures`, not `@playwright/test`, or the throttle never applies to them.
 - **Merges need records.** With a run in progress, a hook allows an issue PR merge only when the head commit has a passing gate record, a passing review record and a green `ci`.
 
 ## Rules

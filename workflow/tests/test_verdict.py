@@ -1,15 +1,17 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from wf.config import load_graph
-from wf.state import ReviewRecord, RunStateError, init_run
+from wf.state import ReviewRecord, RunStateError, init_run, start_round
 from wf.verdict import VerdictError, ingest, load_verdict
 
 REPO = Path(__file__).resolve().parents[2]
 GRAPH = load_graph(REPO / "workflow/graph.toml")
 NOW = "2026-11-14T10:00:00Z"
+STARTED = "2000-01-01T00:00:00Z"  # before any file a test writes
 
 
 def f(id, severity):
@@ -28,8 +30,11 @@ def write_json(tmp, data, name="v.json"):
     return p
 
 
-def state_with_task(tmp_path, task="T1"):
-    return init_run(tmp_path, 13, GRAPH, [task])
+def state_with_task(tmp_path, task="T1", running=("T1.task-review", "final-review")):
+    s = init_run(tmp_path, 13, GRAPH, [task])
+    for node in running:
+        start_round(s, node, None, STARTED)
+    return s
 
 
 def test_findings_with_important_block(tmp_path):
@@ -107,3 +112,33 @@ def test_ingest_final_review_is_keyed_by_node(tmp_path):
     s = state_with_task(tmp_path)
     path = write_json(tmp_path, verdict(node="final-review", task=None, sha="abc"))
     assert ingest(s, "final-review", path, NOW, head="abc").task == "final-review"
+
+
+def test_ingest_refuses_a_node_that_is_not_running(tmp_path):
+    s = state_with_task(tmp_path, running=())
+    path = write_json(tmp_path, verdict(sha="abc"))
+    with pytest.raises(RunStateError, match="not running"):
+        ingest(s, "T1.task-review", path, NOW, head="abc")
+    assert s.reviews == []
+
+
+def test_ingest_refuses_a_verdict_older_than_the_round(tmp_path):
+    import os
+
+    s = init_run(tmp_path, 13, GRAPH, ["T1"])
+    start_round(s, "T1.task-review", None, "2026-11-14T10:00:00Z")
+    path = write_json(tmp_path, verdict(sha="abc"))
+    started = datetime.fromisoformat("2026-11-14T10:00:00Z").timestamp()
+    os.utime(path, (started - 60, started - 60))  # a verdict left over from before the start
+    with pytest.raises(VerdictError, match="written before T1.task-review started"):
+        ingest(s, "T1.task-review", path, NOW, head="abc")
+    os.utime(path, (started + 60, started + 60))
+    assert ingest(s, "T1.task-review", path, NOW, head="abc").result == "pass"
+
+
+def test_ingest_stores_the_path_relative_to_root(tmp_path):
+    s = state_with_task(tmp_path)
+    path = write_json(tmp_path, verdict(sha="abc"))
+    assert (
+        ingest(s, "T1.task-review", path, NOW, head="abc", root=tmp_path).verdict_path == "v.json"
+    )
