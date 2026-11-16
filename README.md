@@ -12,6 +12,10 @@ Explore public health data for the 149 counties of Washington, Oregon, Idaho and
 
 ![The explorer comparing life expectancy with expected, with King County, Washington selected](docs/images/explorer.png)
 
+![The methodology page: the four-step pipeline strip, the reading rail and the first section](docs/images/methodology.png)
+
+![The About page: four panels covering the pipeline, model, site and agent workflow](docs/images/about.png)
+
 ## What it does
 
 - **Explorer.** A county map and sortable table of health, access and social indicators, with confidence intervals and state and regional ranks. A toolbar picks the measure: a category switch (Indicators, Demographics, Outcomes) and a searchable dropdown of that category's measures.
