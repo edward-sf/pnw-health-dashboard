@@ -68,22 +68,12 @@ export function ModelSection({
         prose={
           <>
             <p>
-              The same model is built for each of {targets.length} outcomes,
-              from the same factors:{" "}
+              One model is built for each of {targets.length} outcomes, from the
+              same factors:{" "}
               {joinList(targets.map(([, t]) => outcomeName(t.label)))}. The
-              default is {outcomeName(defaultTarget.label)}. They all come from
-              County Health Rankings & Roadmaps, and each is published with a
-              confidence interval for most counties.
-            </p>
-            <p>
-              CDC PLACES outcomes such as diabetes, COPD and depression are not
-              targets. CDC builds them partly from American Community Survey
-              demographics, so predicting them from the same kind of data would
-              largely reproduce CDC's own model. Low birth weight was also left
-              out. The model's expected values didn't fit Pacific Northwest
-              counties: the region as a whole sat well below its national
-              expectation, so the flags would have shown a regional offset, not
-              differences between counties.
+              default is {outcomeName(defaultTarget.label)}. All come from County
+              Health Rankings & Roadmaps, with a confidence interval for most
+              counties.
             </p>
             <div className="methodology-select">
               <span id="methodology-outcome">Outcome</span>
@@ -104,9 +94,8 @@ export function ModelSection({
               </Select>
             </div>
             <p>
-              The details below, the factors by importance, and the details
-              under Reproducibility are for the outcome selected here. The
-              accuracy table covers every outcome.
+              Everything below, including the factors and Reproducibility,
+              follows this outcome. The accuracy table covers every outcome.
             </p>
           </>
         }
@@ -141,6 +130,16 @@ export function ModelSection({
           <dt>Factors</dt>
           <dd>{joinList(card.features.map(label))}</dd>
         </dl>
+        <h5>Outcomes left out</h5>
+        <p>
+          CDC PLACES outcomes such as diabetes, COPD and depression are not
+          targets. CDC builds them partly from American Community Survey
+          demographics, so predicting them from the same kind of data would
+          largely reproduce CDC's own model. Low birth weight was also left out.
+          The model's expected values didn't fit Pacific Northwest counties: the
+          region as a whole sat well below its national expectation, so the flags
+          would have shown a regional offset, not differences between counties.
+        </p>
         <p>
           The model is trained on {formatCount(card.training_counties)} US
           counties: every county with a reported value for this outcome and at

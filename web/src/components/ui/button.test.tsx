@@ -32,3 +32,14 @@ test("the icon size is at least 24 by 24", () => {
     .find(Boolean);
   expect(Number(size?.[1])).toBeGreaterThanOrEqual(6);
 });
+
+test("a button rendered as a link is not underlined like body links", () => {
+  render(
+    <Button asChild variant="primary">
+      <a href="/x">Source</a>
+    </Button>,
+  );
+  expect(screen.getByRole("link", { name: "Source" }).className).toMatch(
+    /\bno-underline\b/,
+  );
+});
