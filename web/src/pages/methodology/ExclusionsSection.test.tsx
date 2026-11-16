@@ -5,7 +5,7 @@ import { ExclusionsSection } from "./ExclusionsSection";
 
 test("feature groups, behaviors comparison and excluded counties", () => {
   render(<ExclusionsSection model={modelFile} targetId="life_expectancy" />);
-  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "exclusions");
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute("id", "exclusions");
   const text = document.body.textContent ?? "";
   expect(text).toContain("Behaviors: Health behaviors closely restate the outcome.");
   expect(text).toContain("Kentucky");
@@ -42,5 +42,5 @@ test("an excluded state FIPS the web doesn't know is shown raw", () => {
 
 test("the factor groups heading names the selected outcome", () => {
   render(<ExclusionsSection model={modelFile} targetId="premature_death" />);
-  expect(screen.getByRole("heading", { level: 4, name: "Factor groups left out, premature death" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 5, name: "Factor groups left out, premature death" })).toBeInTheDocument();
 });

@@ -1,4 +1,5 @@
 import type { Manifest } from "../../types";
+import { SectionLayout } from "./SectionLayout";
 import { TableScroll } from "./TableScroll";
 
 type Sources = Manifest["sources"];
@@ -35,45 +36,53 @@ export function SourcesSection({ sources }: { sources: Sources }) {
   const latest = latestYears(sources);
   return (
     <section aria-labelledby="sources">
-      <h3 id="sources" tabIndex={-1}>
+      <h4 id="sources" tabIndex={-1}>
         Sources and vintages
-      </h3>
-      <p>
-        Every value comes from a public federal or national source, fetched for all US counties
-        and shown for the Pacific Northwest. The vintage is the data year for ACS and PLACES and the
-        release year for County Health Rankings.
-      </p>
-      <TableScroll label="Data sources">
-        <table className="methodology-table">
-          <caption>Data sources</caption>
-          <thead>
-            <tr>
-              <th scope="col">Source</th>
-              <th scope="col">Vintage</th>
-              <th scope="col">Used for</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sources.map(({ source, year, url }) => {
-              const legacy = source === "chr" && year < (latest.get("chr") ?? year);
-              return (
-                <tr key={`${source}-${year}`}>
-                  <th scope="row">
-                    <a href={url}>{sourceName(source)}</a>
-                    {legacy && " (legacy values for the former Valdez-Cordova Census Area)"}
-                  </th>
-                  <td>{year}</td>
-                  <td>{legacy ? LEGACY_USE : (USES[source] ?? "")}</td>
+      </h4>
+      <SectionLayout
+        prose={
+          <>
+            <p>
+              Every value comes from a public federal or national source, fetched for all US
+              counties and shown for the Pacific Northwest. The vintage is the data year for ACS and
+              PLACES and the release year for County Health Rankings.
+            </p>
+            <p>
+              CDC WONDER isn't used: its API doesn't support queries below the national level, so
+              county data can't be fetched from it.
+            </p>
+          </>
+        }
+        evidence={
+          <TableScroll label="Data sources">
+            <table className="methodology-table">
+              <caption>Data sources</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Source</th>
+                  <th scope="col">Vintage</th>
+                  <th scope="col">Used for</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </TableScroll>
-      <p>
-        CDC WONDER isn't used: its API doesn't support queries below the national level, so
-        county data can't be fetched from it.
-      </p>
+              </thead>
+              <tbody>
+                {sources.map(({ source, year, url }) => {
+                  const legacy = source === "chr" && year < (latest.get("chr") ?? year);
+                  return (
+                    <tr key={`${source}-${year}`}>
+                      <th scope="row">
+                        <a href={url}>{sourceName(source)}</a>
+                        {legacy && " (legacy values for the former Valdez-Cordova Census Area)"}
+                      </th>
+                      <td>{year}</td>
+                      <td>{legacy ? LEGACY_USE : (USES[source] ?? "")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </TableScroll>
+        }
+      />
     </section>
   );
 }

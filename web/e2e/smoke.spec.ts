@@ -171,7 +171,7 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   const panel = page.getByRole("dialog", { name: "County details" });
   await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
-  const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
+  const heading = page.getByRole("heading", { level: 5, name: "Counties with no result" });
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport();
 });

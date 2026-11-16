@@ -35,7 +35,7 @@ function renderSection() {
 
 test("heading, id and the source year", () => {
   const text = renderSection();
-  const h = screen.getByRole("heading", { level: 3, name: "Outcomes by race and ethnicity" });
+  const h = screen.getByRole("heading", { level: 4, name: "Outcomes by race and ethnicity" });
   expect(h).toHaveAttribute("id", "race-breakdown");
   expect(h).toHaveAttribute("tabindex", "-1");
   expect(text).toContain("County Health Rankings 2025");
@@ -70,7 +70,7 @@ test("explains the Chugach and Copper River gap and does not deny Idaho NHPI val
 
 test("Who lives here lists profile measures with their universes", () => {
   renderSection();
-  expect(screen.getByRole("heading", { level: 4, name: "Who lives here" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 5, name: "Who lives here" })).toBeInTheDocument();
   expect(screen.getByText(/Veterans/)).toHaveTextContent(/Civilian population 18 and over/);
   expect(screen.getByText(/With a disability/)).toHaveTextContent(
     /Civilian noninstitutionalized population/,

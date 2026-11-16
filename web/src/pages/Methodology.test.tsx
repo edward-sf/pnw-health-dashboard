@@ -5,6 +5,7 @@ import { expect, test, vi } from "vitest";
 import type { DataState } from "../data/useData";
 import { manifest, model, strata, topology, values } from "../test/fixtures";
 import { Methodology } from "./Methodology";
+import { STEPS } from "./methodology/steps";
 
 const ready: DataState = {
   status: "ready",
@@ -21,9 +22,15 @@ const ANCHORS = [
   "unreliable",
   "race-breakdown",
   "model",
+  "model-importance",
+  "no-result",
   "exclusions",
   "similar-counties",
   "model-card",
+  "fetch",
+  "harmonize",
+  "model-step",
+  "publish",
 ];
 
 function at(state: DataState, path = "/methodology") {
@@ -53,7 +60,7 @@ test("ready renders every anchor, focusable, with a table of contents", () => {
   for (const id of ANCHORS) {
     const el = document.getElementById(id);
     expect(el, id).not.toBeNull();
-    expect(el).toHaveAttribute("tabindex", "-1");
+    if (id !== "model-importance") expect(el).toHaveAttribute("tabindex", "-1");
   }
   const toc = screen.getByRole("navigation", { name: "On this page" });
   expect(toc.querySelectorAll("a").length).toBeGreaterThanOrEqual(6);
@@ -81,26 +88,45 @@ test("wording guard: no causal language anywhere on the page", () => {
   expect(document.body.textContent).not.toMatch(/explains? the difference/i);
 });
 
-test("the outline nests: one page h2, sections at h3, sub-anchors at h4", () => {
+test("the outline nests: page h2, steps at h3, sections at h4, sub-anchors at h5", () => {
   at(ready);
   const h2s = screen.getAllByRole("heading", { level: 2 });
   expect(h2s.map((h) => h.textContent)).toEqual(["Methodology"]);
   expect(h2s[0]).toHaveAttribute("data-page-heading");
+  expect(document.getElementById("at-a-glance")?.tagName).toBe("H3");
   for (const id of [
-    "at-a-glance",
     "sources",
     "indicators",
     "harmonization",
     "missing-data",
+    "race-breakdown",
     "model",
     "exclusions",
+    "similar-counties",
     "model-card",
   ]) {
-    expect(document.getElementById(id)?.tagName, id).toBe("H3");
-  }
-  for (const id of ["legacy", "suppression", "unreliable"]) {
     expect(document.getElementById(id)?.tagName, id).toBe("H4");
   }
+  for (const id of ["legacy", "suppression", "unreliable", "model-importance", "no-result"]) {
+    expect(document.getElementById(id)?.tagName, id).toBe("H5");
+  }
+  expect(screen.getByRole("heading", { level: 4, name: "How it works" })).toHaveAttribute(
+    "id",
+    "model",
+  );
+});
+
+test("each step has an h3 with its id and 'Step n of 4', and contains its sections", () => {
+  at(ready);
+  STEPS.forEach((step, i) => {
+    const h = screen.getByRole("heading", { level: 3, name: new RegExp(step.name) });
+    expect(h).toHaveAttribute("id", step.id);
+    expect(h).toHaveTextContent(`Step ${i + 1} of 4`);
+    const stepEl = h.closest("section");
+    for (const { id } of step.sections) {
+      expect(stepEl?.contains(document.getElementById(id)), id).toBe(true);
+    }
+  });
 });
 
 test("the outcome select lives on the page, defaults to life expectancy and drives importance and the model card", async () => {
@@ -108,13 +134,13 @@ test("the outcome select lives on the page, defaults to life expectancy and driv
   const select = screen.getByRole("combobox", { name: "Outcome" });
   expect(select).toHaveTextContent("Life expectancy");
   expect(
-    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+    screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Life expectancy");
   const user = userEvent.setup();
   await user.click(select);
   await user.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
   expect(
-    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+    screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Premature death");
   expect(document.body.textContent).toContain("OutcomePremature death");
 });
@@ -125,7 +151,7 @@ test("has a Similar counties section in the table of contents", () => {
     "href",
     "/methodology#similar-counties",
   );
-  expect(document.getElementById("similar-counties")?.tagName).toBe("H3");
+  expect(document.getElementById("similar-counties")?.tagName).toBe("H4");
 });
 
 test("a deep link to similar counties focuses its heading", () => {

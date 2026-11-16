@@ -15,19 +15,9 @@ import { PeersSection } from "./methodology/PeersSection";
 import { RaceBreakdownSection } from "./methodology/RaceBreakdownSection";
 import { ReproducibilitySection } from "./methodology/ReproducibilitySection";
 import { SourcesSection } from "./methodology/SourcesSection";
+import { MethodologyStep } from "./methodology/MethodologyStep";
+import { FETCH, HARMONIZE, MODEL, PUBLISH, STEPS } from "./methodology/steps";
 import { useHashFocus } from "./methodology/useHashFocus";
-
-const CONTENTS = [
-  ["sources", "Sources and vintages"],
-  ["indicators", "Indicators"],
-  ["harmonization", "Geography"],
-  ["missing-data", "Missing and uncertain values"],
-  ["race-breakdown", "Outcomes by race and ethnicity"],
-  ["model", "The model"],
-  ["exclusions", "What the model leaves out"],
-  ["similar-counties", "Similar counties"],
-  ["model-card", "Reproducibility"],
-] as const;
 
 export function Methodology({ state }: { state: DataState }) {
   usePageTitle(pageTitle("Methodology"));
@@ -48,36 +38,44 @@ export function Methodology({ state }: { state: DataState }) {
           <AtAGlance data={state.data} />
           <nav aria-label="On this page" className="methodology-toc">
             <ul>
-              {CONTENTS.map(([id, title]) => (
+              {STEPS.flatMap((step) => step.sections).map(({ id, railLabel }) => (
                 <li key={id}>
-                  <Link to={{ hash: id }}>{title}</Link>
+                  <Link to={{ hash: id }}>{railLabel}</Link>
                 </li>
               ))}
             </ul>
           </nav>
-          <SourcesSection sources={state.data.manifest.sources} />
-          <IndicatorCatalog indicators={state.data.manifest.indicators} />
-          <HarmonizationSection sources={state.data.manifest.sources} />
-          <MissingDataSection indicators={state.data.manifest.indicators} />
-          <RaceBreakdownSection
-            strata={state.data.strata}
-            indicators={state.data.manifest.indicators}
-          />
-          <ModelSection
-            model={state.data.model}
-            targetId={targetId}
-            onTargetChange={setTargetId}
-            indicators={state.data.manifest.indicators}
-          />
-          <ExclusionsSection model={state.data.model} targetId={targetId} />
-          <PeersSection
-            peers={state.data.model.peers}
-            indicators={state.data.manifest.indicators}
-          />
-          <ReproducibilitySection
-            model={targetModel(state.data.model, targetId)}
-            builtAt={state.data.manifest.built_at}
-          />
+          <MethodologyStep step={FETCH} index={0}>
+            <SourcesSection sources={state.data.manifest.sources} />
+            <IndicatorCatalog indicators={state.data.manifest.indicators} />
+          </MethodologyStep>
+          <MethodologyStep step={HARMONIZE} index={1}>
+            <HarmonizationSection sources={state.data.manifest.sources} />
+            <MissingDataSection indicators={state.data.manifest.indicators} />
+            <RaceBreakdownSection
+              strata={state.data.strata}
+              indicators={state.data.manifest.indicators}
+            />
+          </MethodologyStep>
+          <MethodologyStep step={MODEL} index={2}>
+            <ModelSection
+              model={state.data.model}
+              targetId={targetId}
+              onTargetChange={setTargetId}
+              indicators={state.data.manifest.indicators}
+            />
+            <ExclusionsSection model={state.data.model} targetId={targetId} />
+            <PeersSection
+              peers={state.data.model.peers}
+              indicators={state.data.manifest.indicators}
+            />
+          </MethodologyStep>
+          <MethodologyStep step={PUBLISH} index={3}>
+            <ReproducibilitySection
+              model={targetModel(state.data.model, targetId)}
+              builtAt={state.data.manifest.built_at}
+            />
+          </MethodologyStep>
         </>
       )}
     </section>
