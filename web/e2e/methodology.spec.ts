@@ -192,3 +192,15 @@ test("the phone bar sticks to the top edge and a jump lands the heading below it
   expect(top).toBeGreaterThanOrEqual(barBottom);
   expect(top).toBeLessThan(barBottom + 40);
 });
+
+for (const width of [375, 1440]) {
+  test(`the pipeline strip shows no list bullets at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("./methodology");
+    const items = page.getByRole("navigation", { name: "Pipeline steps" }).locator("li");
+    await expect(items.first()).toBeVisible();
+    const types = await items.evaluateAll((els) => els.map((e) => getComputedStyle(e).listStyleType));
+    expect(types.length).toBeGreaterThan(0);
+    for (const t of types) expect(t).toBe("none");
+  });
+}

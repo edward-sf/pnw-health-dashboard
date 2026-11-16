@@ -1724,7 +1724,7 @@
     max-width: 65ch;
   }
 
-  .pipeline-strip {
+  .methodology .pipeline-strip {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
@@ -1777,7 +1777,7 @@
   }
 
   @media (min-width: 721px) {
-    .pipeline-strip {
+    .methodology .pipeline-strip {
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
     }
