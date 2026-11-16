@@ -95,6 +95,16 @@ Every wrapper in `web/src/components/ui` uses only tokens.
 - **Focus rule:** one global `:focus-visible` outline in `--focus`, 2px, 3:1 or better against every surface it sits on. No component sets its own ring. On the fir header the outline switches to `--focus-on-fir`, because the page's dark ring vanishes on fir.
 - **Full-row fields** (the command filter, #278) have no outline. The wrapper shows focus with a 2px `--focus` bottom border and a `--wash` tint. Nested surfaces clip to their parent's radius, so a child never squares off a rounded corner.
 
+### Methodology and About components
+
+These live under `web/src/pages/` and use only tokens.
+
+- **Reading rail** (`methodology/ReadingRail.tsx`, class `.reading-rail`). Use it for a long page of numbered steps that a reader jumps around in. From 721px it is a sticky left column listing each step with its sections. On a phone it becomes a sticky bar under the header (`.reading-rail--phone`) that opens the same list. The section in view carries `aria-current="location"`. Tokens: `--ink` for links, `--ink-muted` for step names, `--line` for the left rule, `--evergreen` for the current rule and current step name, `--surface` for the phone bar, `--header-height` for its sticky offset, `--text-sm`.
+- **Pipeline strip** (`methodology/PipelineHero.tsx`, `.pipeline-strip`). Use it as a page's overview when the page is a sequence of stages, each worth one figure. Each stage is a link to its heading. It is a 2×2 grid on phones and a single row from 721px. Tokens: `--surface` and `--wash` (hover) for the cards, `--line` and `--radius-lg` for the border, `--ink-muted` for labels, `--text-2xl` with `tabular-nums` for the figure, `--text-sm`.
+- **Prose-and-evidence section** (`methodology/SectionLayout.tsx`, `.methodology-section--split`). Use it when a section has a short explanation and a table or chart that backs it up. Prose goes left (under about 65ch) and the evidence in a box on the right; below 721px, and for a section with no evidence, it is one column. Tokens: `--surface` and `--line` for the evidence box, `--radius-lg`, `--chart-muted` and `--evergreen` for any bars inside it.
+- **Fold** (`methodology/Fold.tsx`, `.methodology-fold`). Use it for a long list or table the reader may not need. It is a closed `<details>` with a plain summary ("Show all 9 factors"), so find-in-page still reaches the content. Never fold an anchored heading; a deep link into a fold opens it first (`useHashFocus`). Tokens: `--line`, `--ink-muted`, `--text-sm`.
+- **About panel** (`About.tsx`, `.about-panel`). Use it for one self-contained area of a case study: a title, one sentence, stack chips and one proof point. Panels sit in a 2×2 grid on desktop and one column on phones. Tokens: `--surface`, `--line` and `--radius-lg` for the card, `--text-xl` for the title, `--radius-full` and `--line` for the chips, `--text-sm`, and a 2px `--fir-soft` left rule for the proof point.
+
 ## Data colour rules
 
 - **Ramps are data, never brand.** The directional ramp is ColorBrewer OrRd (`schemeOrRd[5]`), the neutral ramp is Blues (`schemeBlues[5]`), and the model tiers are RdBu (`#ca0020`, `#f4a582`, `#92c5de`, `#0571b0`) with `tierNone` and the hatch for no data. They never move for the brand. When a brand colour is too close to one, the brand colour moves.

@@ -207,3 +207,15 @@ Calls marked *(designer's call)* were made while writing the spec, not by the au
 - Which further tables fold, by the "long content" rule.
 - Visual details within the tokens: spacing, chip style, chevrons in the strip, bar heights.
 - How to split the work into issues and PRs, in the plan.
+
+## As built
+
+Where the implementation differs from the spec above, or where the spec left a choice open:
+
+- **Pipeline strip bullets.** The strip's list items show a bullet marker beside each card at 1440 wide, in front of the chevron. The spec asks for chevrons only. Left as shipped and logged as a follow-up.
+- **Reading line.** The scrollspy watches a zero-height line (header plus a quarter of the viewport). A long programmatic jump that carries a heading across the line in one frame reports no change, so the rail stays on its previous item until the next small scroll. Reader scrolling, rail clicks (which pin the item) and deep links are unaffected. The e2e test therefore scrolls in small wheel steps. Logged as a follow-up.
+- **`#model-importance` focus.** The heading gained `tabIndex={-1}` in this task so a deep link can focus it, as the spec's deep-link rule requires. The spec listed it among the anchors that keep working but did not say it must be focusable.
+- **Content width.** The methodology and About pages share the site's content column, so at 1440 wide they stop near 1040px and leave the right side empty. The spec did not set a width.
+- **About proof points.** The Model and Agent workflow proof points are links as a whole sentence (the spec says the panel links to its target without fixing the link's extent).
+- **Stack chips.** Site and delivery lists React 19, TypeScript, Vite, d3-geo, Observable Plot and Playwright, as the spec does.
+- **Screenshots.** Light theme, 1440 wide, taken from a production build: `docs/images/methodology.png` and `docs/images/about.png`, shown in the README.

@@ -146,7 +146,7 @@ export function ModelSection({
                 },
               ])}
             />
-            <h5 id="model-importance">Factors by importance: {model.label}</h5>
+            <h5 id="model-importance" tabIndex={-1}>Factors by importance: {model.label}</h5>
             <p>
               Each factor's average contribution to the expected values, in the
               outcome's unit, across all counties (mean absolute SHAP value).
