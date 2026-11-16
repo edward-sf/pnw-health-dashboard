@@ -49,9 +49,13 @@ test("shows the name and state on one line, the value and the rank, and no CI", 
   expect(document.querySelector(".panel-value")).toHaveTextContent("9.5%");
   expect(document.querySelector(".panel-ci")).toBeNull();
   expect(screen.queryByText(/90% CI/)).not.toBeInTheDocument();
-  const ranks = screen.getByLabelText("2nd most favorable of 2 counties, 2nd of 1 in Washington");
-  expect(ranks).toHaveTextContent("2/2 counties (2nd in WA)");
-  expect(ranks).toHaveAttribute("title", "2nd most favorable of 2 counties, 2nd of 1 in Washington");
+  // A screen reader reads the full wording; the short form is shown but hidden from it.
+  const ranks = document.querySelector(".panel-ranks")!;
+  const label = "2nd most favorable of 2 counties, 2nd of 1 in Washington";
+  expect(ranks.querySelector('[aria-hidden="true"]')).toHaveTextContent("2/2 counties (2nd in WA)");
+  expect(ranks.querySelector(".visually-hidden")).toHaveTextContent(label);
+  expect(ranks).not.toHaveAttribute("aria-label");
+  expect(ranks).toHaveAttribute("title", label);
   expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
 });
 

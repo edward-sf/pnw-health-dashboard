@@ -1147,6 +1147,11 @@
     margin: 0;
     font-size: var(--text-sm);
     font-weight: 600;
+  }
+
+  /* The number never breaks; the unit ("per 100k", "years") drops below it when space is short. */
+  .model-figure-number,
+  .model-figure-unit {
     white-space: nowrap;
   }
 

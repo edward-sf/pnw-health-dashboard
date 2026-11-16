@@ -83,16 +83,16 @@ function ModelResult({
       <dl className="model-figures">
         <div>
           <dt>Actual</dt>
-          <dd>{formatValue(actual, unit, d)}</dd>
+          <dd>{figure(formatValue(actual, unit, d))}</dd>
         </div>
         <div>
           <dt>Expected</dt>
-          <dd>{formatValue(predicted, unit, d)}</dd>
+          <dd>{figure(formatValue(predicted, unit, d))}</dd>
         </div>
         <div>
           <dt>Difference</dt>
           <dd>
-            <strong>{formatSigned(residual, unit, d)}</strong>
+            <strong>{figure(formatSigned(residual, unit, d))}</strong>
           </dd>
         </div>
       </dl>
@@ -149,4 +149,19 @@ function rangeNote(entry: CountyModel, target: TargetModel): string {
       ? "a typical county's measurement uncertainty, since this county's estimate has no confidence interval."
       : "this county's own measurement uncertainty."
   }`;
+}
+
+/**
+ * A figure with its number kept whole and its unit free to wrap below it, so "24,556 per 100k"
+ * fits a third of a 320px panel without running into the next column.
+ */
+function figure(text: string) {
+  const m = /^(\S+) (.+)$/.exec(text);
+  if (!m) return text;
+  return (
+    <>
+      <span className="model-figure-number">{m[1]}</span>{" "}
+      <span className="model-figure-unit">{m[2]}</span>
+    </>
+  );
 }

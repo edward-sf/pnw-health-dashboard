@@ -85,8 +85,9 @@ export function CountyPanel({
         <>
           <p className="panel-value">{formatValue(v, indicator.unit)}</p>
           {ranks && (
-            <p className="panel-ranks" aria-label={ranks.label} title={ranks.label}>
-              {ranks.text}
+            <p className="panel-ranks" title={ranks.label}>
+              <span aria-hidden="true">{ranks.text}</span>
+              <span className="visually-hidden">{ranks.label}</span>
             </p>
           )}
           {entry?.unreliable && (

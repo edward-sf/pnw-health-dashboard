@@ -163,3 +163,13 @@ test("values mode keeps County and Value", () => {
   setup({ data, unit: "percent" });
   expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["County", "Value"]);
 });
+
+test("a peer with not enough data shows the label without an empty swatch", () => {
+  const data: ModelPeerData = {
+    ...modelData,
+    rows: [modelData.rows[0]!, { ...modelData.rows[1]!, flag: "insufficient_data" }],
+  };
+  setup({ data });
+  const cell = within(screen.getByRole("row", { name: /Multnomah/ })).getByText("Not enough data").closest("td")!;
+  expect(cell.querySelector(".tier-swatch")).toBeNull();
+});

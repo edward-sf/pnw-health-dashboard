@@ -20,3 +20,10 @@ test("suppression, unreliable estimates and confidence levels", () => {
   expect(text).toMatch(/margins of error at the 90% level/);
   expect(text).toMatch(/95%/);
 });
+
+test("intervals are shown in the table, not the county panel", () => {
+  render(<MissingDataSection indicators={manifest.indicators} />);
+  const text = document.body.textContent ?? "";
+  expect(text).toMatch(/Where a county has an interval, the table shows it\./);
+  expect(text).not.toMatch(/county panel and table show/);
+});

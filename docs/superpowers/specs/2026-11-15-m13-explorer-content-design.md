@@ -128,6 +128,9 @@ These are the differences from the design above, all made in the PR for #336.
 - **Methodology:** the race-breakdown section now says the panel doesn't show the breakdowns, and drops its sentences about how the panel listed and flagged groups.
 - **Similar counties ⓘ:** it names every matching measure ("Matched on … and …."). The old sentence named three and counted the rest.
 - **Range chart:** the county's dot keeps its tier fill and gets a 1.5px `--chart-ink` ring, so it reads even on a band of its own colour, including the grey middle band. A `--surface` ring was tried first, and on the light theme it left an about-as-expected dot nearly invisible.
-- **Model figures:** set in `--text-sm` without wrapping, so "5,529 per 100k" fits three columns at 320px.
+- **Model figures:** each value is split into a number that never breaks and a unit ("per 100k", "years") that drops below it when space is short. At 320px and 375px, "24,556 per 100k" then stays inside its column. Keeping the whole value on one line overflowed.
+- **Rank for screen readers:** the short form is `aria-hidden`, and the full wording is visually hidden text. `aria-label` on a `<p>` isn't reliably read. The `title` stays for mouse users.
+- **Similar counties, "Not enough data":** no swatch, matching the model table, because the hatch is an SVG pattern rather than a CSS colour.
+- **Methodology:** "Where a county has an interval, the table shows it." The panel no longer shows intervals.
 - **Rate columns:** in Compared mode, per-100k values still wrap in the Similar counties Actual column, as they did before. The county column needs the width at 320px.
 - **Band tokens:** `--chart-band-75` and `--chart-band-90` are no longer drawn, but they stay in `styles.css`. The token tests and the design guide still list them.

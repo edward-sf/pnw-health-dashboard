@@ -28,3 +28,27 @@ for (const vp of [
     });
   }
 }
+
+// Each model figure's text must stay inside its own column, so neighbours never run together.
+// Kusilvak and Yukon-Koyukuk carry the longest per-100k figures.
+for (const fips of ["53033", "02158", "02290"]) {
+  for (const width of [320, 375]) {
+    test(`model figures stay inside their columns at ${width}px for ${fips}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto(`./?i=premature_death&show=expected&c=${fips}`);
+      const figures = page.locator(".model-figures");
+      await expect(figures.locator("dd")).toHaveCount(3);
+      const spills = await figures.evaluate((dl) =>
+        [...dl.querySelectorAll(":scope > div")].flatMap((col) => {
+          const box = col.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(col.querySelector("dd")!);
+          return [...range.getClientRects()]
+            .filter((r) => r.left < box.left - 0.5 || r.right > box.right + 0.5)
+            .map(() => col.querySelector("dd")!.textContent);
+        }),
+      );
+      expect(spills).toEqual([]);
+    });
+  }
+}

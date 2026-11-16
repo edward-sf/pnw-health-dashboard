@@ -93,11 +93,14 @@ export function SimilarCounties({ data, unit, direction, features, indicators, o
               <td>{fmt(r.value)}</td>
               {r.kind === "model" && (
                 <td className="similar-tier">
-                  <span
-                    className="tier-swatch"
-                    aria-hidden="true"
-                    style={{ background: tierFill(r.flag, palette) }}
-                  />
+                  {/* The hatch is an SVG pattern, not a CSS colour, so "Not enough data" has no swatch. */}
+                  {r.flag !== "insufficient_data" && (
+                    <span
+                      className="tier-swatch"
+                      aria-hidden="true"
+                      style={{ background: tierFill(r.flag, palette) }}
+                    />
+                  )}
                   {shortTierLabel(r.flag, direction)}
                 </td>
               )}
