@@ -110,3 +110,10 @@ function Nested() {
     </details>
   );
 }
+
+test("focuses without scrolling, so a smooth scroll is not cancelled", () => {
+  const focus = vi.spyOn(HTMLElement.prototype, "focus");
+  at("/methodology#a");
+  expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+  focus.mockRestore();
+});

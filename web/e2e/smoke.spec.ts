@@ -174,6 +174,9 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   const heading = page.getByRole("heading", { level: 5, name: "Counties with no result" });
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport();
+  // Never inside a closed fold: a reader who lands here sees the heading and its text.
+  expect(await heading.evaluate((h) => h.closest("details:not([open])") === null)).toBe(true);
+  await expect(heading.locator("xpath=following-sibling::p[1]")).toBeVisible();
 });
 
 test("the county panel shows no race breakdown in either mode", async ({ page }) => {
