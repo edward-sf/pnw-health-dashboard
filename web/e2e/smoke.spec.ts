@@ -141,7 +141,7 @@ test("select a similar county", async ({ page }) => {
   await page.goto("./?c=53033");
   const panel = page.getByRole("dialog", { name: "County details" });
   const similar = panel.getByRole("region", { name: "Similar counties" });
-  const peer = similar.getByRole("button").first();
+  const peer = similar.getByRole("table").getByRole("button").first();
   const label = (await peer.textContent())?.trim() ?? "";
   expect(label).toMatch(/^.+, [A-Z]{2}$/);
   const name = label.replace(/, [A-Z]{2}$/, "");

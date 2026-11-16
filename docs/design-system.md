@@ -46,10 +46,10 @@ Light values are in `:root` and dark values in `.dark`, both in `web/src/styles.
 | `--map-hover` | Hovered county outline | `#333333` | `#f2f5f5` |
 | `--map-inset-frame` | Alaska inset frame | `#7c8a8d` | `#7c8a8d` |
 | `--swatch-border` | Legend and tier swatch borders (3:1) | `#6b7280` | `#8b9aa0` |
-| `--chart-ink` | Chart text and the selected mark | `#374151` | `#d6dee0` |
+| `--chart-ink` | Chart text, and the dark-theme edge on coloured factor bars | `#374151` | `#d6dee0` |
 | `--chart-muted` | Bars and the other counties | `#6b7280` | `#8b9aa0` |
-| `--chart-band-75` | Model card 75% band | `#e6e9ee` | `#263236` |
-| `--chart-band-90` | Model card 90% band | `#c9ced6` | `#364449` |
+| `--chart-band-75` | Reserved: no longer drawn, since the range chart uses the tier fills | `#e6e9ee` | `#263236` |
+| `--chart-band-90` | Reserved: no longer drawn, since the range chart uses the tier fills | `#c9ced6` | `#364449` |
 
 ### Type, radius, spacing, elevation
 
@@ -91,7 +91,7 @@ The font family is `--font-sans`.
 Every wrapper in `web/src/components/ui` uses only tokens.
 
 - **Button** (`button.tsx`, `buttonVariants`). Variants: `primary` (one main action per view), `secondary` (the default: bordered, for ordinary actions) and `ghost` (low emphasis, such as toolbar and icon actions). Sizes: `sm`, `md` (default) and `icon`. Style buttons through these variants, not ad hoc classes. Links that navigate but look like buttons use `asChild` with an `<a>`.
-- **Badge:** a short label or status. **Toggle and ToggleGroup:** a choice that is shown at all times (for example the map mode). **Select and DropdownMenu:** a choice from a list. **Popover:** a small floating panel. **Dialog:** a blocking task. **Drawer:** the phone county panel. **Command:** a filterable list (the measure picker and county search). **Input:** a text field.
+- **Badge:** a short label or status. **Toggle and ToggleGroup:** a choice that is shown at all times (for example the map mode). **Select and DropdownMenu:** a choice from a list. **Popover:** a small floating panel. **InfoTip** (`info-tip.tsx`): the one way to put an explanation behind an ⓘ, as a ghost icon button named "About …" that opens a popover. Definitions and methodology prose go there, not in the panel's flow. **Dialog:** a blocking task. **Drawer:** the phone county panel. **Command:** a filterable list (the measure picker and county search). **Input:** a text field.
 - **Focus rule:** one global `:focus-visible` outline in `--focus`, 2px, 3:1 or better against every surface it sits on. No component sets its own ring. On the fir header the outline switches to `--focus-on-fir`, because the page's dark ring vanishes on fir.
 - **Full-row fields** (the command filter, #278) have no outline. The wrapper shows focus with a 2px `--focus` bottom border and a `--wash` tint. Nested surfaces clip to their parent's radius, so a child never squares off a rounded corner.
 
@@ -101,6 +101,9 @@ Every wrapper in `web/src/components/ui` uses only tokens.
 - **Separation:** every brand colour is at least ΔE 15 (CIE76) from every data colour, in both themes. `web/src/color/dataColors.ts` lists the data colours and `tokens.test.ts` enforces it.
 - **Neutral fields never get a good/bad ramp.** Demographic shares use Blues. A directional ramp is only for measures whose health meaning is clear, and it is labelled "More favorable" and "Less favorable".
 - **The map stage stays neutral,** so data colours read the same in both themes.
+- **The selected county on the strip plot** is an `--evergreen` dot with a `--surface` ring and an `--evergreen` rule through the strip. Evergreen marks "your county" without saying good or bad.
+- **The model card's range chart** shows the tier fills as bands: `tierNone` in the middle, then the "somewhat" fills and then the "notably" fills on each side. Which side is red follows the outcome's direction, so it matches the badge and the map legend.
+- **Factor bars** are coloured by favorability: the "notably" blue (`#0571b0`) when the factor moves the expected value the favorable way, and the "notably" red (`#ca0020`) when it moves it the less favorable way. The +/− labels keep the raw direction. "All other factors" stays `--chart-muted`. In the dark theme each coloured bar gets a 1px `--chart-ink` edge, because the red alone is under 3:1 there.
 
 ## Voice and copy
 
@@ -111,5 +114,6 @@ Every wrapper in `web/src/components/ui` uses only tokens.
   3. Use the source's terms (ACS, CDC PLACES, County Health Rankings), and say so where a term is dated or narrow.
   4. Model tiers describe the model, not the county.
   5. Colour-blind safe and contrast-checked in both themes.
-- **Vocabulary:** say "more favorable" and "less favorable", not better or worse. Rank 1 is "most favorable". Model tiers say "higher" or "lower than expected", mapped from the outcome's direction. The tier labels are never a verdict on a county. The category is displayed "Health behaviors"; its exported value `Behaviors` is unchanged.
+- **Vocabulary:** say "more favorable" and "less favorable", not better or worse. Rank 1 is "most favorable". The panel shows a rank as `10/139 counties (3rd in WA)`, and its accessible name and hover text read "10th most favorable of 139 counties, 3rd of 39 in Washington".
+- **Race and ethnicity labels** are short ("White", "Asian"). "Hispanic or Latino (any race)" keeps its qualifier. The definition (every other group counts only people who are not Hispanic) lives in each description and in the Who lives here ⓘ. Model tiers say "higher" or "lower than expected", mapped from the outcome's direction. The tier labels are never a verdict on a county. The category is displayed "Health behaviors"; its exported value `Behaviors` is unchanged.
 - **"Associated with", never "causes".** The model's factors are associated with its estimate. Keep copy consistent with the methodology page.

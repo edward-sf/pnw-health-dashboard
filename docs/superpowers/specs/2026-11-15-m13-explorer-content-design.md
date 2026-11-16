@@ -119,3 +119,15 @@ Every new ⓘ uses the same component as "About this measure" in the Explorer he
   - unit tests for the new copy, the rank format and its accessible name, the factor colour mapping for both directions, and the absent breakdown and CI;
   - an e2e check that the panel has no horizontal overflow at the narrowest panel width in both modes;
   - an axe check in both themes.
+
+## As built
+
+These are the differences from the design above, all made in the PR for #336.
+
+- **Panel props:** `CountyPanel` no longer takes `strata` or `targetIndicator`, since nothing in the panel uses them. `RaceBreakdown.tsx` stays in the code for the Atlas page.
+- **Methodology:** the race-breakdown section now says the panel doesn't show the breakdowns, and drops its sentences about how the panel listed and flagged groups.
+- **Similar counties ⓘ:** it names every matching measure ("Matched on … and …."). The old sentence named three and counted the rest.
+- **Range chart:** the county's dot keeps its tier fill and gets a 1.5px `--chart-ink` ring, so it reads even on a band of its own colour, including the grey middle band. A `--surface` ring was tried first, and on the light theme it left an about-as-expected dot nearly invisible.
+- **Model figures:** set in `--text-sm` without wrapping, so "5,529 per 100k" fits three columns at 320px.
+- **Rate columns:** in Compared mode, per-100k values still wrap in the Similar counties Actual column, as they did before. The county column needs the width at 320px.
+- **Band tokens:** `--chart-band-75` and `--chart-band-90` are no longer drawn, but they stay in `styles.css`. The token tests and the design guide still list them.

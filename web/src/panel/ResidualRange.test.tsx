@@ -139,9 +139,9 @@ test.each([
   expect(Number(order[0]!.getAttribute("x"))).toBeCloseTo(0, 6);
 });
 
-test("the dot is ringed in the surface colour so it reads on every band", () => {
+test("the dot is ringed in chart ink so it reads on every band, including the grey middle", () => {
   const { container } = render(
     <ResidualRange direction="higher_is_better" residual={1} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
   );
-  expect(container.querySelector("circle")).toHaveAttribute("stroke", "var(--surface)");
+  expect(container.querySelector("circle")).toHaveAttribute("stroke", "var(--chart-ink)");
 });

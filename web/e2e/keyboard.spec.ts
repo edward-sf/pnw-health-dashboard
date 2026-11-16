@@ -91,7 +91,7 @@ test("the explorer can be driven end to end from the keyboard", async ({ page },
   await expectFocusOutline(page, "county heading");
 
   // A similar-county button moves focus to the new heading.
-  const peer = dialog.getByRole("region", { name: "Similar counties" }).getByRole("button").first();
+  const peer = dialog.getByRole("region", { name: "Similar counties" }).getByRole("table").getByRole("button").first();
   await tabTo(page, peer, "similar county button");
   const peerName = ((await peer.textContent()) ?? "").replace(/\s*,.*$/, "").trim();
   await page.keyboard.press("Enter");

@@ -78,7 +78,7 @@ test("a new county reopens the drawer in peek", async ({ page }) => {
   await settledAt(page, 0.4);
   await drawer.locator("[data-vaul-handle]").click();
   await settledAt(page, 0.85);
-  const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("button").first();
+  const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("table").getByRole("button").first();
   await peer.scrollIntoViewIfNeeded();
   await peer.tap();
   await expect(page).not.toHaveURL(/[?&]c=53033/);

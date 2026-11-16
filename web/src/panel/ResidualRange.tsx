@@ -107,8 +107,8 @@ export function ResidualRange({ residual, threshold75, threshold90, flag, unit, 
           cy={20}
           r={5}
           fill={tierFill(flag, palette)}
-          stroke="var(--surface)"
-          strokeWidth={2}
+          stroke="var(--chart-ink)"
+          strokeWidth={1.5}
         />
         {ticks.map((t) => (
           <text
