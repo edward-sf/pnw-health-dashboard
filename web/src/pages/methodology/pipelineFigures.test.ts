@@ -19,3 +19,12 @@ test("counts sources, counties and outcomes, and reads the default PNW R²", () 
   );
   expect(f.outcomes).toBe(Object.keys(model.targets).length);
 });
+
+test("names the states the counties are in, alphabetically", () => {
+  expect(pipelineFigures(data).states).toEqual([
+    "Alaska",
+    "Idaho",
+    "Oregon",
+    "Washington",
+  ]);
+});

@@ -160,8 +160,13 @@ test("methodology and about pages render", async ({ page }) => {
   await expect(
     page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
   ).toBeVisible();
+  await expect(page.locator("main")).toContainText("in Alaska, Idaho, Oregon and Washington");
   await page.goto("./about");
   await expect(page.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toBeVisible();
+  // Buttons that are links don't pick up the body-link underline.
+  for (const name of ["View the source on GitHub", "LinkedIn"]) {
+    await expect(page.getByRole("link", { name })).toHaveCSS("text-decoration-line", "none");
+  }
 });
 
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {

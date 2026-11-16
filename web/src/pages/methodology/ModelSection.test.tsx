@@ -362,3 +362,21 @@ test("the R² comparison reads the selected target's metrics", () => {
     evidence.queryByText(formatMetric(model.metrics.lightgbm.national.r2)),
   ).toBeNull();
 });
+
+test("the lead column keeps to the outcomes; why others are left out sits below it", () => {
+  const { container } = render(
+    <ModelSection
+      model={modelFile}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  const prose = container.querySelector(".methodology-prose")?.textContent ?? "";
+  expect(prose).toMatch(/confidence interval for most counties/);
+  expect(prose).not.toMatch(/CDC PLACES outcomes|regional offset/);
+  expect(
+    screen.getByRole("heading", { level: 5, name: "Outcomes left out" }),
+  ).toBeInTheDocument();
+  expect(container.textContent).toMatch(/regional offset/);
+});

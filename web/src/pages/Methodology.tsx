@@ -8,6 +8,7 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { defaultTargetId, targetModel } from "../model/targetView";
 import { ExclusionsSection } from "./methodology/ExclusionsSection";
 import { HarmonizationSection } from "./methodology/HarmonizationSection";
+import { pipelineFigures } from "./methodology/pipelineFigures";
 import { IndicatorCatalog } from "./methodology/IndicatorCatalog";
 import { MissingDataSection } from "./methodology/MissingDataSection";
 import { ModelSection } from "./methodology/ModelSection";
@@ -58,7 +59,10 @@ export function Methodology({ state }: { state: DataState }) {
                 <IndicatorCatalog indicators={state.data.manifest.indicators} />
               </MethodologyStep>
               <MethodologyStep step={HARMONIZE} index={1}>
-                <HarmonizationSection sources={state.data.manifest.sources} />
+                <HarmonizationSection
+                  sources={state.data.manifest.sources}
+                  coverage={pipelineFigures(state.data)}
+                />
                 <MissingDataSection indicators={state.data.manifest.indicators} />
                 <RaceBreakdownSection
                   strata={state.data.strata}

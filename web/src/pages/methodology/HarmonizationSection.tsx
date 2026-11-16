@@ -1,8 +1,15 @@
 import type { Manifest } from "../../types";
+import { formatCount, joinList } from "./format";
 import { latestYears, sourceName } from "./SourcesSection";
 import { SectionLayout } from "./SectionLayout";
 
-export function HarmonizationSection({ sources }: { sources: Manifest["sources"] }) {
+export function HarmonizationSection({
+  sources,
+  coverage,
+}: {
+  sources: Manifest["sources"];
+  coverage: { counties: number; states: string[] };
+}) {
   const latestChr = latestYears(sources).get("chr");
   const legacyYear = sources
     .filter((s) => s.source === "chr" && latestChr !== undefined && s.year < latestChr)
@@ -18,8 +25,9 @@ export function HarmonizationSection({ sources }: { sources: Manifest["sources"]
         prose={
           <>
             <p>
-              Every source is joined on 2020 Census county codes (five-digit FIPS codes), so a
-              county means the same area in every dataset.
+              The site covers {formatCount(coverage.counties)} counties in{" "}
+              {joinList(coverage.states)}. Every source is joined on 2020 Census county codes
+              (five-digit FIPS codes), so a county means the same area in every dataset.
             </p>
             <p>
               Alaska's Wade Hampton Census Area (02270) was renamed Kusilvak Census Area (02158).

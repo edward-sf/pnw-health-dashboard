@@ -44,12 +44,11 @@ export function SourcesSection({ sources }: { sources: Sources }) {
           <>
             <p>
               Every value comes from a public federal or national source, fetched for all US
-              counties and shown for the Pacific Northwest. The vintage is the data year for ACS and
-              PLACES and the release year for County Health Rankings.
+              counties and shown for the Pacific Northwest. Vintage is the data year for ACS and
+              PLACES, and the release year for County Health Rankings.
             </p>
             <p>
-              CDC WONDER isn't used: its API doesn't support queries below the national level, so
-              county data can't be fetched from it.
+              CDC WONDER isn't used: its API can't be queried below the national level.
             </p>
           </>
         }

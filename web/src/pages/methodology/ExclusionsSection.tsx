@@ -37,9 +37,9 @@ export function ExclusionsSection({
             </ul>
             <h5>How much do behaviors add?</h5>
             <p>
-              A second LightGBM model adds the health behavior measures from CDC PLACES to the
-              factors. For each outcome, it and the main model are refit on the same counties, those
-              with every behavior measure, so the comparison is like for like.
+              A second LightGBM model adds CDC PLACES health behavior measures to the factors. For
+              each outcome, both models are refit on the counties with every behavior measure, so
+              the comparison is like for like.
             </p>
           </>
         }
