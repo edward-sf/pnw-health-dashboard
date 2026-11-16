@@ -17,7 +17,9 @@ test("a step renders a labelled h3 with its id and position", () => {
 });
 
 test("SectionLayout with evidence is a two-child split", () => {
-  const { container } = render(<SectionLayout prose={<p>p</p>} evidence={<p>e</p>} />);
+  const { container } = render(
+    <SectionLayout prose={<p>p</p>} evidence={<p>e</p>} />,
+  );
   const split = container.querySelector(".methodology-section--split");
   expect(split).not.toBeNull();
   expect(split?.children).toHaveLength(2);
@@ -26,5 +28,7 @@ test("SectionLayout with evidence is a two-child split", () => {
 test("SectionLayout without evidence is one column", () => {
   const { container } = render(<SectionLayout prose={<p>p</p>} />);
   expect(container.querySelector(".methodology-section--split")).toBeNull();
-  expect(container.querySelector(".methodology-section")?.children).toHaveLength(1);
+  expect(
+    container.querySelector(".methodology-section")?.children,
+  ).toHaveLength(1);
 });

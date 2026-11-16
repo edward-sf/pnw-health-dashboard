@@ -1,13 +1,21 @@
 import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
-import { model as modelFile, lifeExpectancy as model } from "../../test/fixtures";
+import {
+  model as modelFile,
+  lifeExpectancy as model,
+} from "../../test/fixtures";
 import { ExclusionsSection } from "./ExclusionsSection";
 
 test("feature groups, behaviors comparison and excluded counties", () => {
   render(<ExclusionsSection model={modelFile} targetId="life_expectancy" />);
-  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute("id", "exclusions");
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute(
+    "id",
+    "exclusions",
+  );
   const text = document.body.textContent ?? "";
-  expect(text).toContain("Behaviors: Health behaviors closely restate the outcome.");
+  expect(text).toContain(
+    "Behaviors: Health behaviors closely restate the outcome.",
+  );
   expect(text).toContain("Kentucky");
   expect(text).toContain("120 counties");
   expect(text).toMatch(/only the behaviors model's accuracy metrics are used/i);
@@ -17,11 +25,17 @@ test("feature groups, behaviors comparison and excluded counties", () => {
   expect(text).toContain("1 county in Hawaii: No features available.");
   const table = screen.getByRole("table");
   const targets = Object.values(modelFile.targets);
-  expect(within(table).getAllByText("With behaviors")).toHaveLength(2 * targets.length);
-  expect(within(table).getAllByText("Main model")).toHaveLength(2 * targets.length);
+  expect(within(table).getAllByText("With behaviors")).toHaveLength(
+    2 * targets.length,
+  );
+  expect(within(table).getAllByText("Main model")).toHaveLength(
+    2 * targets.length,
+  );
   for (const t of targets)
     expect(
-      within(table).getAllByText(new RegExp(`^${t.label.replace(/[()]/g, "\\$&")}, `)),
+      within(table).getAllByText(
+        new RegExp(`^${t.label.replace(/[()]/g, "\\$&")}, `),
+      ),
     ).not.toHaveLength(0);
 });
 

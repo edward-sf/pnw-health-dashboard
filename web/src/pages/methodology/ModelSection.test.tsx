@@ -7,7 +7,9 @@ import {
   lifeExpectancy as model,
   prematureDeath,
 } from "../../test/fixtures";
-import { formatCount } from "./format";
+import { formatValue } from "../../color/formatValue";
+import { modelDigits } from "../../model/modelView";
+import { featureLabel, formatCount, formatMetric } from "./format";
 import { ModelSection } from "./ModelSection";
 
 test("training, validation, metrics, importance and tiers", () => {
@@ -19,18 +21,27 @@ test("training, validation, metrics, importance and tiers", () => {
       indicators={manifest.indicators}
     />,
   );
-  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute("id", "model");
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute(
+    "id",
+    "model",
+  );
   const text = document.body.textContent ?? "";
-  expect(text).toContain(`${formatCount(model.model_card.training_counties)} US counties`);
+  expect(text).toContain(
+    `${formatCount(model.model_card.training_counties)} US counties`,
+  );
   expect(text).toContain(`${model.model_card.n_folds}-fold cross-validation`);
   expect(text).toContain("OutcomeLife expectancy");
   const table = screen.getByRole("table");
   const targets = Object.keys(modelFile.targets).length;
   // Per target, two models (Ridge, LightGBM) with a national and a PNW row each; plus the header.
-  expect(within(table).getAllByText("Ridge baseline")).toHaveLength(2 * targets);
+  expect(within(table).getAllByText("Ridge baseline")).toHaveLength(
+    2 * targets,
+  );
   expect(within(table).getAllByText("LightGBM")).toHaveLength(2 * targets);
   expect(within(table).getAllByRole("row")).toHaveLength(1 + 4 * targets);
-  const ranked = within(screen.getByRole("list", { name: /Factors by importance/ }))
+  const ranked = within(
+    screen.getByRole("list", { name: /Factors by importance/ }),
+  )
     .getAllByRole("listitem")
     .map((li) => li.textContent);
   expect(ranked[0]).toMatch(/^Bachelor's degree or higher/);
@@ -75,8 +86,12 @@ test("the outcome select is labelled, defaults to the given target and reports c
   expect(select).toHaveTextContent("Life expectancy");
   const user = userEvent.setup();
   await user.click(select);
-  expect(screen.getAllByRole("option")).toHaveLength(Object.keys(modelFile.targets).length);
-  await user.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
+  expect(screen.getAllByRole("option")).toHaveLength(
+    Object.keys(modelFile.targets).length,
+  );
+  await user.click(
+    screen.getByRole("option", { name: "Premature death (years lost)" }),
+  );
   expect(seen).toEqual(["premature_death"]);
 });
 
@@ -92,9 +107,9 @@ test("importance heading and unit follow the selected target", () => {
   expect(
     screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Premature death");
-  const ranked = within(screen.getByRole("list", { name: /Factors by importance/ })).getAllByRole(
-    "listitem",
-  );
+  const ranked = within(
+    screen.getByRole("list", { name: /Factors by importance/ }),
+  ).getAllByRole("listitem");
   expect(ranked[0]?.textContent).toMatch(/per 100k/);
   expect(ranked[0]?.textContent).not.toMatch(/years/);
   expect(document.body.textContent).toContain("600 per 100k");
@@ -141,7 +156,8 @@ test("the closing sections read correctly for every outcome", () => {
   expect(le).toContain("change life expectancy");
   expect(pd).toContain("why a county's actual value differs");
   expect(pd).toContain("change premature death");
-  for (const section of [le, pd]) expect(section).not.toMatch(/lives tend to be longer/);
+  for (const section of [le, pd])
+    expect(section).not.toMatch(/lives tend to be longer/);
   expect(pd).not.toMatch(/life expectancy/i);
 });
 
@@ -154,10 +170,14 @@ test("makes no claim the data can't support about the sources or intervals", () 
 
 test("flag colours are blue and red, and low birth weight is explained plainly", () => {
   const { text } = wording("life_expectancy");
-  expect(text).toMatch(/blue for more favorable than expected and red for less favorable/);
+  expect(text).toMatch(
+    /blue for more favorable than expected and red for less favorable/,
+  );
   expect(text).not.toMatch(/orange/);
   expect(text).toMatch(/regional offset/);
-  expect(text).not.toMatch(/review of the first results|because counties there sit/);
+  expect(text).not.toMatch(
+    /review of the first results|because counties there sit/,
+  );
 });
 
 test("names the default outcome from DEFAULT_TARGET, not key order", () => {
@@ -176,7 +196,9 @@ test("names the default outcome from DEFAULT_TARGET, not key order", () => {
       indicators={manifest.indicators}
     />,
   );
-  expect(document.body.textContent).toContain("The default is life expectancy.");
+  expect(document.body.textContent).toContain(
+    "The default is life expectancy.",
+  );
 });
 
 test("the accuracy table puts each outcome's unit in the Outcome cell", () => {
@@ -190,7 +212,9 @@ test("the accuracy table puts each outcome's unit in the Outcome cell", () => {
   );
   const table = screen.getByRole("table");
   expect(within(table).getAllByText("Life expectancy, years")).toHaveLength(4);
-  expect(within(table).getAllByText("Premature death (years lost), per 100k")).toHaveLength(4);
+  expect(
+    within(table).getAllByText("Premature death (years lost), per 100k"),
+  ).toHaveLength(4);
 });
 
 test.each(["life_expectancy", "premature_death", "injury_deaths"])(
@@ -214,7 +238,9 @@ test.each(["life_expectancy", "premature_death", "injury_deaths"])(
       name: "Associations, not effects",
     });
     const text = heading.nextElementSibling!.textContent!;
-    expect(text).toContain("why a county's actual value differs from its expected value");
+    expect(text).toContain(
+      "why a county's actual value differs from its expected value",
+    );
     expect(text).not.toContain("(");
     expect(text).not.toMatch(/deaths differs/);
   },
@@ -256,5 +282,83 @@ test("the full factor list is folded, under a heading outside the fold", () => {
   const list = screen.getByRole("list", { name: /Factors by importance/ });
   const fold = list.closest("details")!;
   expect(fold).not.toHaveAttribute("open");
-  expect(fold.querySelector("summary")).toHaveTextContent(/^Show all \d+ factors$/);
+  expect(fold.querySelector("summary")).toHaveTextContent(
+    /^Show all \d+ factors$/,
+  );
+});
+
+test("the evidence slot compares R², and the top three factors show as bars", () => {
+  const { container } = render(
+    <ModelSection
+      model={modelFile}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  const evidence = container.querySelector(".methodology-evidence")!;
+  expect(
+    within(evidence as HTMLElement).getByText("Nationally"),
+  ).toBeInTheDocument();
+  expect(
+    within(evidence as HTMLElement).getByText(
+      formatMetric(model.metrics.lightgbm.national.r2),
+    ),
+  ).toBeInTheDocument();
+  expect(
+    within(evidence as HTMLElement).getByText(
+      formatMetric(model.metrics.lightgbm.pnw.r2),
+    ),
+  ).toBeInTheDocument();
+  const top3 = [...model.global_importance]
+    .sort((a, b) => b.mean_abs_shap - a.mean_abs_shap)
+    .slice(0, 3);
+  expect(container.querySelectorAll(".factor-bar")).toHaveLength(3);
+  expect(
+    [...container.querySelectorAll(".factor-label")].map((e) => e.textContent),
+  ).toEqual(top3.map((e) => featureLabel(e.feature, manifest.indicators)));
+  expect(
+    [...container.querySelectorAll(".factor-value")].map((e) => e.textContent),
+  ).toEqual(
+    top3.map((e) =>
+      formatValue(e.mean_abs_shap, model.unit, modelDigits(model.unit, 2)),
+    ),
+  );
+  expect(document.body.textContent).toContain(
+    "Ranked by how strongly each is associated with the model's estimate. Associations, not causes.",
+  );
+  expect(screen.getByRole("table")).toBeInTheDocument();
+});
+
+test("the R² comparison reads the selected target's metrics", () => {
+  const distinct = {
+    ...prematureDeath,
+    metrics: {
+      ...prematureDeath.metrics,
+      lightgbm: {
+        national: { ...prematureDeath.metrics.lightgbm.national, r2: 0.33 },
+        pnw: { ...prematureDeath.metrics.lightgbm.pnw, r2: 0.12 },
+      },
+    },
+  };
+  const file = {
+    ...modelFile,
+    targets: { ...modelFile.targets, premature_death: distinct },
+  };
+  const { container } = render(
+    <ModelSection
+      model={file}
+      targetId="premature_death"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  const evidence = within(
+    container.querySelector(".methodology-evidence") as HTMLElement,
+  );
+  expect(evidence.getByText("0.33")).toBeInTheDocument();
+  expect(evidence.getByText("0.12")).toBeInTheDocument();
+  expect(
+    evidence.queryByText(formatMetric(model.metrics.lightgbm.national.r2)),
+  ).toBeNull();
 });
