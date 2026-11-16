@@ -155,8 +155,8 @@ test("select a similar county", async ({ page }) => {
 
 test("methodology and about pages render", async ({ page }) => {
   await page.goto("./methodology");
-  await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
-  await expect(page.getByText("At a glance").first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "How the atlas is built" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Pipeline steps" })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
   ).toBeVisible();
