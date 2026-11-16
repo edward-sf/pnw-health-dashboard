@@ -1,6 +1,8 @@
 import type { Direction, Indicator } from "../../types";
 import { categoryLabel } from "../../explorer/categories";
 import { sourceName } from "./SourcesSection";
+import { Fold } from "./Fold";
+import { joinList } from "./format";
 import { TableScroll } from "./TableScroll";
 import { SectionLayout } from "./SectionLayout";
 
@@ -42,23 +44,24 @@ export function IndicatorCatalog({ indicators }: { indicators: Indicator[] }) {
             </p>
             {categories.map((category) => {
               const headingId = `indicators-${category.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+              const members = indicators.filter((i) => i.category === category);
               return (
                 <div key={category}>
                   <h5 id={headingId}>{categoryLabel(category)}</h5>
-                  <TableScroll labelledBy={headingId}>
-                    <table className="methodology-table" aria-labelledby={headingId}>
-                      <thead>
-                        <tr>
-                          <th scope="col">Indicator</th>
-                          <th scope="col">Source</th>
-                          <th scope="col">Direction</th>
-                          <th scope="col">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {indicators
-                          .filter((i) => i.category === category)
-                          .map((i) => (
+                  <p>Including {joinList(members.slice(0, 3).map((i) => i.label))}.</p>
+                  <Fold summary={`Show all ${members.length} indicators`}>
+                    <TableScroll labelledBy={headingId}>
+                      <table className="methodology-table" aria-labelledby={headingId}>
+                        <thead>
+                          <tr>
+                            <th scope="col">Indicator</th>
+                            <th scope="col">Source</th>
+                            <th scope="col">Direction</th>
+                            <th scope="col">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {members.map((i) => (
                             <tr key={i.id}>
                               <th scope="row">{i.label}</th>
                               <td>{sourceAndYear(i)}</td>
@@ -66,9 +69,10 @@ export function IndicatorCatalog({ indicators }: { indicators: Indicator[] }) {
                               <td>{i.description}</td>
                             </tr>
                           ))}
-                      </tbody>
-                    </table>
-                  </TableScroll>
+                        </tbody>
+                      </table>
+                    </TableScroll>
+                  </Fold>
                 </div>
               );
             })}

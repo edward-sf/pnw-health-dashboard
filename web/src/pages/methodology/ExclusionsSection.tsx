@@ -1,6 +1,7 @@
 import { targetModel } from "../../model/targetView";
 import type { ModelFile } from "../../types";
 import { groupExcludedCounties } from "./excludedCounties";
+import { Fold } from "./Fold";
 import { formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
 import { SectionLayout } from "./SectionLayout";
@@ -83,13 +84,17 @@ export function ExclusionsSection({
       {groups.length === 0 ? (
         <p>No county with a reported value for this outcome is left out.</p>
       ) : (
-        <ul>
-          {groups.map((g) => (
-            <li key={g.reason}>
-              {counties(g.count)} in {joinList(g.states)}: {g.reason}
-            </li>
-          ))}
-        </ul>
+        <Fold
+          summary={`Show ${groups.length === 1 ? "the reason" : `all ${groups.length} reasons`}`}
+        >
+          <ul>
+            {groups.map((g) => (
+              <li key={g.reason}>
+                {counties(g.count)} in {joinList(g.states)}: {g.reason}
+              </li>
+            ))}
+          </ul>
+        </Fold>
       )}
     </section>
   );
