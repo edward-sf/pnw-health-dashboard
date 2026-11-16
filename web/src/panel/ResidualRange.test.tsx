@@ -6,7 +6,7 @@ import { ResidualRange } from "./ResidualRange";
 
 function dot(residual: number, flag: Parameters<typeof tierFill>[0], t90 = 3.37) {
   const { container } = render(
-    <ResidualRange residual={residual} threshold75={2.36} threshold90={t90} flag={flag} unit="years" />,
+    <ResidualRange direction="higher_is_better" residual={residual} threshold75={2.36} threshold90={t90} flag={flag} unit="years" />,
   );
   const circle = container.querySelector("circle")!;
   const zero = Number(container.querySelector("line")!.getAttribute("x1"));
@@ -31,7 +31,7 @@ test("a residual far beyond t90 stays inside the viewBox", () => {
 test("screen-reader text gives the meaning for each of the three cases", () => {
   const text = (r: number) => {
     const { container, unmount } = render(
-      <ResidualRange residual={r} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
+      <ResidualRange direction="higher_is_better" residual={r} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
     );
     const t = container.querySelector(".visually-hidden")!.textContent;
     unmount();
@@ -44,7 +44,7 @@ test("screen-reader text gives the meaning for each of the three cases", () => {
 
 function labels(residual: number, t75 = 2.36, t90 = 3.37) {
   const { container, unmount } = render(
-    <ResidualRange residual={residual} threshold75={t75} threshold90={t90} flag="none" unit="years" />,
+    <ResidualRange direction="higher_is_better" residual={residual} threshold75={t75} threshold90={t90} flag="none" unit="years" />,
   );
   const out = [...container.querySelectorAll("text.range-label")].map((t) => ({
     text: t.textContent,
@@ -71,7 +71,7 @@ test("when the ranges would crowd together, only the outer range is labelled", (
 
 test("screen-reader text uses the target's unit", () => {
   const { container } = render(
-    <ResidualRange residual={1800} threshold75={1200} threshold90={1700} flag="notably_worse" unit="rate_per_100k" />,
+    <ResidualRange direction="higher_is_better" residual={1800} threshold75={1200} threshold90={1700} flag="notably_worse" unit="rate_per_100k" />,
   );
   expect(container.querySelector(".visually-hidden")!.textContent).toBe(
     "+1,800 per 100k is beyond ±1,700 per 100k, the range for notably higher or lower.",
@@ -81,7 +81,7 @@ test("screen-reader text uses the target's unit", () => {
 test("direction note is appended to the screen-reader text only when given", () => {
   const text = (note?: string | null) => {
     const { container, unmount } = render(
-      <ResidualRange residual={3.7} threshold75={2.36} threshold90={3.37} flag="none" unit="years" note={note} />,
+      <ResidualRange direction="higher_is_better" residual={3.7} threshold75={2.36} threshold90={3.37} flag="none" unit="years" note={note} />,
     );
     const t = container.querySelector(".visually-hidden")!.textContent;
     unmount();
@@ -97,7 +97,7 @@ test("rate axis labels are compact and never overlap or clip at realistic premat
   const CHAR = 6; // generous width of one character at fontSize 10
   for (const residual of [1800, 5000, 9000, 25000]) {
     const { container, unmount } = render(
-      <ResidualRange residual={residual} threshold75={2506} threshold90={10119} flag="none" unit="rate_per_100k" />,
+      <ResidualRange direction="higher_is_better" residual={residual} threshold75={2506} threshold90={10119} flag="none" unit="rate_per_100k" />,
     );
     const l = [...container.querySelectorAll("text.range-label")].map((t) => ({
       text: t.textContent ?? "",
@@ -114,4 +114,34 @@ test("rate axis labels are compact and never overlap or clip at realistic premat
       prevRight = x + half;
     }
   }
+});
+
+test.each([
+  ["higher_is_better", "#ca0020", "#f4a582", "#92c5de", "#0571b0"],
+  ["higher_is_worse", "#0571b0", "#92c5de", "#f4a582", "#ca0020"],
+] as const)("bands take the tier fills, red on the less favorable side (%s)", (direction, lowN, lowS, highS, highN) => {
+  const { container } = render(
+    <ResidualRange direction={direction} residual={1} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
+  );
+  const band = (k: string) => container.querySelector(`[data-band="${k}"]`)!;
+  expect(band("low-notably").getAttribute("fill")).toBe(lowN);
+  expect(band("low-somewhat").getAttribute("fill")).toBe(lowS);
+  expect(band("none").getAttribute("fill")).toBe(PALETTES.light.tierNone);
+  expect(band("high-somewhat").getAttribute("fill")).toBe(highS);
+  expect(band("high-notably").getAttribute("fill")).toBe(highN);
+  // The bands tile the axis in order, so each starts where the one before it ends.
+  const order = ["low-notably", "low-somewhat", "none", "high-somewhat", "high-notably"].map(band);
+  for (let i = 1; i < order.length; i++) {
+    const prev = order[i - 1]!;
+    const end = Number(prev.getAttribute("x")) + Number(prev.getAttribute("width"));
+    expect(Number(order[i]!.getAttribute("x"))).toBeCloseTo(end, 6);
+  }
+  expect(Number(order[0]!.getAttribute("x"))).toBeCloseTo(0, 6);
+});
+
+test("the dot is ringed in chart ink so it reads on every band, including the grey middle", () => {
+  const { container } = render(
+    <ResidualRange direction="higher_is_better" residual={1} threshold75={2.36} threshold90={3.37} flag="none" unit="years" />,
+  );
+  expect(container.querySelector("circle")).toHaveAttribute("stroke", "var(--chart-ink)");
 });

@@ -37,7 +37,7 @@ export function MissingDataSection({ indicators }: { indicators: Indicator[] }) 
         {acs.length > 0 && `ACS estimates come with margins of error at the ${acs.join(" and ")} level. `}
         {others.length > 0 &&
           `Other sources' estimates carry the intervals those sources publish, at the ${others.join(" and ")} level. `}
-        Where a county has an interval, the county panel and table show it.
+        Where a county has an interval, the table shows it.
       </p>
     </section>
   );

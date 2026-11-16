@@ -51,6 +51,34 @@ export const tierLabel = (flag: Flag, direction: Direction): string => LABELS[di
 export const tierFill = (flag: Flag, palette: Palette): string =>
   flag === "none" ? palette.tierNone : TIER_FILLS[flag];
 
+/** A tier label without "than expected", for tight spaces: "Notably lower", "About as expected". */
+export const shortTierLabel = (flag: Flag, direction: Direction): string =>
+  tierLabel(flag, direction).replace(/ than expected$/, "");
+
+/**
+ * The tiers on one side of zero on the range chart. Below zero is the less favorable side when
+ * higher is better, and the more favorable side when higher is worse.
+ */
+export function sideFlags(
+  side: "low" | "high",
+  direction: Direction,
+): { somewhat: Flag; notably: Flag } {
+  const worse = (side === "low") === (direction === "higher_is_better");
+  return worse
+    ? { somewhat: "somewhat_worse", notably: "notably_worse" }
+    : { somewhat: "somewhat_better", notably: "notably_better" };
+}
+
+/**
+ * A factor bar's fill: the "notably" blue when the factor moves the expected value the favorable
+ * way, the "notably" red when it moves it the less favorable way, and none (neutral) at zero.
+ */
+export function factorFill(contribution: number, direction: Direction): string | null {
+  if (contribution === 0) return null;
+  const favorable = (contribution > 0) === (direction === "higher_is_better");
+  return favorable ? TIER_FILLS.notably_better : TIER_FILLS.notably_worse;
+}
+
 export function tierRank(flag: Flag): number | null {
   const i = TIERS.indexOf(flag);
   return i === -1 ? null : i;

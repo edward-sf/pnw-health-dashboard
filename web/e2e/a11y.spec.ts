@@ -54,24 +54,24 @@ for (const theme of ["light", "dark"] as const) {
     test("explorer: county panel open", async ({ page }, testInfo) => {
       await openExplorer(page, "?i=poverty_rate&c=53033");
       const panel = page.getByRole("dialog", { name: "County details" });
-      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County, WA");
       await expect(panel.locator("svg circle").first()).toBeVisible();
       await audit(page, testInfo);
     });
 
-    test("explorer: county panel with race breakdown", async ({ page }, testInfo) => {
+    test("explorer: county panel for an outcome", async ({ page }, testInfo) => {
       await openExplorer(page, "?i=life_expectancy&c=53077");
       const panel = page.getByRole("dialog", { name: "County details" });
-      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
-      await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County, WA");
+      await expect(panel.getByRole("region", { name: "Who lives here" })).toBeVisible();
       await audit(page, testInfo);
     });
 
     test("explorer: model mode county panel", async ({ page }, testInfo) => {
       await openExplorer(page, "?i=life_expectancy&show=expected&c=53077");
       const panel = page.getByRole("dialog", { name: "County details" });
-      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
-      await expect(panel.getByRole("region", { name: /^By race and ethnicity/ })).toBeVisible();
+      await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County, WA");
+      await expect(panel.getByRole("region", { name: "Who lives here" })).toBeVisible();
       await audit(page, testInfo);
     });
 

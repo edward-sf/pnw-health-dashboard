@@ -4,9 +4,12 @@ import { PALETTES } from "../color/palette";
 import { lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import {
   countyModel,
+  factorFill,
   hasModelResult,
   modelTooltip,
   TIERS,
+  shortTierLabel,
+  sideFlags,
   tierCounts,
   tierFill,
   tierLabel,
@@ -96,4 +99,28 @@ test("hasModelResult is false for insufficient data or any null field", () => {
   for (const k of ["actual", "predicted", "residual", "base_value", "threshold_75", "threshold_90"] as const) {
     expect(hasModelResult({ ...full, [k]: null })).toBe(false);
   }
+});
+
+test("sideFlags: the low side is the less favorable one when higher is better", () => {
+  expect(sideFlags("low", "higher_is_better")).toEqual({ somewhat: "somewhat_worse", notably: "notably_worse" });
+  expect(sideFlags("high", "higher_is_better")).toEqual({ somewhat: "somewhat_better", notably: "notably_better" });
+  expect(sideFlags("low", "higher_is_worse")).toEqual({ somewhat: "somewhat_better", notably: "notably_better" });
+  expect(sideFlags("high", "higher_is_worse")).toEqual({ somewhat: "somewhat_worse", notably: "notably_worse" });
+});
+
+test("factorFill colours by favorability, mapped by the outcome's direction", () => {
+  expect(factorFill(2.7, "higher_is_better")).toBe("#0571b0");
+  expect(factorFill(-0.2, "higher_is_better")).toBe("#ca0020");
+  expect(factorFill(2.7, "higher_is_worse")).toBe("#ca0020");
+  expect(factorFill(-1, "higher_is_worse")).toBe("#0571b0");
+  expect(factorFill(0, "higher_is_better")).toBeNull();
+  expect(factorFill(0, "higher_is_worse")).toBeNull();
+});
+
+test("shortTierLabel drops 'than expected'", () => {
+  expect(shortTierLabel("notably_worse", "higher_is_better")).toBe("Notably lower");
+  expect(shortTierLabel("notably_worse", "higher_is_worse")).toBe("Notably higher");
+  expect(shortTierLabel("somewhat_better", "higher_is_better")).toBe("Somewhat higher");
+  expect(shortTierLabel("none", "higher_is_worse")).toBe("About as expected");
+  expect(shortTierLabel("insufficient_data", "higher_is_better")).toBe("Not enough data");
 });

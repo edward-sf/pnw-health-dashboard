@@ -56,7 +56,7 @@ test("tap a county: the drawer opens at 40%, the handle drags it to 85% and back
   await page.locator('path.county[data-fips="53033"]').tap();
   const drawer = page.getByRole("dialog", { name: "County details" });
   await expect(drawer).toBeVisible();
-  await expect(drawer.getByRole("heading", { level: 2 })).toHaveText("King County");
+  await expect(drawer.getByRole("heading", { level: 2 })).toHaveText("King County, WA");
   await expect(page.locator("[role=tooltip]")).toHaveCount(0);
   await expect(drawer.getByRole("button", { name: "Expand" })).toHaveCount(0);
   await settledAt(page, 0.4);
@@ -78,7 +78,7 @@ test("a new county reopens the drawer in peek", async ({ page }) => {
   await settledAt(page, 0.4);
   await drawer.locator("[data-vaul-handle]").click();
   await settledAt(page, 0.85);
-  const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("button").first();
+  const peer = drawer.getByRole("region", { name: "Similar counties" }).getByRole("table").getByRole("button").first();
   await peer.scrollIntoViewIfNeeded();
   await peer.tap();
   await expect(page).not.toHaveURL(/[?&]c=53033/);
@@ -103,7 +103,7 @@ test("with the drawer open the page behind still scrolls and takes taps", async 
   // A county above the drawer still takes a tap, and its details replace the open county's.
   await page.locator('path.county[data-fips="53073"]').tap();
   await expect(page).toHaveURL(/[?&]c=53073/);
-  await expect(drawer.getByRole("heading", { level: 2 })).toHaveText("Whatcom County");
+  await expect(drawer.getByRole("heading", { level: 2 })).toHaveText("Whatcom County, WA");
 
   // The page still scrolls, and its controls stay in the accessibility tree.
   const before = await page.evaluate(() => window.scrollY);

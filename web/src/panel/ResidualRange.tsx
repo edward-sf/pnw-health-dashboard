@@ -1,6 +1,6 @@
 import { formatBound, formatSigned, formatTick, formatValue } from "../color/formatValue";
 import { usePalette } from "../color/palette";
-import { modelDigits, tierFill } from "../model/modelView";
+import { type Direction, modelDigits, sideFlags, tierFill } from "../model/modelView";
 import type { Flag, Unit } from "../types";
 
 const W = 320;
@@ -47,15 +47,31 @@ function baseMeaning(residual: number, r: string, a: string, b: string, t75: num
   return `${r} is within ±${a}, about as expected.`;
 }
 
-type Props = { residual: number; threshold75: number; threshold90: number; flag: Flag; unit: Unit; note?: string | null };
+type Props = {
+  residual: number;
+  threshold75: number;
+  threshold90: number;
+  flag: Flag;
+  unit: Unit;
+  /** Which side of zero is less favorable, so the bands take the tier colours the map uses. */
+  direction: Direction;
+  note?: string | null;
+};
 
-export function ResidualRange({ residual, threshold75, threshold90, flag, unit, note = null }: Props) {
+export function ResidualRange({ residual, threshold75, threshold90, flag, unit, direction, note = null }: Props) {
   const palette = usePalette();
   const half = rangeDomain(residual, threshold90);
   const x = (v: number) => ((v + half) / (2 * half)) * W;
-  const band = (t: number) => ({ x: x(-t), width: x(t) - x(-t) });
-  const b90 = band(threshold90);
-  const b75 = band(threshold75);
+  const low = sideFlags("low", direction);
+  const high = sideFlags("high", direction);
+  // Five bands tile the axis: notably and somewhat on each side, about as expected in the middle.
+  const bands: { key: string; from: number; to: number; flag: Flag }[] = [
+    { key: "low-notably", from: -half, to: -threshold90, flag: low.notably },
+    { key: "low-somewhat", from: -threshold90, to: -threshold75, flag: low.somewhat },
+    { key: "none", from: -threshold75, to: threshold75, flag: "none" },
+    { key: "high-somewhat", from: threshold75, to: threshold90, flag: high.somewhat },
+    { key: "high-notably", from: threshold90, to: half, flag: high.notably },
+  ];
   const labelW = (t: number) => signedBound(t, unit).length * CHAR_W;
   const needed = Math.max(MIN_LABEL_GAP, (labelW(threshold75) + labelW(threshold90)) / 2 + 2);
   const clearOfZero = x(threshold75) - x(0) >= (labelW(threshold75) + CHAR_W) / 2 + 2;
@@ -72,9 +88,18 @@ export function ResidualRange({ residual, threshold75, threshold90, flag, unit, 
         aria-hidden="true"
         focusable="false"
       >
-        {/* Colors other than the tier's come from the chart tokens, by class, in styles.css. */}
-        <rect className="range-band-90" x={b90.x} y={10} width={b90.width} height={20} />
-        <rect className="range-band-75" x={b75.x} y={10} width={b75.width} height={20} />
+        {bands.map((b) => (
+          <rect
+            key={b.key}
+            data-band={b.key}
+            className="range-band"
+            x={x(b.from)}
+            y={10}
+            width={x(b.to) - x(b.from)}
+            height={20}
+            fill={tierFill(b.flag, palette)}
+          />
+        ))}
         <line className="range-zero" x1={x(0)} x2={x(0)} y1={6} y2={34} strokeWidth={1} />
         <circle
           className="range-dot"
@@ -82,7 +107,8 @@ export function ResidualRange({ residual, threshold75, threshold90, flag, unit, 
           cy={20}
           r={5}
           fill={tierFill(flag, palette)}
-          strokeWidth={1}
+          stroke="var(--chart-ink)"
+          strokeWidth={1.5}
         />
         {ticks.map((t) => (
           <text

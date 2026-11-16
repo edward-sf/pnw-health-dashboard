@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
 import type { Indicator, ValuesFile } from "../types";
 import { WhoLivesHere } from "./WhoLivesHere";
@@ -67,12 +68,16 @@ test("null shows Not available with no bar; zero shows 0.0% with bar", () => {
   expect(zero.querySelector("span[style]")).not.toBeNull();
 });
 
-test("includes the overlap note and no evaluative language", () => {
+const NOTE =
+  "Every group except Hispanic or Latino counts only people who are not Hispanic. Shares do not overlap. People who identify with more than one race are counted under two or more races, so the American Indian and Alaska Native share undercounts them. Some other race is not shown, so shares may not sum to 100%.";
+
+test("the race definitions wait behind an ⓘ, and nothing is evaluative", async () => {
   const section = setup();
-  expect(section.textContent).toContain(
-    "Shares do not overlap. People who identify with more than one race are counted under two or more races, so the American Indian and Alaska Native share undercounts them. Some other race is not shown, so shares may not sum to 100%.",
-  );
+  expect(section.querySelector(".who-note")).toBeNull();
+  expect(section.textContent).not.toContain("Shares do not overlap");
   expect(section.textContent).not.toMatch(/model|expected|flag|life expectancy|better|worse/i);
+  await userEvent.click(screen.getByRole("button", { name: "About race and ethnicity" }));
+  expect(await screen.findByText(NOTE)).toBeVisible();
 });
 
 const e2 = (v: number | null) => ({ v, lo: null, hi: null, rank: null, state_rank: null });
@@ -115,10 +120,13 @@ test("groups rows under Age and sex, Race and ethnicity, Other, in catalog order
   expect(labels).toEqual(["Total population", "Age 65 and over", "Female", "Asian population", "Veterans"]);
 });
 
-test("shows the universe under rows that have one", () => {
+test("the universe moves into the label's hover text and accessible text, not the visible row", () => {
   const section = setupProfile();
-  const row = Array.from(section.querySelectorAll("li")).find((r) => r.textContent?.includes("Veterans"))!;
-  expect(row.textContent).toContain("Civilian population 18 and over");
+  expect(section.querySelector(".who-universe")).toBeNull();
+  const label = Array.from(section.querySelectorAll(".who-label")).find((l) => l.textContent?.startsWith("Veterans"))!;
+  expect(label).toHaveAttribute("title", "Civilian population 18 and over");
+  const hidden = label.querySelector(".visually-hidden")!;
+  expect(hidden.textContent).toBe(", Civilian population 18 and over");
   expect(section.textContent?.match(/Civilian population 18 and over/g)).toHaveLength(1);
 });
 
@@ -134,11 +142,13 @@ test("includes age_65_plus though its category is Social & Economic", () => {
   expect(section.textContent).toContain("15.0%");
 });
 
-test("keeps the race note under the race group only", () => {
+test("keeps the race ⓘ beside the race heading only", () => {
   const withRace = setupProfile();
-  expect(withRace.textContent).toContain("Shares do not overlap");
+  const button = screen.getByRole("button", { name: "About race and ethnicity" });
+  expect(button.closest(".who-group-title")!.querySelector("h4")!.textContent).toBe("Race and ethnicity");
+  expect(withRace.querySelectorAll("button")).toHaveLength(1);
   const { container } = render(
     <WhoLivesHere fips="53033" indicators={profileIndicators.filter((i) => i.profile !== "race")} values={profileValues} />,
   );
-  expect(container.textContent).not.toContain("Shares do not overlap");
+  expect(container.querySelector("button")).toBeNull();
 });

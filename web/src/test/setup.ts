@@ -6,6 +6,7 @@ import { resetMatchMedia } from "./matchMedia";
 vi.mock("@observablehq/plot", () => ({
   plot: () => document.createElementNS("http://www.w3.org/2000/svg", "svg"),
   dot: () => ({}),
+  ruleX: () => ({}),
 }));
 
 // jsdom lacks these; Radix Popover, cmdk and the Explorer's stage measurement use them.

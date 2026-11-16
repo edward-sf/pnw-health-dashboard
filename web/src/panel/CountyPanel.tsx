@@ -2,14 +2,13 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router";
-import { formatCi, formatValue } from "../color/formatValue";
+import { formatValue } from "../color/formatValue";
 import type {
   County,
   CountyModel,
   Indicator,
   Manifest,
   Peers,
-  StrataFile,
   TargetModel,
   ValueEntry,
   ValuesFile,
@@ -18,7 +17,6 @@ import { buildPeerRows } from "./buildPeerRows";
 import { SimilarCounties } from "./SimilarCounties";
 import { ModelCard } from "./ModelCard";
 import { PanelShell } from "./PanelShell";
-import { RaceBreakdown } from "./RaceBreakdown";
 import { rankSummary } from "./rankSummary";
 import { StripPlot } from "./StripPlot";
 import { WhoLivesHere } from "./WhoLivesHere";
@@ -32,9 +30,6 @@ type Props = {
   target: TargetModel;
   manifest: Manifest;
   values: ValuesFile;
-  strata: StrataFile;
-  /** The manifest indicator for the model target; its race breakdown follows the model card. */
-  targetIndicator: Indicator | undefined;
   /** With Compared with expected the model card comes first (parent spec §6). */
   modelMode: boolean;
   peers: Peers;
@@ -57,8 +52,6 @@ export function CountyPanel({
   target,
   manifest,
   values,
-  strata,
-  targetIndicator,
   modelMode,
   peers,
   onSelectCounty,
@@ -80,7 +73,6 @@ export function CountyPanel({
   const entry = entries[county.fips];
   const v = entry?.v ?? null;
   const legacy = entry?.legacy ?? null;
-  const ci = entry ? formatCi(entry.lo, entry.hi, indicator) : null;
   const ranks =
     v !== null && indicator.direction !== "neutral"
       ? rankSummary(county.fips, entries, counties)
@@ -92,8 +84,12 @@ export function CountyPanel({
       {v !== null ? (
         <>
           <p className="panel-value">{formatValue(v, indicator.unit)}</p>
-          {ci && <p className="panel-ci">{ci}</p>}
-          {ranks && <p className="panel-ranks">{ranks}</p>}
+          {ranks && (
+            <p className="panel-ranks" title={ranks.label}>
+              <span aria-hidden="true">{ranks.text}</span>
+              <span className="visually-hidden">{ranks.label}</span>
+            </p>
+          )}
           {entry?.unreliable && (
             <p className="panel-unreliable">
               The data source marks this estimate as unreliable, so read it and its rank with
@@ -108,10 +104,6 @@ export function CountyPanel({
             : "Suppressed or not available"}{" "}
           <Link to={legacy ? "/methodology#legacy" : "/methodology#suppression"}>Methodology</Link>
         </p>
-      )}
-      {/* With Compared with expected the breakdown is the target's, after the model card, so it is not repeated here. */}
-      {!modelMode && (
-        <RaceBreakdown indicator={indicator} fips={county.fips} overall={entry} strata={strata} />
       )}
       <StripPlot county={county} indicator={indicator} entries={entries} />
     </div>
@@ -138,9 +130,8 @@ export function CountyPanel({
       <div className="panel-header">
         <div>
           <h2 ref={headingRef} tabIndex={-1}>
-            {county.name}
+            {county.name}, {county.state}
           </h2>
-          <p className="panel-state">{county.state}</p>
         </div>
         <Button
           type="button"
@@ -156,14 +147,6 @@ export function CountyPanel({
       </div>
       <div className="panel-body">
         {modelMode && modelCard}
-        {modelMode && targetIndicator && (
-          <RaceBreakdown
-            indicator={targetIndicator}
-            fips={county.fips}
-            overall={values[targetIndicator.id]?.[county.fips]}
-            strata={strata}
-          />
-        )}
         {indicatorSection}
         {!modelMode && modelCard}
         <WhoLivesHere fips={county.fips} indicators={manifest.indicators} values={values} />

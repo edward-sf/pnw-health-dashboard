@@ -43,8 +43,18 @@ export function StripPlot({ county, indicator, entries }: Props) {
       },
       y: { axis: null, domain: [-1, 1] },
       marks: [
-        Plot.dot(points, { x: "v", y: "jitter", r: 2.5, fill: "var(--chart-muted)", fillOpacity: 0.6 }),
-        Plot.dot(selected ? [selected] : [], { x: "v", y: "jitter", r: 5, fill: "var(--chart-ink)" }),
+        Plot.dot(points, { x: "v", y: "jitter", r: 2.5, fill: "var(--chart-muted)", fillOpacity: 0.45 }),
+        // The selected county: a rule through the whole strip, so it is findable in a dense
+        // cluster, and a ringed evergreen dot on top.
+        Plot.ruleX(selected ? [selected] : [], { x: "v", stroke: "var(--evergreen)", strokeWidth: 1.5 }),
+        Plot.dot(selected ? [selected] : [], {
+          x: "v",
+          y: "jitter",
+          r: 5,
+          fill: "var(--evergreen)",
+          stroke: "var(--surface)",
+          strokeWidth: 2,
+        }),
       ],
     });
     el.replaceChildren(chart);

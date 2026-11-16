@@ -271,3 +271,14 @@ def test_sensitivity_review_descriptions() -> None:
         'Percent of the population 5 and over who speak English less than "very well", '
         "in the American Community Survey's wording."
     )
+
+
+def test_race_share_labels_are_short_and_descriptions_keep_the_definition() -> None:
+    by_id = {i.id: i for i in load_catalog()}
+    race = [i for i in by_id.values() if i.profile == "race"]
+    assert len(race) == 7
+    assert by_id["pct_hispanic"].label == "Hispanic or Latino (any race)"
+    for ind in race:
+        assert "not Hispanic" not in ind.label
+        if ind.id != "pct_hispanic":
+            assert "not Hispanic or Latino" in ind.description
