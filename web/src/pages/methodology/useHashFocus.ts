@@ -26,7 +26,9 @@ export function useHashFocus(ready: boolean, smooth = false): void {
       d.open = true;
     }
     el.scrollIntoView?.({ behavior: smooth ? "smooth" : "auto" });
-    el.focus();
+    // Focusing an off-screen element would otherwise scroll it into view at once and cancel the
+    // smooth scroll above.
+    el.focus({ preventScroll: true });
     // `smooth` is read at navigation time only; changing it alone must not rescroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, hash, key]);

@@ -4,37 +4,106 @@ import { expect, test } from "./fixtures";
 const rail = (page: import("@playwright/test").Page) =>
   page.getByRole("navigation", { name: "On this page" });
 
-/**
- * Scrolls a heading past the scrollspy's reading line in small steps. The spy watches a
- * zero-height line, so one long jump can skip it and report nothing; a reader's wheel never does.
- */
-async function readDownTo(page: Page, id: string) {
-  const top = () => page.evaluate((i) => document.getElementById(i)!.getBoundingClientRect().top, id);
-  await page.evaluate((i) => {
-    const el = document.getElementById(i)!;
-    window.scrollBy(0, el.getBoundingClientRect().top - 400);
-  }, id);
-  for (let n = 0; n < 40 && (await top()) > 200; n++) await page.mouse.wheel(0, 20);
+/** Waits until the page has stopped scrolling (scrollY unchanged for ten frames). */
+async function settled(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        let last = -1;
+        let still = 0;
+        const tick = () => {
+          still = window.scrollY === last ? still + 1 : 0;
+          last = window.scrollY;
+          if (still >= 10) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
 }
+
+const atBottom = (page: Page) =>
+  page.evaluate(() => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2);
+
+const RAIL_LABELS = [
+  "Sources and vintages",
+  "Indicators",
+  "Geography",
+  "Missing and uncertain values",
+  "Outcomes by race and ethnicity",
+  "How it works",
+  "What it leaves out",
+  "Similar counties",
+  "Reproduce it",
+];
 
 test("the reading rail follows the section in view", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("./methodology");
-  // The page lays out once its data loads; scroll only after the rail and the last section exist.
-  const link = rail(page).getByRole("link", { name: "How it works" });
   await expect(page.locator("#model-card")).toBeAttached();
-  await expect(link).toBeVisible();
-  await readDownTo(page, "model");
-  await expect(link).toHaveAttribute("aria-current", "location");
+  await page.evaluate(() => document.getElementById("model")!.scrollIntoView());
+  await page.mouse.wheel(0, 40);
+  await settled(page);
+  await expect(rail(page).getByRole("link", { name: "How it works" })).toHaveAttribute(
+    "aria-current",
+    "location",
+  );
 });
+
+for (const label of RAIL_LABELS) {
+  test(`the rail item "${label}" is current after its jump settles`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("./methodology");
+    await expect(page.locator("#model-card")).toBeAttached();
+    await rail(page).getByRole("link", { name: label }).click();
+    await settled(page);
+    // A target that cannot reach the top because the page ends first leaves the last item current.
+    const expected = (await atBottom(page)) ? "Reproduce it" : label;
+    await expect(rail(page).getByRole("link", { name: expected })).toHaveAttribute(
+      "aria-current",
+      "location",
+    );
+    await page.mouse.wheel(0, 60);
+    await settled(page);
+    await expect(rail(page).locator('[aria-current="location"]')).toHaveCount(1);
+  });
+}
 
 test("the last rail item is current once picked", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1600 });
   await page.goto("./methodology");
   const link = rail(page).getByRole("link", { name: "Reproduce it" });
   await link.click();
-  await expect(link).toHaveAttribute("aria-current", /.+/);
+  await settled(page);
+  await expect(link).toHaveAttribute("aria-current", "location");
   await expect(page.locator("#model-card")).toBeFocused();
+});
+
+test("a rail jump scrolls smoothly and lands the heading at the top", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("./methodology");
+  await expect(page.locator("#model-card")).toBeAttached();
+  const samples = page.evaluate(
+    () =>
+      new Promise<number[]>((resolve) => {
+        const ys: number[] = [];
+        let still = 0;
+        const tick = () => {
+          const y = window.scrollY;
+          still = ys.length && ys[ys.length - 1] === y ? still + 1 : 0;
+          ys.push(y);
+          if ((still >= 10 && ys[0] !== y) || ys.length > 600) resolve(ys);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+  await rail(page).getByRole("link", { name: "Geography" }).click();
+  const ys = await samples;
+  expect(new Set(ys).size).toBeGreaterThan(3);
+  const top = await page.evaluate(() => document.getElementById("harmonization")!.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThan(100);
 });
 
 for (const id of [
@@ -53,7 +122,8 @@ for (const id of [
   });
 }
 
-test("a hero strip step jumps to its section", async ({ page }) => {
+test("a hero strip step jumps to its section and the rail keeps a place", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("./methodology");
   await page
     .getByRole("navigation", { name: "Pipeline steps" })
@@ -61,19 +131,26 @@ test("a hero strip step jumps to its section", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/#model-step$/);
   await expect(page.locator("#model-step")).toBeFocused();
+  await settled(page);
+  await expect(rail(page).locator('[aria-current="location"]')).toHaveCount(1);
 });
 
 test("the phone bar names the section and jumps", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("./methodology");
   await expect(page.locator("#model-card")).toBeAttached();
-  await readDownTo(page, "sources");
   const bar = rail(page).getByRole("button");
-  await expect(bar).toHaveText("Fetch · Sources and vintages");
+  await bar.click();
+  await rail(page).getByRole("link", { name: "How it works" }).click();
+  await settled(page);
+  await expect(page.locator("#model")).toBeFocused();
+  await expect(bar).toHaveText("Model · How it works");
+  await expect(page.locator("#reading-rail-list")).toBeHidden();
   await bar.click();
   await rail(page).getByRole("link", { name: "Similar counties" }).click();
+  await settled(page);
   await expect(page.locator("#similar-counties")).toBeFocused();
-  await expect(page.locator("#reading-rail-list")).toBeHidden();
+  await expect(bar).toHaveText("Model · Similar counties");
 });
 
 for (const width of [375, 721, 900, 1100, 1440]) {
