@@ -5,9 +5,19 @@ import { manifest, strata } from "../../test/fixtures";
 import type { Indicator } from "../../types";
 import { RaceBreakdownSection } from "./RaceBreakdownSection";
 
-const base = manifest.indicators.find((i) => i.id === "life_expectancy") as Indicator;
-const outcome = (id: string, label: string): Indicator => ({ ...base, id, label });
-const profile = (id: string, label: string, universe: string | null): Indicator => ({
+const base = manifest.indicators.find(
+  (i) => i.id === "life_expectancy",
+) as Indicator;
+const outcome = (id: string, label: string): Indicator => ({
+  ...base,
+  id,
+  label,
+});
+const profile = (
+  id: string,
+  label: string,
+  universe: string | null,
+): Indicator => ({
   ...base,
   id,
   label,
@@ -20,7 +30,11 @@ const indicators: Indicator[] = [
   outcome("life_expectancy", "Life expectancy"),
   outcome("preventable_hospital_stays", "Preventable hospital stays"),
   profile("pct_veterans", "Veterans", "Civilian population 18 and over"),
-  profile("pct_disability", "With a disability", "Civilian noninstitutionalized population"),
+  profile(
+    "pct_disability",
+    "With a disability",
+    "Civilian noninstitutionalized population",
+  ),
   profile("pct_asian", "Asian population", null),
 ];
 
@@ -35,7 +49,10 @@ function renderSection() {
 
 test("heading, id and the source year", () => {
   const text = renderSection();
-  const h = screen.getByRole("heading", { level: 4, name: "Outcomes by race and ethnicity" });
+  const h = screen.getByRole("heading", {
+    level: 4,
+    name: "Outcomes by race and ethnicity",
+  });
   expect(h).toHaveAttribute("id", "race-breakdown");
   expect(h).toHaveAttribute("tabindex", "-1");
   expect(text).toContain("County Health Rankings 2025");
@@ -70,8 +87,12 @@ test("explains the Chugach and Copper River gap and does not deny Idaho NHPI val
 
 test("Who lives here lists profile measures with their universes", () => {
   renderSection();
-  expect(screen.getByRole("heading", { level: 5, name: "Who lives here" })).toBeInTheDocument();
-  expect(screen.getByText(/Veterans/)).toHaveTextContent(/Civilian population 18 and over/);
+  expect(
+    screen.getByRole("heading", { level: 5, name: "Who lives here" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Veterans/)).toHaveTextContent(
+    /Civilian population 18 and over/,
+  );
   expect(screen.getByText(/With a disability/)).toHaveTextContent(
     /Civilian noninstitutionalized population/,
   );

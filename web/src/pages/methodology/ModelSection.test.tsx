@@ -7,7 +7,9 @@ import {
   lifeExpectancy as model,
   prematureDeath,
 } from "../../test/fixtures";
-import { formatCount, formatMetric } from "./format";
+import { formatValue } from "../../color/formatValue";
+import { modelDigits } from "../../model/modelView";
+import { featureLabel, formatCount, formatMetric } from "./format";
 import { ModelSection } from "./ModelSection";
 
 test("training, validation, metrics, importance and tiers", () => {
@@ -308,9 +310,55 @@ test("the evidence slot compares R², and the top three factors show as bars", (
       formatMetric(model.metrics.lightgbm.pnw.r2),
     ),
   ).toBeInTheDocument();
+  const top3 = [...model.global_importance]
+    .sort((a, b) => b.mean_abs_shap - a.mean_abs_shap)
+    .slice(0, 3);
   expect(container.querySelectorAll(".factor-bar")).toHaveLength(3);
+  expect(
+    [...container.querySelectorAll(".factor-label")].map((e) => e.textContent),
+  ).toEqual(top3.map((e) => featureLabel(e.feature, manifest.indicators)));
+  expect(
+    [...container.querySelectorAll(".factor-value")].map((e) => e.textContent),
+  ).toEqual(
+    top3.map((e) =>
+      formatValue(e.mean_abs_shap, model.unit, modelDigits(model.unit, 2)),
+    ),
+  );
   expect(document.body.textContent).toContain(
     "Ranked by how strongly each is associated with the model's estimate. Associations, not causes.",
   );
   expect(screen.getByRole("table")).toBeInTheDocument();
+});
+
+test("the R² comparison reads the selected target's metrics", () => {
+  const distinct = {
+    ...prematureDeath,
+    metrics: {
+      ...prematureDeath.metrics,
+      lightgbm: {
+        national: { ...prematureDeath.metrics.lightgbm.national, r2: 0.33 },
+        pnw: { ...prematureDeath.metrics.lightgbm.pnw, r2: 0.12 },
+      },
+    },
+  };
+  const file = {
+    ...modelFile,
+    targets: { ...modelFile.targets, premature_death: distinct },
+  };
+  const { container } = render(
+    <ModelSection
+      model={file}
+      targetId="premature_death"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  const evidence = within(
+    container.querySelector(".methodology-evidence") as HTMLElement,
+  );
+  expect(evidence.getByText("0.33")).toBeInTheDocument();
+  expect(evidence.getByText("0.12")).toBeInTheDocument();
+  expect(
+    evidence.queryByText(formatMetric(model.metrics.lightgbm.national.r2)),
+  ).toBeNull();
 });

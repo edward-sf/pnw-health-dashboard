@@ -24,3 +24,12 @@ test("every label and display is visible text", () => {
     expect(screen.getByText(i.display)).toBeVisible();
   }
 });
+
+test("all-zero values give zero-width bars, not NaN", () => {
+  const { container } = render(
+    <FactorBars items={[{ label: "Zero", value: 0, display: "0.0" }]} />,
+  );
+  expect(container.querySelector<HTMLElement>(".factor-bar")!.style.width).toBe(
+    "0%",
+  );
+});

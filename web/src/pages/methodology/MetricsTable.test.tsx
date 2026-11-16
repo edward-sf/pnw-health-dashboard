@@ -31,7 +31,9 @@ test("the scrolling wrapper is a named, focusable region", () => {
   render(<MetricsTable caption="Accuracy" rows={[]} />);
   const region = screen.getByRole("region", { name: "Accuracy" });
   expect(region).toHaveAttribute("tabindex", "0");
-  expect(region).toContainElement(screen.getByRole("table", { name: "Accuracy" }));
+  expect(region).toContainElement(
+    screen.getByRole("table", { name: "Accuracy" }),
+  );
 });
 
 test("rows with a target add a Target column, one block per target and model", () => {
@@ -60,5 +62,7 @@ test("rows with a target add a Target column, one block per target and model", (
   ).toEqual(["Outcome", "Model", "Area", "R²", "RMSE", "MAE", "Counties"]);
   const rows = within(table).getAllByRole("row").slice(1);
   expect(rows).toHaveLength(4);
-  expect(rows[0]?.textContent).toBe("Life expectancyLightGBMUnited States0.801.501.103,000");
+  expect(rows[0]?.textContent).toBe(
+    "Life expectancyLightGBMUnited States0.801.501.103,000",
+  );
 });

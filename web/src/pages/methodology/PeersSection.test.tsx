@@ -32,7 +32,9 @@ test("names k, the minimum features, imputation, scaling, distance and the race 
   expect(text).toMatch(/median/);
   expect(text).toMatch(/z-scores/);
   expect(text).toMatch(/Euclidean/);
-  expect(text).toContain(`${Object.keys(peers.counties).length} Pacific Northwest counties`);
+  expect(text).toContain(
+    `${Object.keys(peers.counties).length} Pacific Northwest counties`,
+  );
   expect(text).toMatch(/race and ethnicity/i);
   expect(text).toMatch(/never a county outside the Pacific Northwest/i);
   expect(text).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
