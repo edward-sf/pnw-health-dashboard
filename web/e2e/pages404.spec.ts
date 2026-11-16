@@ -36,7 +36,7 @@ test("a deep link through the real 404 restores path, query and hash", async ({ 
   expect(res.status()).toBe(404);
 
   await page.goto("./methodology?i=poverty_rate#sources");
-  await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "How the atlas is built" })).toBeVisible();
   const url = new URL(page.url());
   expect(url.pathname).toBe("/pnw-health-dashboard/methodology");
   expect(url.search).toBe("?i=poverty_rate");

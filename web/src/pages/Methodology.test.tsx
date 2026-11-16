@@ -43,7 +43,7 @@ function at(state: DataState, path = "/methodology") {
 
 test("loading shows the loading line", () => {
   at({ status: "loading" });
-  expect(screen.getByRole("heading", { level: 2, name: "Methodology" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "How the atlas is built" })).toBeInTheDocument();
   expect(screen.getByText("Loading data…")).toBeInTheDocument();
 });
 
@@ -68,7 +68,7 @@ test("ready renders every anchor, focusable, with a table of contents", () => {
     "href",
     "/methodology#sources",
   );
-  expect(screen.getByRole("heading", { name: "At a glance" })).toBeInTheDocument();
+  expect(screen.queryByText("At a glance")).toBeNull();
 });
 
 test("a deep link opened before the data loads focuses its heading once ready", () => {
@@ -93,9 +93,8 @@ test("wording guard: no causal language anywhere on the page", () => {
 test("the outline nests: page h2, steps at h3, sections at h4, sub-anchors at h5", () => {
   at(ready);
   const h2s = screen.getAllByRole("heading", { level: 2 });
-  expect(h2s.map((h) => h.textContent)).toEqual(["Methodology"]);
+  expect(h2s.map((h) => h.textContent)).toEqual(["How the atlas is built"]);
   expect(h2s[0]).toHaveAttribute("data-page-heading");
-  expect(document.getElementById("at-a-glance")?.tagName).toBe("H3");
   for (const id of [
     "sources",
     "indicators",
@@ -170,6 +169,6 @@ test("falls back to the first target when life_expectancy is absent", () => {
     data: { manifest, topology, values, strata, model: { ...model, targets: rest } },
   };
   at(without);
-  expect(screen.getByRole("heading", { name: "Methodology" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "How the atlas is built" })).toBeInTheDocument();
   expect(screen.getByText(/The default is premature death\./)).toBeInTheDocument();
 });

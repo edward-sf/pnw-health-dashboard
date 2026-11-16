@@ -5,12 +5,12 @@ import { pageTitle } from "../brand/brand";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { DataState } from "../data/useData";
 import { defaultTargetId, targetModel } from "../model/targetView";
-import { AtAGlance } from "./methodology/AtAGlance";
 import { ExclusionsSection } from "./methodology/ExclusionsSection";
 import { HarmonizationSection } from "./methodology/HarmonizationSection";
 import { IndicatorCatalog } from "./methodology/IndicatorCatalog";
 import { MissingDataSection } from "./methodology/MissingDataSection";
 import { ModelSection } from "./methodology/ModelSection";
+import { PipelineHero } from "./methodology/PipelineHero";
 import { PeersSection } from "./methodology/PeersSection";
 import { RaceBreakdownSection } from "./methodology/RaceBreakdownSection";
 import { ReproducibilitySection } from "./methodology/ReproducibilitySection";
@@ -29,13 +29,13 @@ export function Methodology({ state }: { state: DataState }) {
   return (
     <section className="methodology">
       <h2 tabIndex={-1} data-page-heading>
-        Methodology
+        How the atlas is built
       </h2>
       {state.status === "loading" && <p className="app-status">Loading data…</p>}
       {state.status === "error" && <ErrorPage message={state.message} onRetry={state.retry} />}
       {state.status === "ready" && (
         <>
-          <AtAGlance data={state.data} />
+          <PipelineHero data={state.data} />
           <nav aria-label="On this page" className="methodology-toc">
             <ul>
               {STEPS.flatMap((step) => step.sections).map(({ id, railLabel }) => (

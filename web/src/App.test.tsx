@@ -68,9 +68,9 @@ describe("App", () => {
   it("/methodology renders the page once the data loads", async () => {
     at("/methodology");
     expect(
-      screen.getByRole("heading", { level: 2, name: "Methodology" }),
+      screen.getByRole("heading", { level: 2, name: "How the atlas is built" }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "At a glance" })).toBeInTheDocument();
+    expect(await screen.findByRole("navigation", { name: "Pipeline steps" })).toBeInTheDocument();
   });
 
   it("/about renders while the data fails to load", () => {
@@ -136,8 +136,8 @@ describe("App", () => {
     const retry = await screen.findByRole("button", { name: "Try again" });
     heal();
     await user.click(retry);
-    await screen.findByRole("heading", { name: "At a glance" });
-    expect(screen.getByRole("heading", { level: 2, name: "Methodology" })).toHaveFocus();
+    await screen.findByRole("navigation", { name: "Pipeline steps" });
+    expect(screen.getByRole("heading", { level: 2, name: "How the atlas is built" })).toHaveFocus();
   });
 
   it("an unknown path redirects to the explorer", async () => {
@@ -169,7 +169,7 @@ describe("App", () => {
     await screen.findByRole("group", { name: "County map" });
     await user.click(screen.getByRole("link", { name: "Methodology" }));
     expect(
-      screen.getByRole("heading", { level: 2, name: "Methodology" }),
+      screen.getByRole("heading", { level: 2, name: "How the atlas is built" }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "About" }));
     expect(
