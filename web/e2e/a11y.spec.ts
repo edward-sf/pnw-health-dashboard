@@ -108,7 +108,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("about page", async ({ page }, testInfo) => {
       await page.goto("./about");
-      await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toBeVisible();
       await audit(page, testInfo);
     });
   });

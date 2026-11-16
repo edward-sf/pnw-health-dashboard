@@ -77,7 +77,7 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("offline"))));
     at("/about");
     expect(
-      screen.getByRole("heading", { level: 2, name: "About" }),
+      screen.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" }),
     ).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "About" }));
     expect(
-      screen.getByRole("heading", { level: 2, name: "About" }),
+      screen.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Explorer" }));
     expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();
@@ -199,7 +199,7 @@ describe("App", () => {
     expect(header).toContainElement(nav);
     expect(main).not.toContainElement(h1);
     expect(main).not.toContainElement(nav);
-    expect(main).toContainElement(screen.getByRole("heading", { level: 2, name: "About" }));
+    expect(main).toContainElement(screen.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" }));
   });
 
   it("the active nav link has aria-current=page", async () => {
@@ -235,7 +235,7 @@ describe("App", () => {
     at("/");
     await screen.findByRole("group", { name: "County map" });
     await user.click(screen.getByRole("link", { name: "About" }));
-    expect(screen.getByRole("heading", { level: 2, name: "About" })).toHaveFocus();
+    expect(screen.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toHaveFocus();
     await user.click(screen.getByRole("link", { name: "Explorer" }));
     expect(screen.getByRole("heading", { level: 2, name: "Poverty rate" })).toHaveFocus();
   });

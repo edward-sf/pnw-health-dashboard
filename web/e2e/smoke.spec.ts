@@ -161,7 +161,7 @@ test("methodology and about pages render", async ({ page }) => {
     page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
   ).toBeVisible();
   await page.goto("./about");
-  await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toBeVisible();
 });
 
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
