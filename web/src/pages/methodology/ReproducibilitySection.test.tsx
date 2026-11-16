@@ -20,3 +20,10 @@ test("shows the selected outcome's training counties", () => {
   expect(document.body.textContent).toContain("OutcomeLife expectancy");
   expect(document.body.textContent).toContain("Training counties3,000");
 });
+
+test("the LightGBM parameters are in a closed fold", () => {
+  render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
+  const fold = screen.getByText("learning_rate").closest("details")!;
+  expect(fold).toHaveClass("methodology-fold");
+  expect(fold).not.toHaveAttribute("open");
+});

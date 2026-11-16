@@ -113,13 +113,20 @@ test("says why PLACES outcomes and low birth weight are not targets, and how dir
   expect(text).toMatch(/PLACES outcomes .* not targets/);
   expect(text).toMatch(/partly from .*American Community Survey/);
   expect(text).toMatch(/low birth weight/i);
-  expect(text).toMatch(/lower is more favorable.*a negative difference is more favorable than expected/is);
+  expect(text).toMatch(
+    /lower is more favorable.*a negative difference is more favorable than expected/is,
+  );
   expect(text).toMatch(/blue for more favorable than expected/);
 });
 
 const wording = (id: string) => {
   const { unmount } = render(
-    <ModelSection model={modelFile} targetId={id} onTargetChange={() => {}} indicators={manifest.indicators} />,
+    <ModelSection
+      model={modelFile}
+      targetId={id}
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
   );
   const text = document.body.textContent ?? "";
   const section = text.slice(text.indexOf("Factors that stand in for others"));
@@ -154,13 +161,33 @@ test("flag colours are blue and red, and low birth weight is explained plainly",
 });
 
 test("names the default outcome from DEFAULT_TARGET, not key order", () => {
-  const reordered = { ...modelFile, targets: { premature_death: modelFile.targets.premature_death!, life_expectancy: modelFile.targets.life_expectancy! } };
-  render(<ModelSection model={reordered} targetId="life_expectancy" onTargetChange={() => {}} indicators={manifest.indicators} />);
+  const reordered = {
+    ...modelFile,
+    targets: {
+      premature_death: modelFile.targets.premature_death!,
+      life_expectancy: modelFile.targets.life_expectancy!,
+    },
+  };
+  render(
+    <ModelSection
+      model={reordered}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
   expect(document.body.textContent).toContain("The default is life expectancy.");
 });
 
 test("the accuracy table puts each outcome's unit in the Outcome cell", () => {
-  render(<ModelSection model={modelFile} targetId="life_expectancy" onTargetChange={() => {}} indicators={manifest.indicators} />);
+  render(
+    <ModelSection
+      model={modelFile}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
   const table = screen.getByRole("table");
   expect(within(table).getAllByText("Life expectancy, years")).toHaveLength(4);
   expect(within(table).getAllByText("Premature death (years lost), per 100k")).toHaveLength(4);
@@ -170,7 +197,10 @@ test.each(["life_expectancy", "premature_death", "injury_deaths"])(
   "the associations paragraph reads for %s",
   (targetId) => {
     const injury = { ...prematureDeath, label: "Injury deaths" };
-    const file = { ...modelFile, targets: { ...modelFile.targets, injury_deaths: injury } };
+    const file = {
+      ...modelFile,
+      targets: { ...modelFile.targets, injury_deaths: injury },
+    };
     render(
       <ModelSection
         model={file}
@@ -179,7 +209,10 @@ test.each(["life_expectancy", "premature_death", "injury_deaths"])(
         indicators={manifest.indicators}
       />,
     );
-    const heading = screen.getByRole("heading", { level: 5, name: "Associations, not effects" });
+    const heading = screen.getByRole("heading", {
+      level: 5,
+      name: "Associations, not effects",
+    });
     const text = heading.nextElementSibling!.textContent!;
     expect(text).toContain("why a county's actual value differs from its expected value");
     expect(text).not.toContain("(");
@@ -196,8 +229,32 @@ test("the model section reads higher or lower than expected, and is not a judgme
       indicators={manifest.indicators}
     />,
   );
-  expect(screen.getByRole("heading", { level: 5, name: "Higher or lower than expected" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", {
+      level: 5,
+      name: "Higher or lower than expected",
+    }),
+  ).toBeInTheDocument();
   expect(document.body.textContent).toContain(
     "The tiers compare a county with the model's estimate; they are not a judgment of the county.",
   );
+});
+
+test("the full factor list is folded, under a heading outside the fold", () => {
+  render(
+    <ModelSection
+      model={modelFile}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  const heading = screen.getByRole("heading", {
+    name: /Factors by importance/,
+  });
+  expect(heading.closest("details")).toBeNull();
+  const list = screen.getByRole("list", { name: /Factors by importance/ });
+  const fold = list.closest("details")!;
+  expect(fold).not.toHaveAttribute("open");
+  expect(fold.querySelector("summary")).toHaveTextContent(/^Show all \d+ factors$/);
 });

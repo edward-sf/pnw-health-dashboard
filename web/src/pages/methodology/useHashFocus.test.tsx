@@ -82,3 +82,31 @@ test("ignores a hash with no match", () => {
   at("/methodology#nope");
   expect(document.body).toHaveFocus();
 });
+
+test("opens every enclosing details before focusing the target", () => {
+  render(
+    <MemoryRouter initialEntries={["/methodology#target"]}>
+      <Nested />
+    </MemoryRouter>,
+  );
+  const outer = screen.getByTestId("outer") as HTMLDetailsElement;
+  const inner = screen.getByTestId("inner") as HTMLDetailsElement;
+  expect(outer.open).toBe(true);
+  expect(inner.open).toBe(true);
+  expect(screen.getByRole("heading", { name: "Target" })).toHaveFocus();
+});
+
+function Nested() {
+  useHashFocus(true);
+  return (
+    <details data-testid="outer">
+      <summary>Outer</summary>
+      <details data-testid="inner">
+        <summary>Inner</summary>
+        <h5 id="target" tabIndex={-1}>
+          Target
+        </h5>
+      </details>
+    </details>
+  );
+}

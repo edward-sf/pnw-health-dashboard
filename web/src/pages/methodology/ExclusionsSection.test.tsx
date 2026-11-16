@@ -19,7 +19,10 @@ test("feature groups, behaviors comparison and excluded counties", () => {
   const targets = Object.values(modelFile.targets);
   expect(within(table).getAllByText("With behaviors")).toHaveLength(2 * targets.length);
   expect(within(table).getAllByText("Main model")).toHaveLength(2 * targets.length);
-  for (const t of targets) expect(within(table).getAllByText(new RegExp(`^${t.label.replace(/[()]/g, "\\$&")}, `))).not.toHaveLength(0);
+  for (const t of targets)
+    expect(
+      within(table).getAllByText(new RegExp(`^${t.label.replace(/[()]/g, "\\$&")}, `)),
+    ).not.toHaveLength(0);
 });
 
 test("an excluded state FIPS the web doesn't know is shown raw", () => {
@@ -42,5 +45,23 @@ test("an excluded state FIPS the web doesn't know is shown raw", () => {
 
 test("the factor groups heading names the selected outcome", () => {
   render(<ExclusionsSection model={modelFile} targetId="premature_death" />);
-  expect(screen.getByRole("heading", { level: 5, name: "Factor groups left out, premature death" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", {
+      level: 5,
+      name: "Factor groups left out, premature death",
+    }),
+  ).toBeInTheDocument();
+});
+
+test("the counties left out of training are in a closed fold", () => {
+  render(<ExclusionsSection model={modelFile} targetId="life_expectancy" />);
+  const item = screen.getByText(/Connecticut reports planning regions/);
+  const fold = item.closest("details")!;
+  expect(fold).toHaveClass("methodology-fold");
+  expect(fold).not.toHaveAttribute("open");
+  expect(
+    screen
+      .getByRole("heading", { level: 5, name: /Counties left out of training/ })
+      .closest("details"),
+  ).toBeNull();
 });

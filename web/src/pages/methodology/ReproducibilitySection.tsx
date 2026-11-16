@@ -1,4 +1,5 @@
 import type { TargetModel } from "../../types";
+import { Fold } from "./Fold";
 import { formatCount } from "./format";
 import { SectionLayout } from "./SectionLayout";
 
@@ -54,16 +55,18 @@ export function ReproducibilitySection({
         }
       />
       <h5>LightGBM parameters</h5>
-      <dl className="methodology-dl">
-        {Object.entries(card.lightgbm_params).map(([key, value]) => (
-          <div key={key}>
-            <dt>
-              <code>{key}</code>
-            </dt>
-            <dd>{String(value)}</dd>
-          </div>
-        ))}
-      </dl>
+      <Fold summary="Show the parameters">
+        <dl className="methodology-dl">
+          {Object.entries(card.lightgbm_params).map(([key, value]) => (
+            <div key={key}>
+              <dt>
+                <code>{key}</code>
+              </dt>
+              <dd>{String(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      </Fold>
     </section>
   );
 }

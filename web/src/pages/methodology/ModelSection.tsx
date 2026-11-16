@@ -9,6 +9,7 @@ import { formatValue } from "../../color/formatValue";
 import { modelDigits } from "../../model/modelView";
 import { defaultTargetId, targetModel } from "../../model/targetView";
 import type { Indicator, ModelFile } from "../../types";
+import { Fold } from "./Fold";
 import { featureLabel, formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
 import { SectionLayout } from "./SectionLayout";
@@ -101,8 +102,16 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
             <MetricsTable
               caption="Cross-validated accuracy, by outcome"
               rows={targets.flatMap(([, t]) => [
-                { target: outcomeCell(t), model: "Ridge baseline", ...t.metrics.ridge },
-                { target: outcomeCell(t), model: "LightGBM", ...t.metrics.lightgbm },
+                {
+                  target: outcomeCell(t),
+                  model: "Ridge baseline",
+                  ...t.metrics.ridge,
+                },
+                {
+                  target: outcomeCell(t),
+                  model: "LightGBM",
+                  ...t.metrics.lightgbm,
+                },
               ])}
             />
             <h5 id="model-importance">Factors by importance: {model.label}</h5>
@@ -110,14 +119,16 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
               Each factor's average contribution to the expected values, in the outcome's unit,
               across all counties (mean absolute SHAP value).
             </p>
-            <ol aria-labelledby="model-importance">
-              {ranked.map((e) => (
-                <li key={e.feature}>
-                  {label(e.feature)}:{" "}
-                  {formatValue(e.mean_abs_shap, model.unit, modelDigits(model.unit, 2))}
-                </li>
-              ))}
-            </ol>
+            <Fold summary={`Show all ${ranked.length} factors`}>
+              <ol aria-labelledby="model-importance">
+                {ranked.map((e) => (
+                  <li key={e.feature}>
+                    {label(e.feature)}:{" "}
+                    {formatValue(e.mean_abs_shap, model.unit, modelDigits(model.unit, 2))}
+                  </li>
+                ))}
+              </ol>
+            </Fold>
             <h5>Higher or lower than expected</h5>
             <p>
               A county's difference is its actual value minus the model's expected value. Which sign
