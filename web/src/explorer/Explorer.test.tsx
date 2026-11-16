@@ -166,10 +166,13 @@ test("back restores view and county", async () => {
 
 const title = () => screen.getByRole("heading", { level: 2, name: "Poverty rate" });
 
-test("shows the indicator description and source under the title", () => {
+test("shows the source under the title and the description only behind About this measure", async () => {
   setup("/?i=poverty_rate");
-  expect(screen.getByText("Share of residents living below the poverty line.")).toBeInTheDocument();
   expect(screen.getByText("Source: Census ACS 5-year, 2023.")).toBeInTheDocument();
+  expect(document.querySelector(".indicator-description--clamped")).toBeNull();
+  expect(screen.queryByText("Share of residents living below the poverty line.")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
+  expect(await screen.findByText("Share of residents living below the poverty line.")).toBeVisible();
 });
 
 test("search, close, then a map click leaves the heading unfocused", async () => {
@@ -418,14 +421,14 @@ test("phone: the description waits behind About this measure", async () => {
   expect(screen.getByText(text)).toBeInTheDocument();
 });
 
-test("wide viewport: no sheet-open class; the description shows, and in full behind About this measure", async () => {
+test("wide viewport: no sheet-open class; the description is only behind About this measure", async () => {
   mockMatchMedia(false);
   setup("/?i=poverty_rate&c=53033");
   expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
   const text = "Share of residents living below the poverty line.";
-  expect(screen.getByText(text)).toHaveClass("indicator-description--clamped");
+  expect(screen.queryByText(text)).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
-  expect(screen.getAllByText(text)).toHaveLength(2);
+  expect(screen.getAllByText(text)).toHaveLength(1);
 });
 
 test("wide viewport: the Show switch sits in the title block's slot", () => {
@@ -533,11 +536,12 @@ test("switching to Compared with expected with a county open puts the card first
   expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-test("titles the map and subtitle from the target", () => {
+test("titles the map and subtitle from the target", async () => {
   setup("/?i=premature_death&show=expected");
   expect(
     screen.getByRole("heading", { level: 2, name: "Premature death (years lost): compared with expected" }),
   ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
   expect(
     screen.getByText(/^How each county compares on premature death with what the model expects/),
   ).toBeInTheDocument();
@@ -557,10 +561,11 @@ test.each([
   ["life_expectancy", "life expectancy"],
   ["premature_death", "premature death"],
   ["injury_deaths", "injury deaths"],
-])("the model subtitle for %s reads without parentheses", (id, name) => {
+])("the model subtitle for %s reads without parentheses", async (id, name) => {
   const injury = { ...prematureDeath, label: "Injury deaths" };
   const withInjury = { ...model, targets: { ...model.targets, injury_deaths: injury } };
   setup(`/?i=${id}&show=expected`, { manifest, values, topology, model: withInjury, strata });
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
   const text = document.querySelector(".indicator-description")!.textContent!;
   expect(text).toContain(`How each county compares on ${name} with what the model expects`);
   expect(text).not.toContain("(");

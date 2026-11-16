@@ -1,7 +1,6 @@
-import { ChartNoAxesColumn, Info, Map as MapIcon, Scale, Table2 } from "lucide-react";
+import { ChartNoAxesColumn, Map as MapIcon, Scale, Table2 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { InfoTip } from "@/components/ui/info-tip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Legend } from "../color/Legend";
 import { formatValue } from "../color/formatValue";
@@ -215,34 +214,18 @@ export function Explorer({ data }: { data: AppData }) {
         </div>
       </div>
       {/* Its height does not depend on the measure, so the map below never moves: the heading
-          fits one line from 721px (two on phones), the description is held to two lines with the
-          full text behind About this measure, and the Show switch has a slot either way. On
+          fits one line from 721px (two on phones), the description is only behind About this
+          measure, and the Show switch has a slot either way. On
           phones the switch sits under the map instead. */}
       <div className="title-block">
         <div className="title-row">
           <h2 ref={titleRef} className="indicator-title" tabIndex={-1} data-page-heading>
             {heading}
           </h2>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="about-measure"
-                aria-label="About this measure"
-              >
-                <Info aria-hidden="true" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] text-sm">
-              <p className="indicator-description">{description}</p>
-            </PopoverContent>
-          </Popover>
+          <InfoTip label="About this measure" className="about-measure">
+            <p className="indicator-description">{description}</p>
+          </InfoTip>
         </div>
-        {!isPhone && (
-          <p className="indicator-description indicator-description--clamped">{description}</p>
-        )}
         <div className="title-meta">
           {compared ? (
             targetIndicator && <p className="indicator-source">{sourceLine(targetIndicator)}</p>

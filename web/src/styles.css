@@ -417,17 +417,6 @@
     margin: 0;
   }
 
-  /* Two lines whatever the measure; a longer description is cut off here and read in full
-     behind About this measure. */
-  .indicator-description--clamped {
-    display: -webkit-box;
-    height: 2lh;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
   /* The source line, with the Show switch's slot at its end. The slot keeps the switch's height
      when the measure has no switch, so the map does not move when it appears. */
   .title-meta {
