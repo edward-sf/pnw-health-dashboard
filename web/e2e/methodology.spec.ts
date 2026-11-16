@@ -75,3 +75,22 @@ test("the phone bar names the section and jumps", async ({ page }) => {
   await expect(page.locator("#similar-counties")).toBeFocused();
   await expect(page.locator("#reading-rail-list")).toBeHidden();
 });
+
+for (const width of [375, 721, 900, 1100, 1440]) {
+  test(`the Model section lays out at ${width}px: no sideways scroll, R² bars drawn`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("./methodology");
+    await expect(page.locator("#model-card")).toBeAttached();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    const widths = await page.locator(".r2-bar").evaluateAll((els) =>
+      els.map((e) => e.getBoundingClientRect().width),
+    );
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect(w).toBeGreaterThan(0);
+  });
+}

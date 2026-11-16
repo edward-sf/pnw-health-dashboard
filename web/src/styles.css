@@ -1659,6 +1659,10 @@
     max-width: 65ch;
   }
 
+  .methodology-prose {
+    min-width: 0;
+  }
+
   .methodology-section--split {
     display: grid;
     grid-template-columns: 1fr;
@@ -1666,6 +1670,7 @@
   }
 
   .methodology-evidence {
+    align-self: start;
     min-width: 0;
     padding: 1rem;
     border: 1px solid var(--line);
@@ -1675,8 +1680,12 @@
 
   @media (min-width: 721px) {
     .methodology-section--split {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
+
+  .methodology-wide {
+    min-width: 0;
   }
 
   .methodology p,
@@ -1951,7 +1960,7 @@
 
   .methodology-dl {
     display: grid;
-    grid-template-columns: max-content 1fr;
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: 0.25rem 1rem;
     margin: 0 0 0.875rem;
   }
@@ -1966,6 +1975,7 @@
 
   .methodology-dl dd {
     margin: 0;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -1983,7 +1993,7 @@
   .r2-row,
   .factor-row {
     display: grid;
-    grid-template-columns: 8.5rem 1fr 3.5rem;
+    grid-template-columns: minmax(0, 8.5rem) minmax(3rem, 1fr) 2.5rem;
     align-items: center;
     gap: 0.5rem;
     margin: 0 0 0.5rem;

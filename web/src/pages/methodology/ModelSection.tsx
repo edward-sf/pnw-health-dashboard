@@ -108,131 +108,6 @@ export function ModelSection({
               under Reproducibility are for the outcome selected here. The
               accuracy table covers every outcome.
             </p>
-            <dl className="methodology-dl">
-              <dt>Outcome</dt>
-              <dd>{model.label}</dd>
-              <dt>Factors</dt>
-              <dd>{joinList(card.features.map(label))}</dd>
-            </dl>
-            <p>
-              The model is trained on {formatCount(card.training_counties)} US
-              counties: every county with a reported value for this outcome and
-              at least one factor. It's tested with {`${card.n_folds}-fold`}{" "}
-              cross-validation grouped by state, so each county's expected value
-              comes from a model that never saw any county in its state. A
-              missing factor value is filled with the median from the counties
-              used to train that model; the values shown on the site are never
-              filled in.
-            </p>
-            <p>
-              Two models are compared: a ridge regression baseline and LightGBM,
-              a gradient-boosted tree model. The map and county panel use
-              LightGBM. R² is the share of the variation in each outcome between
-              counties that the model accounts for (1 would be perfect). RMSE
-              and MAE are typical prediction errors, in the outcome's own unit.
-            </p>
-            <MetricsTable
-              caption="Cross-validated accuracy, by outcome"
-              rows={targets.flatMap(([, t]) => [
-                {
-                  target: outcomeCell(t),
-                  model: "Ridge baseline",
-                  ...t.metrics.ridge,
-                },
-                {
-                  target: outcomeCell(t),
-                  model: "LightGBM",
-                  ...t.metrics.lightgbm,
-                },
-              ])}
-            />
-            <h5 id="model-importance" tabIndex={-1}>Factors by importance: {model.label}</h5>
-            <p>
-              Each factor's average contribution to the expected values, in the
-              outcome's unit, across all counties (mean absolute SHAP value).
-            </p>
-            <p>
-              Ranked by how strongly each is associated with the model's
-              estimate. Associations, not causes.
-            </p>
-            <FactorBars
-              items={ranked.slice(0, 3).map((e) => ({
-                label: label(e.feature),
-                value: e.mean_abs_shap,
-                display: formatValue(
-                  e.mean_abs_shap,
-                  model.unit,
-                  modelDigits(model.unit, 2),
-                ),
-              }))}
-            />
-            <Fold summary={`Show all ${ranked.length} factors`}>
-              <ol aria-labelledby="model-importance">
-                {ranked.map((e) => (
-                  <li key={e.feature}>
-                    {label(e.feature)}:{" "}
-                    {formatValue(
-                      e.mean_abs_shap,
-                      model.unit,
-                      modelDigits(model.unit, 2),
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </Fold>
-            <h5>Higher or lower than expected</h5>
-            <p>
-              A county's difference is its actual value minus the model's
-              expected value. Which sign is more favorable depends on the
-              outcome.
-              {better &&
-                ` Where higher is more favorable (${better}), a positive difference is more favorable than expected, and a negative one less favorable.`}
-              {worse &&
-                ` Where lower is more favorable (${worse}), a negative difference is more favorable than expected, and a positive one less favorable.`}{" "}
-              The flag colors keep blue for more favorable than expected and red
-              for less favorable, whichever way the outcome runs. The tiers
-              compare a county with the model's estimate; they are not a
-              judgment of the county.
-            </p>
-            <p>
-              Each county has its own range, z × √(σ_model² + se²). σ_model is
-              the model's typical error once average measurement noise is taken
-              out:{" "}
-              {formatValue(sigma_model, model.unit, modelDigits(model.unit, 1))}
-              . se is the standard error of the county's value, from its
-              published confidence interval; a county without an interval uses
-              the average se² instead. A difference beyond the range with z ={" "}
-              {formatZ(z_75)} (a two-sided 75% range) is flagged as somewhat
-              higher or lower than expected, and beyond the range with z ={" "}
-              {formatZ(z_90)} (a two-sided 90% range) as notably higher or
-              lower.
-            </p>
-            <h5 id="no-result" tabIndex={-1}>
-              Counties with no result
-            </h5>
-            <p>
-              A county whose value for the outcome isn't reported has no model
-              result, because there is nothing to compare its expected value
-              with. On the map, with Compared with expected on, these counties
-              are hatched and marked "Not enough data".
-            </p>
-            <h5>Factors that stand in for others</h5>
-            <p>
-              Some factors stand in for others the model doesn't see. For
-              example, high housing costs often go with expensive metro areas
-              and college towns, so a higher housing cost burden can move the
-              expected value toward what those places tend to have. A factor's
-              contribution shows what the model has learned goes with it, not
-              what would happen if it changed.
-            </p>
-            <h5>Associations, not effects</h5>
-            <p>
-              The factors are associated with the expected value. They describe
-              what the model expects for a county with that profile. They say
-              nothing about why a county's actual value differs from its
-              expected value, and they don't show that changing a factor would
-              change {outcome}.
-            </p>
           </>
         }
         evidence={
@@ -242,6 +117,132 @@ export function ModelSection({
           />
         }
       />
+      <div className="methodology-wide">
+        <MetricsTable
+          caption="Cross-validated accuracy, by outcome"
+          rows={targets.flatMap(([, t]) => [
+            {
+              target: outcomeCell(t),
+              model: "Ridge baseline",
+              ...t.metrics.ridge,
+            },
+            {
+              target: outcomeCell(t),
+              model: "LightGBM",
+              ...t.metrics.lightgbm,
+            },
+          ])}
+        />
+      </div>
+      <div className="methodology-section">
+        <dl className="methodology-dl">
+          <dt>Outcome</dt>
+          <dd>{model.label}</dd>
+          <dt>Factors</dt>
+          <dd>{joinList(card.features.map(label))}</dd>
+        </dl>
+        <p>
+          The model is trained on {formatCount(card.training_counties)} US
+          counties: every county with a reported value for this outcome and at
+          least one factor. It's tested with {`${card.n_folds}-fold`}{" "}
+          cross-validation grouped by state, so each county's expected value
+          comes from a model that never saw any county in its state. A missing
+          factor value is filled with the median from the counties used to train
+          that model; the values shown on the site are never filled in.
+        </p>
+        <p>
+          Two models are compared: a ridge regression baseline and LightGBM, a
+          gradient-boosted tree model. The map and county panel use LightGBM. R²
+          is the share of the variation in each outcome between counties that
+          the model accounts for (1 would be perfect). RMSE and MAE are typical
+          prediction errors, in the outcome's own unit.
+        </p>
+        <h5 id="model-importance" tabIndex={-1}>
+          Factors by importance: {model.label}
+        </h5>
+        <p>
+          Each factor's average contribution to the expected values, in the
+          outcome's unit, across all counties (mean absolute SHAP value).
+        </p>
+        <p>
+          Ranked by how strongly each is associated with the model's estimate.
+          Associations, not causes.
+        </p>
+        <FactorBars
+          items={ranked.slice(0, 3).map((e) => ({
+            label: label(e.feature),
+            value: e.mean_abs_shap,
+            display: formatValue(
+              e.mean_abs_shap,
+              model.unit,
+              modelDigits(model.unit, 2),
+            ),
+          }))}
+        />
+        <Fold summary={`Show all ${ranked.length} factors`}>
+          <ol aria-labelledby="model-importance">
+            {ranked.map((e) => (
+              <li key={e.feature}>
+                {label(e.feature)}:{" "}
+                {formatValue(
+                  e.mean_abs_shap,
+                  model.unit,
+                  modelDigits(model.unit, 2),
+                )}
+              </li>
+            ))}
+          </ol>
+        </Fold>
+        <h5>Higher or lower than expected</h5>
+        <p>
+          A county's difference is its actual value minus the model's expected
+          value. Which sign is more favorable depends on the outcome.
+          {better &&
+            ` Where higher is more favorable (${better}), a positive difference is more favorable than expected, and a negative one less favorable.`}
+          {worse &&
+            ` Where lower is more favorable (${worse}), a negative difference is more favorable than expected, and a positive one less favorable.`}{" "}
+          The flag colors keep blue for more favorable than expected and red for
+          less favorable, whichever way the outcome runs. The tiers compare a
+          county with the model's estimate; they are not a judgment of the
+          county.
+        </p>
+        <p>
+          Each county has its own range, z × √(σ_model² + se²). σ_model is the
+          model's typical error once average measurement noise is taken out:{" "}
+          {formatValue(sigma_model, model.unit, modelDigits(model.unit, 1))}. se
+          is the standard error of the county's value, from its published
+          confidence interval; a county without an interval uses the average se²
+          instead. A difference beyond the range with z = {formatZ(z_75)} (a
+          two-sided 75% range) is flagged as somewhat higher or lower than
+          expected, and beyond the range with z = {formatZ(z_90)} (a two-sided
+          90% range) as notably higher or lower.
+        </p>
+        <h5 id="no-result" tabIndex={-1}>
+          Counties with no result
+        </h5>
+        <p>
+          A county whose value for the outcome isn't reported has no model
+          result, because there is nothing to compare its expected value with.
+          On the map, with Compared with expected on, these counties are hatched
+          and marked "Not enough data".
+        </p>
+        <h5>Factors that stand in for others</h5>
+        <p>
+          Some factors stand in for others the model doesn't see. For example,
+          high housing costs often go with expensive metro areas and college
+          towns, so a higher housing cost burden can move the expected value
+          toward what those places tend to have. A factor's contribution shows
+          what the model has learned goes with it, not what would happen if it
+          changed.
+        </p>
+        <h5>Associations, not effects</h5>
+        <p>
+          The factors are associated with the expected value. They describe what
+          the model expects for a county with that profile. They say nothing
+          about why a county's actual value differs from its expected value, and
+          they don't show that changing a factor would change {outcome}.
+        </p>
+      </div>
     </section>
   );
 }
