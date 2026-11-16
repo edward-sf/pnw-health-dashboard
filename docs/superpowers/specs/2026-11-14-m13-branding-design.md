@@ -310,12 +310,12 @@ Flag names in the export (`notably_better` …) are unchanged; only the displaye
 | `age_65_plus` | Social & Economic | neutral | Keep | Its category differs from `age_under_18` because the model's feature rules require it; it is a display grouping only. |
 | `pct_female` | Demographics | neutral | **Change description** to "Percent of the total population whose sex is recorded as female in the American Community Survey." | Principle 3: the ACS asks about sex, with two options. The label stays "Female"; the description names the source's narrow definition. |
 | `pct_hispanic` | Demographics | neutral | Keep | Census term. |
-| `pct_white` | Demographics | neutral | Keep | |
-| `pct_black` | Demographics | neutral | Keep | |
-| `pct_aian` | Demographics | neutral | Keep | The undercount of multiracial American Indian and Alaska Native people is already explained in the Who lives here note. |
-| `pct_asian` | Demographics | neutral | Keep | |
-| `pct_nhpi` | Demographics | neutral | Keep | |
-| `pct_two_or_more` | Demographics | neutral | Keep | |
+| `pct_white` | Demographics | neutral | **Change label** to "White" (drop ", not Hispanic"). | Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
+| `pct_black` | Demographics | neutral | **Change label** to "Black" (drop ", not Hispanic"). | Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
+| `pct_aian` | Demographics | neutral | **Change label** to "American Indian and Alaska Native" (drop ", not Hispanic"). | The undercount of multiracial American Indian and Alaska Native people is already explained in the Who lives here note. Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
+| `pct_asian` | Demographics | neutral | **Change label** to "Asian" (drop ", not Hispanic"). | Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
+| `pct_nhpi` | Demographics | neutral | **Change label** to "Native Hawaiian and Pacific Islander" (drop ", not Hispanic"). | Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
+| `pct_two_or_more` | Demographics | neutral | **Change label** to "Two or more races" (drop ", not Hispanic"). | Principle 3: the definition stays in the description and the Who lives here ⓘ (2026-11-15 content review). |
 | `pct_disability` | Demographics | neutral | Keep | Person-first ("with a disability"). Neutral is right. |
 | `pct_veterans` | Demographics | neutral | Keep | |
 | `pct_foreign_born` | Demographics | neutral | Keep | |

@@ -434,7 +434,7 @@
   profile: race
 
 - id: pct_white
-  label: White, not Hispanic
+  label: White
   unit: percent
   source: acs
   source_field: DP05_0096PE
@@ -447,7 +447,7 @@
   profile: race
 
 - id: pct_black
-  label: Black, not Hispanic
+  label: Black
   unit: percent
   source: acs
   source_field: DP05_0097PE
@@ -460,7 +460,7 @@
   profile: race
 
 - id: pct_aian
-  label: American Indian and Alaska Native, not Hispanic
+  label: American Indian and Alaska Native
   unit: percent
   source: acs
   source_field: DP05_0098PE
@@ -473,7 +473,7 @@
   profile: race
 
 - id: pct_asian
-  label: Asian, not Hispanic
+  label: Asian
   unit: percent
   source: acs
   source_field: DP05_0099PE
@@ -486,7 +486,7 @@
   profile: race
 
 - id: pct_nhpi
-  label: Native Hawaiian and Pacific Islander, not Hispanic
+  label: Native Hawaiian and Pacific Islander
   unit: percent
   source: acs
   source_field: DP05_0100PE
@@ -499,7 +499,7 @@
   profile: race
 
 - id: pct_two_or_more
-  label: Two or more races, not Hispanic
+  label: Two or more races
   unit: percent
   source: acs
   source_field: DP05_0102PE
