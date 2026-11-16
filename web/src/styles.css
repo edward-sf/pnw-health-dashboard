@@ -947,12 +947,6 @@
     font-weight: 700;
   }
 
-  .panel-state {
-    margin: 0.125rem 0 0;
-    color: var(--ink-muted);
-    font-size: var(--text-sm);
-  }
-
   .panel-close {
     flex: none;
   }
@@ -999,7 +993,6 @@
     line-height: 1.05;
   }
 
-  .panel-ci,
   .panel-ranks,
   .panel-missing,
   .panel-unreliable {
@@ -1007,8 +1000,7 @@
     font-size: var(--text-sm);
   }
 
-  .panel-ci {
-    color: var(--ink-muted);
+  .panel-ranks {
     font-variant-numeric: tabular-nums;
   }
 

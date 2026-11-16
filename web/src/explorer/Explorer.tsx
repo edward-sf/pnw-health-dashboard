@@ -296,8 +296,6 @@ export function Explorer({ data }: { data: AppData }) {
             target={model}
             manifest={manifest}
             values={values}
-            strata={data.strata}
-            targetIndicator={targetIndicator}
             modelMode={compared}
             peers={data.model.peers}
             onSelectCounty={onSelectPeer}

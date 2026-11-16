@@ -118,7 +118,7 @@ test("in table view the open panel sits beside the table, not over it", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("./?i=poverty_rate&view=table&c=53033");
   const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County, WA");
   const table = (await page.locator(".county-table-wrap").boundingBox())!;
   const box = (await panel.boundingBox())!;
   // A 12px gap between the table frame and the panel.
