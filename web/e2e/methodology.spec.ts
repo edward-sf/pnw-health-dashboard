@@ -204,3 +204,18 @@ for (const width of [375, 1440]) {
     for (const t of types) expect(t).toBe("none");
   });
 }
+
+test("a table inside an evidence box has no box of its own", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("./methodology");
+  await expect(page.locator("#model-card")).toBeAttached();
+  const wraps = page.locator(".methodology-evidence .methodology-table-wrap");
+  expect(await wraps.count()).toBeGreaterThan(0);
+  const chrome = await wraps.evaluateAll((els) =>
+    els.map((e) => {
+      const c = getComputedStyle(e);
+      return `${c.borderTopWidth} ${c.backgroundColor}`;
+    }),
+  );
+  for (const c of chrome) expect(c).toBe("0px rgba(0, 0, 0, 0)");
+});
