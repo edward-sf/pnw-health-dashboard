@@ -63,7 +63,7 @@ test("ready renders every anchor, focusable, with a table of contents", () => {
   for (const id of ANCHORS) {
     const el = document.getElementById(id);
     expect(el, id).not.toBeNull();
-    if (id !== "model-importance") expect(el).toHaveAttribute("tabindex", "-1");
+    expect(el, id).toHaveAttribute("tabindex", "-1");
   }
   const toc = screen.getByRole("navigation", { name: "On this page" });
   expect(toc.querySelectorAll("a").length).toBeGreaterThanOrEqual(6);
