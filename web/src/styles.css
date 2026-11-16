@@ -1751,3 +1751,68 @@
     margin: 0;
   }
 }
+
+@layer components {
+  .r2-comparison {
+    margin: 0;
+  }
+
+  .r2-comparison figcaption {
+    margin: 0 0 0.75rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .r2-row,
+  .factor-row {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr 3.5rem;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    font-size: var(--text-sm);
+  }
+
+  .factor-row {
+    grid-template-columns: 1fr 1fr 5rem;
+  }
+
+  .r2-track,
+  .factor-track {
+    display: block;
+    height: 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--wash);
+  }
+
+  .r2-bar,
+  .factor-bar {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-sm);
+  }
+
+  .r2-bar--national,
+  .factor-bar {
+    background: var(--chart-muted);
+  }
+
+  .r2-bar--pnw {
+    background: var(--evergreen);
+  }
+
+  .r2-value,
+  .factor-value {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .r2-comparison p {
+    margin: 0.5rem 0 0;
+    font-size: var(--text-sm);
+  }
+
+  .factor-bars {
+    margin: 0 0 1rem;
+  }
+}

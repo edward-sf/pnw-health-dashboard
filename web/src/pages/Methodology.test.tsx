@@ -84,8 +84,10 @@ test("a deep link opened before the data loads focuses its heading once ready", 
 
 test("wording guard: no causal language anywhere on the page", () => {
   at(ready);
-  expect(document.body.textContent).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
-  expect(document.body.textContent).not.toMatch(/explains? the difference/i);
+  // "Associations, not causes." negates causation, so it is the one allowed use of the word.
+  const text = (document.body.textContent ?? "").replace("Associations, not causes.", "");
+  expect(text).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
+  expect(text).not.toMatch(/explains? the difference/i);
 });
 
 test("the outline nests: page h2, steps at h3, sections at h4, sub-anchors at h5", () => {
