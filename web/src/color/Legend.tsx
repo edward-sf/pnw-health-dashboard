@@ -1,7 +1,17 @@
 import { HatchSwatch } from "./HatchSwatch";
 import type { Unit } from "../types";
-import { formatValue } from "./formatValue";
+import { formatBound, formatTick, formatValue } from "./formatValue";
 import type { ColorScale } from "./makeColorScale";
+
+// Per-100k and years ranges would wrap to several lines per swatch with the unit repeated on
+// both bounds, so those state it once under the ramp. Dollars and counts use compact bounds.
+const UNIT_NOTE: Partial<Record<Unit, string>> = { years: "years", rate_per_100k: "per 100k" };
+
+function formatLegendBound(v: number, unit: Unit): string {
+  if (unit === "dollars" || unit === "count") return formatTick(v, unit);
+  if (unit === "percent") return formatValue(v, unit);
+  return formatBound(v, unit);
+}
 
 type Props = { scale: ColorScale; unit: Unit };
 
@@ -10,22 +20,31 @@ export function Legend({ scale, unit }: Props) {
   return (
     <div className="legend">
       <div className="legend-scale">
-        {ends && <span className="legend-end">{ends.low}</span>}
-        <ul className="legend-bins">
+        {ends && (
+          <div className="legend-ends">
+            <span className="legend-end" data-end="low">
+              {ends.low}
+            </span>
+            <span className="legend-end" data-end="high">
+              {ends.high}
+            </span>
+          </div>
+        )}
+        <ul className="legend-bins" data-testid="legend-ramp">
           {bins.map((b) => (
             <li key={b.color}>
               <span className="legend-swatch" style={{ background: b.color }} aria-hidden="true" />
-              <span>
-                {formatValue(b.min, unit)} – {formatValue(b.max, unit)}
+              <span className="legend-range">
+                {formatLegendBound(b.min, unit)} – {formatLegendBound(b.max, unit)}
               </span>
             </li>
           ))}
         </ul>
-        {ends && <span className="legend-end">{ends.high}</span>}
       </div>
       <div className="legend-null">
         <HatchSwatch />
         <span>{formatValue(null, unit)}</span>
+        {UNIT_NOTE[unit] && <span className="legend-unit">{UNIT_NOTE[unit]}</span>}
       </div>
     </div>
   );

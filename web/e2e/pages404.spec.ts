@@ -81,11 +81,14 @@ test("a file the server can't stat gets a 500, not the 404 page", async ({ page 
   test.skip(process.getuid?.() === 0, "running as root, which ignores file permissions");
   // The pages server serves web/dist; a directory with no permissions makes stat fail with
   // EACCES, which must not be mistaken for a missing file.
-  const locked = fileURLToPath(new URL("../dist/locked-for-e2e/", import.meta.url));
+  // One directory per worker and repeat, so parallel runs never share (or unlock) each other's.
+  const { workerIndex, repeatEachIndex } = test.info();
+  const name = `locked-for-e2e-${workerIndex}-${repeatEachIndex}`;
+  const locked = fileURLToPath(new URL(`../dist/${name}/`, import.meta.url));
   await mkdir(locked, { recursive: true });
   await chmod(locked, 0o000);
   try {
-    expect((await page.request.get("./locked-for-e2e/index.html")).status()).toBe(500);
+    expect((await page.request.get(`./${name}/index.html`)).status()).toBe(500);
   } finally {
     await chmod(locked, 0o700);
     await rm(locked, { recursive: true, force: true });

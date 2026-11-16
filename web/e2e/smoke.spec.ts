@@ -36,13 +36,16 @@ test("strip plot shows every county inside the chart", async ({ page }) => {
   await expect(chart).toHaveAttribute("aria-hidden", "true");
   await expect(chart.locator("svg circle")).toHaveCount(150);
   // The marks take the chart tokens, so they follow the theme.
-  const { muted, selected, outside } = await chart.locator("svg").evaluate((svg) => {
+  const { muted, selected, rules, outside } = await chart.locator("svg").evaluate((svg) => {
     const box = svg.getBoundingClientRect();
     const circles = [...svg.querySelectorAll("circle")];
     const fill = (c: Element) => c.getAttribute("fill") ?? c.parentElement?.getAttribute("fill");
     return {
       muted: circles.filter((c) => fill(c) === "var(--chart-muted)").length,
-      selected: circles.filter((c) => fill(c) === "var(--chart-ink)").length,
+      selected: circles.filter((c) => fill(c) === "var(--evergreen)").length,
+      rules: [...svg.querySelectorAll("line")].filter(
+        (l) => (l.getAttribute("stroke") ?? l.parentElement?.getAttribute("stroke")) === "var(--evergreen)",
+      ).length,
       outside: circles.filter((c) => {
         const r = c.getBoundingClientRect();
         return r.left < box.left || r.right > box.right || r.top < box.top || r.bottom > box.bottom;
@@ -51,6 +54,7 @@ test("strip plot shows every county inside the chart", async ({ page }) => {
   });
   expect(muted).toBe(149);
   expect(selected).toBe(1);
+  expect(rules).toBe(1);
   expect(outside).toBe(0);
 });
 
@@ -83,9 +87,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
     panel.getByRole("heading", { name: "Life expectancy model" }),
   ).toBeVisible();
   await expect(
-    panel.getByRole("heading", {
-      name: "Factors associated with the expected value",
-    }),
+    panel.getByRole("heading", { name: "Associated factors" }),
   ).toBeVisible();
   await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);
@@ -123,11 +125,23 @@ test("model mode: change the outcome", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("model legend tier names flip when the outcome's direction does", async ({ page }) => {
+  await page.goto("./?i=life_expectancy&show=expected");
+  const firstTier = page.locator(".legend-model .legend-bins li").first();
+  await expect(firstTier).toContainText("Notably lower");
+  await page.getByRole("button", { name: "Measure: Life expectancy" }).click();
+  await page.getByRole("option", { name: /^Premature death/ }).click();
+  await expect(firstTier).toContainText("Notably higher");
+  await page.getByRole("button", { name: /^Measure: Premature death/ }).click();
+  await page.getByRole("option", { name: "Life expectancy", exact: true }).click();
+  await expect(firstTier).toContainText("Notably lower");
+});
+
 test("select a similar county", async ({ page }) => {
   await page.goto("./?c=53033");
   const panel = page.getByRole("dialog", { name: "County details" });
   const similar = panel.getByRole("region", { name: "Similar counties" });
-  const peer = similar.getByRole("button").first();
+  const peer = similar.getByRole("table").getByRole("button").first();
   const label = (await peer.textContent())?.trim() ?? "";
   expect(label).toMatch(/^.+, [A-Z]{2}$/);
   const name = label.replace(/, [A-Z]{2}$/, "");
@@ -162,35 +176,13 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   await expect(heading).toBeInViewport();
 });
 
-test("race breakdown follows the indicator and the outcome", async ({ page }) => {
-  const section = () => page.getByRole("region", { name: "By race and ethnicity (CHR 2025)" });
-
-  await page.goto("./?c=53077&i=life_expectancy");
-  await expect(section()).toBeVisible();
-  await expect(section().getByText("County overall")).toBeVisible();
-
-  await page.goto("./?c=53077&i=diabetes");
-  // Wait for county-specific content so the absence check can't pass before the panel renders.
-  await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
-  await expect(section()).toHaveCount(0);
-
-  await page.goto("./?i=premature_death&show=expected&c=53077");
-  await expect(section()).toHaveCount(1);
-  await expect(section()).toBeVisible();
-  // The region never names the outcome, so assert it sits directly after the model card.
-  const card = page.getByRole("heading", { level: 3, name: "Premature death (years lost) model" });
-  await expect(card).toBeVisible();
-  await expect(section().getByText("County overall")).toBeVisible();
-  const follows = await page.evaluate(() => {
-    const h = [...document.querySelectorAll("h3")].find((e) =>
-      e.textContent?.includes("Premature death (years lost) model"),
-    );
-    const r = document.querySelector(".race-breakdown");
-    const who = document.querySelector(".who-lives-here");
-    const F = Node.DOCUMENT_POSITION_FOLLOWING;
-    return !!(h && r && who && h.compareDocumentPosition(r) & F && r.compareDocumentPosition(who) & F);
-  });
-  expect(follows).toBe(true);
+test("the county panel shows no race breakdown in either mode", async ({ page }) => {
+  for (const url of ["./?c=53077&i=life_expectancy", "./?i=premature_death&show=expected&c=53077"]) {
+    await page.goto(url);
+    // Wait for county-specific content so the absence check can't pass before the panel renders.
+    await expect(page.getByRole("region", { name: "Who lives here" })).toBeVisible();
+    await expect(page.getByRole("region", { name: /^By race and ethnicity/ })).toHaveCount(0);
+  }
 });
 
 test("who lives here shows population and groups", async ({ page }) => {
@@ -209,11 +201,11 @@ test("the panel floats over a live map: clicks keep it open, Escape anywhere clo
   await page.goto("./?i=poverty_rate");
   await page.locator('path.county[data-fips="53033"]').click();
   const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County, WA");
   // Opening from the map leaves focus where it was.
   await expect(panel.getByRole("heading", { level: 2 })).not.toBeFocused();
   await page.locator('path.county[data-fips="53077"]').click();
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("Yakima County, WA");
   // Escape with focus on the toolbar, outside the panel, still closes it.
   await page.getByRole("radio", { name: "Map", exact: true }).focus();
   await page.keyboard.press("Escape");

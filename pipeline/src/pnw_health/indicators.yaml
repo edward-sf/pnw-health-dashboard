@@ -273,7 +273,7 @@
   year: 2025
   category: Outcomes
   direction: higher_is_worse
-  description: Number of deaths due to injury per 100,000 population.
+  description: Deaths from intentional and unintentional injury per 100,000 population.
   race_groups: [aian, asian, black, hispanic, nhopi, white]
 
 - id: primary_care_physicians
@@ -417,7 +417,7 @@
   year: 2024
   category: Demographics
   direction: neutral
-  description: Percent of the total population that is female.
+  description: Percent of the total population whose sex is recorded as female in the American Community Survey.
   profile: age_sex
 
 - id: pct_hispanic
@@ -434,7 +434,7 @@
   profile: race
 
 - id: pct_white
-  label: White, not Hispanic
+  label: White
   unit: percent
   source: acs
   source_field: DP05_0096PE
@@ -447,7 +447,7 @@
   profile: race
 
 - id: pct_black
-  label: Black, not Hispanic
+  label: Black
   unit: percent
   source: acs
   source_field: DP05_0097PE
@@ -460,7 +460,7 @@
   profile: race
 
 - id: pct_aian
-  label: American Indian and Alaska Native, not Hispanic
+  label: American Indian and Alaska Native
   unit: percent
   source: acs
   source_field: DP05_0098PE
@@ -473,7 +473,7 @@
   profile: race
 
 - id: pct_asian
-  label: Asian, not Hispanic
+  label: Asian
   unit: percent
   source: acs
   source_field: DP05_0099PE
@@ -486,7 +486,7 @@
   profile: race
 
 - id: pct_nhpi
-  label: Native Hawaiian and Pacific Islander, not Hispanic
+  label: Native Hawaiian and Pacific Islander
   unit: percent
   source: acs
   source_field: DP05_0100PE
@@ -499,7 +499,7 @@
   profile: race
 
 - id: pct_two_or_more
-  label: Two or more races, not Hispanic
+  label: Two or more races
   unit: percent
   source: acs
   source_field: DP05_0102PE
@@ -562,6 +562,6 @@
   year: 2024
   category: Demographics
   direction: neutral
-  description: Percent of the population 5 and over who speak English less than very well.
+  description: Percent of the population 5 and over who speak English less than "very well", in the American Community Survey's wording.
   profile: other
   universe: Population 5 and over

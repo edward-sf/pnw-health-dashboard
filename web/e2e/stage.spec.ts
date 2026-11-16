@@ -118,7 +118,7 @@ test("in table view the open panel sits beside the table, not over it", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("./?i=poverty_rate&view=table&c=53033");
   const panel = page.getByRole("dialog", { name: "County details" });
-  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveText("King County, WA");
   const table = (await page.locator(".county-table-wrap").boundingBox())!;
   const box = (await panel.boundingBox())!;
   // A 12px gap between the table frame and the panel.
@@ -235,5 +235,111 @@ for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
     const short = reach.filter(({ w, h }) => w < 24 || h < 24).map(({ fips, w, h }) => `${fips}: ${w}×${h}`);
     expect(new Set(reach.map((r) => r.fips)).size).toBe(149);
     expect(short).toEqual([]);
+  });
+}
+
+for (const size of [{ width: 1440, height: 900 }, { width: 900, height: 800 }]) {
+  for (const query of ["?i=poverty_rate", "?i=life_expectancy&show=expected"]) {
+    test(`the legend is one row inside the stage, clear of Alaska, at ${size.width}×${size.height} on ${query}`, async ({
+      page,
+    }, testInfo) => {
+      onlyIn("chromium", testInfo.project.name);
+      await open(page, size, query);
+      const stage = (await page.locator(".map-stage").boundingBox())!;
+      const legend = (await page.locator(".map-stage .legend").boundingBox())!;
+      const frame = (await page.locator("rect.inset-frame").boundingBox())!;
+      expect(legend.x).toBeGreaterThanOrEqual(stage.x);
+      expect(legend.y).toBeGreaterThanOrEqual(stage.y);
+      expect(legend.x + legend.width).toBeLessThanOrEqual(stage.x + stage.width);
+      expect(legend.y + legend.height).toBeLessThanOrEqual(stage.y + stage.height);
+      const apart =
+        legend.x + legend.width <= frame.x ||
+        frame.x + frame.width <= legend.x ||
+        legend.y + legend.height <= frame.y ||
+        frame.y + frame.height <= legend.y;
+      expect(apart).toBe(true);
+      if (query.includes("show=expected")) return;
+      const swatches = await page.locator('[data-testid="legend-ramp"] .legend-swatch').evaluateAll((els) =>
+        els.map((e) => e.getBoundingClientRect()),
+      );
+      expect(swatches.length).toBeGreaterThanOrEqual(2);
+      for (const s of swatches) expect(Math.abs(s.top - swatches[0]!.top)).toBeLessThanOrEqual(2);
+      const low = (await page.locator('.legend-end[data-end="low"]').boundingBox())!;
+      // "More/Less favorable" is wider than one swatch, so the label is anchored to the first
+      // bin's left edge rather than contained by it.
+      expect(Math.abs(low.x - swatches[0]!.left)).toBeLessThanOrEqual(0.5);
+      const high = (await page.locator('.legend-end[data-end="high"]').boundingBox())!;
+      const last = swatches[swatches.length - 1]!;
+      expect(Math.abs(high.x + high.width - (last.left + last.width))).toBeLessThanOrEqual(0.5);
+    });
+  }
+}
+
+async function indicatorIds(page: Page): Promise<string[]> {
+  const res = await page.request.get("./data/manifest.json");
+  const manifest = (await res.json()) as { indicators: { id: string }[] };
+  return manifest.indicators.map((i) => i.id);
+}
+
+// Every measure's legend stays clear of the Alaska frame and inside the stage, wherever the
+// range labels wrap (the per-100k and years ranges are the widest).
+for (const size of [{ width: 900, height: 800 }, { width: 1100, height: 800 }, { width: 721, height: 800 }]) {
+  test(`every measure's legend is clear of Alaska at ${size.width}×${size.height}`, async ({ page }, testInfo) => {
+    onlyIn("chromium", testInfo.project.name);
+    test.setTimeout(180_000);
+    const ids = await indicatorIds(page);
+    expect(ids.length).toBeGreaterThan(30);
+    const bad: string[] = [];
+    for (const id of ids) {
+      await open(page, size, `?i=${id}`);
+      const stage = (await page.locator(".map-stage").boundingBox())!;
+      const legend = (await page.locator(".map-stage .legend").boundingBox())!;
+      const frame = (await page.locator("rect.inset-frame").boundingBox())!;
+      const apart =
+        legend.x + legend.width <= frame.x ||
+        frame.x + frame.width <= legend.x ||
+        legend.y + legend.height <= frame.y ||
+        frame.y + frame.height <= legend.y;
+      const inside =
+        legend.x >= stage.x &&
+        legend.y >= stage.y &&
+        legend.x + legend.width <= stage.x + stage.width &&
+        legend.y + legend.height <= stage.y + stage.height;
+      if (!apart || !inside) bad.push(id);
+    }
+    expect(bad).toEqual([]);
+  });
+}
+
+// Range labels neither collide nor run past the legend, down to a 320px phone.
+for (const size of [{ width: 320, height: 640 }, { width: 721, height: 800 }]) {
+  test(`legend ranges stay apart and inside the legend at ${size.width}px`, async ({ page }, testInfo) => {
+    onlyIn("chromium", testInfo.project.name);
+    test.setTimeout(180_000);
+    const ids = await indicatorIds(page);
+    const bad: string[] = [];
+    for (const id of ids) {
+      await open(page, size, `?i=${id}`);
+      const found = await page.evaluate(() => {
+        const legend = document.querySelector(".legend")!.getBoundingClientRect();
+        const rs = [...document.querySelectorAll(".legend-range")].map((e) => {
+          const range = document.createRange();
+          range.selectNodeContents(e);
+          return [...range.getClientRects()].map((r) => ({ l: r.left, r: r.right, t: r.top, b: r.bottom }));
+        });
+        const boxes = rs.flat();
+        const problems: string[] = [];
+        for (const b of boxes) if (b.r > legend.right + 0.5 || b.l < legend.left - 0.5) problems.push("outside");
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) {
+            const x = Math.min(boxes[i]!.r, boxes[j]!.r) - Math.max(boxes[i]!.l, boxes[j]!.l);
+            const y = Math.min(boxes[i]!.b, boxes[j]!.b) - Math.max(boxes[i]!.t, boxes[j]!.t);
+            if (x > 0.5 && y > 0.5) problems.push("overlap");
+          }
+        return problems;
+      });
+      if (found.length) bad.push(`${id}: ${[...new Set(found)].join(",")}`);
+    }
+    expect(bad).toEqual([]);
   });
 }

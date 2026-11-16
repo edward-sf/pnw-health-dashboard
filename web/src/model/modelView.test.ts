@@ -4,9 +4,12 @@ import { PALETTES } from "../color/palette";
 import { lifeExpectancy as model, prematureDeath } from "../test/fixtures";
 import {
   countyModel,
+  factorFill,
   hasModelResult,
   modelTooltip,
   TIERS,
+  shortTierLabel,
+  sideFlags,
   tierCounts,
   tierFill,
   tierLabel,
@@ -29,10 +32,15 @@ test("tierRank", () => {
   expect(tierRank("insufficient_data")).toBeNull();
 });
 
-test("labels", () => {
-  expect(tierLabel("notably_worse")).toBe("Notably worse than expected");
-  expect(tierLabel("none")).toBe("About as expected");
-  expect(tierLabel("insufficient_data")).toBe("Not enough data");
+test("labels follow the outcome's direction", () => {
+  expect(tierLabel("notably_better", "higher_is_better")).toBe("Notably higher than expected");
+  expect(tierLabel("notably_better", "higher_is_worse")).toBe("Notably lower than expected");
+  expect(tierLabel("somewhat_worse", "higher_is_worse")).toBe("Somewhat higher than expected");
+  expect(tierLabel("somewhat_worse", "higher_is_better")).toBe("Somewhat lower than expected");
+  for (const d of ["higher_is_better", "higher_is_worse"] as const) {
+    expect(tierLabel("none", d)).toBe("About as expected");
+    expect(tierLabel("insufficient_data", d)).toBe("Not enough data");
+  }
 });
 
 test("fills are distinct, differ from the hatch base, and insufficient_data is the hatch", () => {
@@ -70,18 +78,18 @@ test("tierCounts", () => {
 });
 
 test("modelTooltip", () => {
-  expect(modelTooltip("King", "WA", countyModel(model, "53033"), "years")).toBe(
-    "King, WA: notably better than expected (+3.7 years)",
+  expect(modelTooltip("King", "WA", countyModel(model, "53033"), "years", "higher_is_better")).toBe(
+    "King, WA: notably higher than expected (+3.7 years)",
   );
-  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"), "years")).toBe(
+  expect(modelTooltip("Chugach", "AK", countyModel(model, "02063"), "years", "higher_is_better")).toBe(
     "Chugach, AK: not enough data for the model",
   );
 });
 
 test("modelTooltip formats the difference in the target's unit", () => {
   expect(
-    modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k"),
-  ).toBe("Aleutians West, AK: notably worse than expected (+1,800 per 100k)");
+    modelTooltip("Aleutians West", "AK", countyModel(prematureDeath, "02016"), "rate_per_100k", "higher_is_worse"),
+  ).toBe("Aleutians West, AK: notably higher than expected (+1,800 per 100k)");
 });
 
 test("hasModelResult is false for insufficient data or any null field", () => {
@@ -91,4 +99,28 @@ test("hasModelResult is false for insufficient data or any null field", () => {
   for (const k of ["actual", "predicted", "residual", "base_value", "threshold_75", "threshold_90"] as const) {
     expect(hasModelResult({ ...full, [k]: null })).toBe(false);
   }
+});
+
+test("sideFlags: the low side is the less favorable one when higher is better", () => {
+  expect(sideFlags("low", "higher_is_better")).toEqual({ somewhat: "somewhat_worse", notably: "notably_worse" });
+  expect(sideFlags("high", "higher_is_better")).toEqual({ somewhat: "somewhat_better", notably: "notably_better" });
+  expect(sideFlags("low", "higher_is_worse")).toEqual({ somewhat: "somewhat_better", notably: "notably_better" });
+  expect(sideFlags("high", "higher_is_worse")).toEqual({ somewhat: "somewhat_worse", notably: "notably_worse" });
+});
+
+test("factorFill colours by favorability, mapped by the outcome's direction", () => {
+  expect(factorFill(2.7, "higher_is_better")).toBe("#0571b0");
+  expect(factorFill(-0.2, "higher_is_better")).toBe("#ca0020");
+  expect(factorFill(2.7, "higher_is_worse")).toBe("#ca0020");
+  expect(factorFill(-1, "higher_is_worse")).toBe("#0571b0");
+  expect(factorFill(0, "higher_is_better")).toBeNull();
+  expect(factorFill(0, "higher_is_worse")).toBeNull();
+});
+
+test("shortTierLabel drops 'than expected'", () => {
+  expect(shortTierLabel("notably_worse", "higher_is_better")).toBe("Notably lower");
+  expect(shortTierLabel("notably_worse", "higher_is_worse")).toBe("Notably higher");
+  expect(shortTierLabel("somewhat_better", "higher_is_better")).toBe("Somewhat higher");
+  expect(shortTierLabel("none", "higher_is_worse")).toBe("About as expected");
+  expect(shortTierLabel("insufficient_data", "higher_is_better")).toBe("Not enough data");
 });

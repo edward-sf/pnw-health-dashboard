@@ -1,10 +1,11 @@
 import type { Direction, Indicator } from "../../types";
+import { categoryLabel } from "../../explorer/categories";
 import { sourceName } from "./SourcesSection";
 import { TableScroll } from "./TableScroll";
 
 const DIRECTIONS: Record<Direction, string> = {
-  higher_is_better: "higher is better",
-  higher_is_worse: "higher is worse",
+  higher_is_better: "higher is more favorable",
+  higher_is_worse: "lower is more favorable",
   neutral: "no direction",
 };
 
@@ -31,15 +32,15 @@ export function IndicatorCatalog({ indicators }: { indicators: Indicator[] }) {
         Indicators
       </h3>
       <p>
-        Each indicator has a direction. Where higher is better or worse, counties are ranked and
-        colored so that better reads the same way on every map. Indicators with no direction, such
+        Each indicator has a direction. Where one end is more favorable, counties are ranked and
+        colored so that the more favorable end reads the same way on every map. Indicators with no direction, such
         as population shares, are shown for context and not ranked.
       </p>
       {categories.map((category) => {
         const headingId = `indicators-${category.toLowerCase().replace(/[^a-z]+/g, "-")}`;
         return (
           <div key={category}>
-            <h4 id={headingId}>{category}</h4>
+            <h4 id={headingId}>{categoryLabel(category)}</h4>
             <TableScroll labelledBy={headingId}>
               <table className="methodology-table" aria-labelledby={headingId}>
                 <thead>

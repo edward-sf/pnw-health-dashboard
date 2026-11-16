@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/figtree";
 
 /* `dark:` utilities follow the `dark` class on <html> (set by index.html and ThemeProvider). */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -11,15 +11,22 @@
    against --stage, which must match the palette's `stage` in src/color/palette.ts (also tested). */
 :root {
   color-scheme: light;
-  --paper: #f3f5f4;
+  --paper: #f2f5f1;
   --surface: #ffffff;
   --ink: #17252a;
   --ink-muted: #52626a;
   --line: #d6dcdb;
   /* Control borders: 3:1 or better against the surface (WCAG 1.4.11). */
   --line-strong: #7c8a8d;
-  --fir: #1f5c4a;
-  --fir-soft: #e2eee9;
+  /* Brand: fir is the header and brand surface, evergreen is the accent (links, selection,
+     primary), and fir-soft is the mint tint. The mark's sun colour is not a token: mark only. */
+  --fir: #0f3b2c;
+  --evergreen: #2b6b55;
+  --evergreen-ink: #ffffff;
+  --fir-soft: #c6ecd8;
+  --header-ink: #f2f5f1;
+  --focus: #0f3b2c;
+  --focus-on-fir: #8fcfb3;
   --wash: #e9edec;
   --alert: #b42318;
   --stage: #ffffff;
@@ -42,11 +49,22 @@
   --shadow-drawer: 0 -4px 24px rgb(23 37 42 / 18%);
   --shadow-pop: 0 8px 24px rgb(23 37 42 / 14%);
 
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-display: 2.5rem;
+  --text-fluid-title: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  --text-fluid-page: clamp(2rem, 1.6rem + 1.5vw, 2.75rem);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-full: 9999px;
   --radius: 0.5rem;
   --header-height: 3.5rem;
   --gutter: 1.25rem;
-  /* Archivo's width axis: headings and figures run condensed, text runs at normal width. */
-  --condensed: 78%;
 }
 
 /* The dark theme: a dark blue-grey stage, lighter surfaces raised on it, and the same data colors.
@@ -59,8 +77,13 @@
   --ink-muted: #9aabb0;
   --line: #2f3b3f;
   --line-strong: #6e7f84;
-  --fir: #78c4a4;
-  --fir-soft: #1f3a31;
+  --fir: #06150f;
+  --evergreen: #78c4a4;
+  --evergreen-ink: #06150f;
+  --fir-soft: #173c2d;
+  --header-ink: #e4eae9;
+  --focus: #8fcfb3;
+  --focus-on-fir: #8fcfb3;
   --wash: #253034;
   --alert: #ff8a80;
   --stage: #161d20;
@@ -81,14 +104,14 @@
 }
 
 @theme inline {
-  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--paper);
   --color-foreground: var(--ink);
   --color-card: var(--surface);
   --color-card-foreground: var(--ink);
-  --color-primary: var(--ink);
-  --color-primary-foreground: var(--surface);
+  --color-primary: var(--evergreen);
+  --color-primary-foreground: var(--evergreen-ink);
   --color-secondary: var(--wash);
   --color-secondary-foreground: var(--ink);
   --color-muted: var(--wash);
@@ -98,12 +121,10 @@
   --color-destructive: var(--alert);
   --color-border: var(--line);
   --color-input: var(--line-strong);
-  --color-ring: var(--ink);
+  --color-ring: var(--focus);
   --color-fir: var(--fir);
+  --color-header-ink: var(--header-ink);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
@@ -126,7 +147,7 @@
 
   /* The one focus indicator for every interactive element and focus target. */
   :focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -134,14 +155,13 @@
   h2,
   h3,
   h4 {
-    font-stretch: var(--condensed);
     font-weight: 650;
     line-height: 1.15;
     text-wrap: balance;
   }
 
   a {
-    color: var(--fir);
+    color: var(--evergreen);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
@@ -156,8 +176,8 @@
   /* ---------- App shell ---------- */
 
   .site-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
+    background: var(--fir);
+    color: var(--header-ink);
   }
 
   .site-header-inner,
@@ -176,20 +196,52 @@
     min-height: var(--header-height);
   }
 
-  .site-header h1 {
+  /* On the fir surface the page's dark focus ring would vanish; use the mint one. */
+  .site-header :focus-visible {
+    outline-color: var(--focus-on-fir);
+  }
+
+  .site-brand {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .site-brand h1 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: var(--text-lg);
     font-weight: 700;
     letter-spacing: 0.005em;
   }
 
   .site-mark {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--fir);
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .site-tagline {
+    margin: 0;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--focus-on-fir);
+    font-size: var(--text-sm);
+    line-height: 1.2;
+  }
+
+  /* Phones keep the wordmark and nav; the tagline stays for screen readers. */
+  @media (max-width: 719px) {
+    .site-tagline {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   .site-header nav {
@@ -204,25 +256,39 @@
     min-height: 2.75rem;
     padding: 0 0.75rem;
     border-bottom: 2px solid transparent;
-    color: var(--ink-muted);
-    font-size: 0.9375rem;
+    color: var(--header-ink);
+    font-size: var(--text-sm);
     font-weight: 500;
     text-decoration: none;
   }
 
+  /* The links fill the header's height, so an outset ring would leave it; draw it inside. */
+  .site-header nav a:focus-visible {
+    outline-offset: -2px;
+  }
+
   .site-header nav a:hover {
-    color: var(--ink);
+    border-bottom-color: var(--focus-on-fir);
   }
 
   .site-header nav a[aria-current="page"] {
-    border-bottom-color: var(--fir);
-    color: var(--ink);
+    border-bottom-color: var(--focus-on-fir);
     font-weight: 650;
   }
 
   /* The theme switch, at the header's right end. */
   .site-header .theme-menu {
     margin-left: auto;
+  }
+
+  /* On phones the button fills the nav row, so an outset ring would run below the header. */
+  .site-header .theme-menu:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .about-profiles {
+    display: flex;
+    gap: 0.5rem;
   }
 
   main {
@@ -237,7 +303,7 @@
 
   .error-page h2 {
     margin: 1.5rem 0 0.5rem;
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
 
   .error-page p {
@@ -351,17 +417,6 @@
     margin: 0;
   }
 
-  /* Two lines whatever the measure; a longer description is cut off here and read in full
-     behind About this measure. */
-  .indicator-description--clamped {
-    display: -webkit-box;
-    height: 2lh;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
   /* The source line, with the Show switch's slot at its end. The slot keeps the switch's height
      when the measure has no switch, so the map does not move when it appears. */
   .title-meta {
@@ -403,7 +458,7 @@
 
   .indicator-title {
     margin: 0 0 0.375rem;
-    font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+    font-size: var(--text-fluid-title);
     font-weight: 700;
   }
 
@@ -415,7 +470,7 @@
 
   .indicator-source {
     color: var(--ink-muted);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
   }
 
   /* ---------- Map ---------- */
@@ -444,7 +499,7 @@
   .stage-hint {
     margin: 0.75rem 0 0;
     color: var(--ink-muted);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 
   /* In map view the page is a column that fills the viewport, and the stage takes the height
@@ -501,20 +556,26 @@
       gap: 0.25rem 1rem;
     }
 
-    .map-stage .legend-bins {
-      gap: 0.25rem 0.75rem;
-    }
-
     /* A narrow stage leaves a small corner; a smaller legend keeps it clear of Alaska's frame. */
     @container (max-width: 800px) {
       .map-stage :is(.legend li, .legend-null, .legend-end) {
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
       }
+    }
 
-      .map-stage .legend-swatch {
-        width: 12px;
-        height: 12px;
-      }
+    /* The model legend is six rows tall; compact rows keep it above Alaska's frame. */
+    .map-stage .legend-model .legend-bins {
+      gap: 2px;
+    }
+
+    .map-stage .legend-model li {
+      font-size: var(--text-xs);
+      line-height: 1.2;
+    }
+
+    .map-stage .legend-model :is(.legend-swatch, svg) {
+      width: 12px;
+      height: 12px;
     }
 
     /* The title block's description already says this from 721px; it would crowd the corner. */
@@ -583,7 +644,7 @@
   }
 
   .inset-label {
-    font-size: 14px;
+    font-size: var(--text-sm);
     fill: var(--ink-muted);
   }
 
@@ -594,7 +655,7 @@
     border-radius: var(--radius-sm);
     background: var(--ink);
     color: var(--surface);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     max-width: min(240px, 60vw);
     width: max-content;
     white-space: normal;
@@ -616,20 +677,48 @@
     border-top: 1px solid var(--line);
   }
 
-  /* The end labels stay beside the bins, which wrap among themselves. */
+  /* One ordered scale: the end labels sit in a row above the ramp, the low one over the first
+     swatch and the high one over the last; each swatch carries its range beneath it. */
   .legend-scale {
     display: flex;
-    align-items: baseline;
-    gap: 0.5rem 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .legend-ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
   }
 
   .legend-bins {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    flex-wrap: nowrap;
+    gap: 2px;
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  .legend-bins > li {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+
+  .legend-model .legend-bins {
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .legend-model .legend-bins > li {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.375rem;
   }
 
   .legend li,
@@ -637,8 +726,25 @@
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
+  }
+
+  .legend-range {
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
+  /* The unit sits at the right end of the no-data row, so it costs no extra line. */
+  .legend-null:has(.legend-unit) {
+    flex: 1 1 100%;
+  }
+
+  .legend-unit {
+    margin-left: auto;
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+    line-height: 1.25;
   }
 
   .legend-swatch {
@@ -648,19 +754,24 @@
     height: 16px;
     /* 3:1 against the stage (WCAG 1.4.11), so the pale tier and no-data swatches stay visible. */
     border: 1px solid var(--swatch-border);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     box-sizing: border-box;
   }
 
+  .legend-bins:not(ol) .legend-swatch {
+    width: 100%;
+    height: 14px;
+  }
+
   .legend-end {
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-weight: 650;
   }
 
   .legend-note {
     flex-basis: 100%;
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--ink-muted);
   }
 
@@ -684,7 +795,7 @@
   .county-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
   }
 
@@ -702,7 +813,7 @@
     background: var(--surface);
     box-shadow: inset 0 -1px 0 var(--line-strong);
     color: var(--ink-muted);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -754,7 +865,7 @@
 
   .table-county {
     cursor: pointer;
-    color: var(--fir);
+    color: var(--evergreen);
     font-weight: 500;
     text-align: left;
     text-decoration: underline;
@@ -832,14 +943,8 @@
 
   .panel-header h2 {
     margin: 0;
-    font-size: 1.625rem;
+    font-size: var(--text-2xl);
     font-weight: 700;
-  }
-
-  .panel-state {
-    margin: 0.125rem 0 0;
-    color: var(--ink-muted);
-    font-size: 0.875rem;
   }
 
   .panel-close {
@@ -864,42 +969,38 @@
 
   .panel-body h3 {
     margin: 0 0 0.5rem;
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
   }
 
   .panel-body h4 {
     margin: 0 0 0.375rem;
-    font-size: 0.9375rem;
-    font-stretch: 100%;
+    font-size: var(--text-sm);
     font-weight: 650;
   }
 
   .panel-measure {
     margin: 0;
     color: var(--ink-muted);
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 500;
   }
 
   .panel-value {
     margin: 0.125rem 0 0.25rem;
-    font-size: 2.5rem;
-    font-stretch: var(--condensed);
+    font-size: var(--text-display);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     line-height: 1.05;
   }
 
-  .panel-ci,
   .panel-ranks,
   .panel-missing,
   .panel-unreliable {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 
-  .panel-ci {
-    color: var(--ink-muted);
+  .panel-ranks {
     font-variant-numeric: tabular-nums;
   }
 
@@ -926,12 +1027,12 @@
 
   .strip-plot-missing {
     margin: 0.25rem 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--ink-muted);
   }
 
   /* Race breakdown: text rows, each over a dot-and-interval mark on one shared axis. One neutral
-     ink for every group, so no group reads as better or worse by color. */
+     ink for every group, so no group reads as a verdict by color. */
   .panel-indicator .race-breakdown {
     margin-top: 0.875rem;
   }
@@ -940,7 +1041,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
   }
 
@@ -978,19 +1079,19 @@
     width: 8px;
     height: 8px;
     margin-left: -4px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     background: var(--chart-ink);
   }
 
   .race-breakdown-note {
     margin: 0.375rem 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--ink-muted);
   }
 
   /* Model card */
   .model-card {
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
   }
 
   /* The card's title and, on measures that are not an outcome, its Outcome select. */
@@ -1007,6 +1108,19 @@
     margin: 0;
   }
 
+  /* The title and its ⓘ stay together on the left; the Outcome select sits at the right. */
+  .model-card-title,
+  .model-factors-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .panel-body .model-factors-heading h4 {
+    margin: 0;
+  }
+
   .model-outcome {
     max-width: 100%;
   }
@@ -1015,8 +1129,30 @@
     margin: 0 0 0.5rem;
   }
 
-  .model-numbers {
+  /* Actual, Expected and Difference as three columns, label over value, so nothing wraps. */
+  .model-figures {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
     font-variant-numeric: tabular-nums;
+  }
+
+  .model-figures dt {
+    color: var(--ink-muted);
+    font-size: var(--text-xs);
+  }
+
+  .model-figures dd {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  /* The number never breaks; the unit ("per 100k", "years") drops below it when space is short. */
+  .model-figure-number,
+  .model-figure-unit {
+    white-space: nowrap;
   }
 
   .model-divider {
@@ -1030,7 +1166,7 @@
     flex: none;
     width: 12px;
     height: 12px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     border: 1px solid var(--ink);
   }
 
@@ -1041,20 +1177,8 @@
     font-family: inherit;
   }
 
-  .range-band-90 {
-    fill: var(--chart-band-90);
-  }
-
-  .range-band-75 {
-    fill: var(--chart-band-75);
-  }
-
   .range-zero {
     stroke: var(--chart-ink);
-  }
-
-  .range-dot {
-    stroke: var(--ink);
   }
 
   .range-label {
@@ -1066,36 +1190,45 @@
     fill: var(--chart-ink);
   }
 
-  .shap-bar {
+  /* "All other factors" is a remainder, so it stays neutral; factor bars carry a tier fill. */
+  .shap-bar:not([fill]) {
     fill: var(--chart-muted);
+  }
+
+  /* On the dark surface the red fill is under 3:1, so every coloured bar gets an ink edge. */
+  .dark .shap-bar[fill] {
+    stroke: var(--chart-ink);
+    stroke-width: 1;
   }
 
   .shap-zero {
     stroke: var(--chart-muted);
   }
 
-  .model-factors-note,
-  .model-rounded-note,
-  .model-card .model-factors-note,
-  .model-card .model-rounded-note {
-    font-size: 0.8125rem;
-    color: var(--ink-muted);
-  }
-
-  .model-card .model-factors-note {
-    margin: 0.5rem 0 0;
-  }
-
-  .model-card .model-rounded-note {
-    margin: 0.125rem 0 0.5rem;
+  .model-factors-heading {
+    margin-bottom: 0.375rem;
   }
 
   /* Who lives here */
+  /* A compact fact sheet: one column in a narrow panel, two once there is room. */
+  .who-lives-here {
+    container-type: inline-size;
+  }
+
   .who-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 1.25rem;
     list-style: none;
     margin: 0;
     padding: 0;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
+  }
+
+  @container (min-width: 22rem) {
+    .who-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .who-row {
@@ -1113,7 +1246,7 @@
   .who-track {
     grid-column: 1 / -1;
     height: 6px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     background: var(--wash);
     overflow: hidden;
   }
@@ -1124,33 +1257,45 @@
     background: var(--chart-muted);
   }
 
-  .panel-body .who-group-heading {
+  .who-group-title {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
     margin: 0.875rem 0 0.4rem;
   }
 
-  .who-universe {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--ink-muted);
-  }
-
-  .who-note {
+  .panel-body .who-group-heading {
     margin: 0;
-    font-size: 0.8125rem;
-    color: var(--ink-muted);
   }
 
   /* Similar counties */
   .similar-basis {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
     margin: 0 0 0.5rem;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     color: var(--ink-muted);
+  }
+
+  .similar-basis p {
+    margin: 0;
+  }
+
+  /* The tier's swatch and short label, kept on one line. */
+  .similar-tier {
+    white-space: nowrap;
+  }
+
+  .similar-tier .tier-swatch {
+    margin-right: 0.375rem;
+    vertical-align: -1px;
   }
 
   .similar-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
     table-layout: auto;
   }
@@ -1188,7 +1333,7 @@
   }
 
   .similar-peer {
-    color: var(--fir);
+    color: var(--evergreen);
     text-align: left;
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -1208,20 +1353,23 @@
       --gutter: 1rem;
     }
 
+    /* Two rows: the brand, then the nav with the theme button at its right end. The button is
+       after the nav in the DOM, so tab order matches. */
     .site-header-inner {
-      padding-top: 0.625rem;
+      column-gap: 0;
+      padding-top: 0.5rem;
+    }
+
+    .site-brand {
+      flex-basis: 100%;
     }
 
     .site-header nav {
-      flex-basis: 100%;
+      gap: 0;
       margin-left: -0.75rem;
     }
 
-    /* Beside the brand on the first row, so the nav keeps the second row to itself. It comes
-       before the nav in the DOM on phones (App.tsx), so tab order matches. Its 44px target
-       overhangs the row instead of making it taller than the brand. */
     .site-header .theme-menu {
-      margin-block: -0.625rem -0.75rem;
       margin-right: -0.5rem;
     }
 
@@ -1289,7 +1437,7 @@
       flex: 1 1 0;
       align-items: flex-end;
       min-height: 2lh;
-      font-size: 1.25rem;
+      font-size: var(--text-xl);
     }
 
     /* Under the map (or above the table), where it cannot push the map down. */
@@ -1333,7 +1481,7 @@
       box-sizing: border-box;
       height: 100dvh;
       border-bottom: 0;
-      border-radius: 16px 16px 0 0;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
       box-shadow: var(--shadow-drawer);
     }
 
@@ -1356,7 +1504,7 @@
       width: 40px;
       height: 4px;
       margin: 10px auto 6px;
-      border-radius: 2px;
+      border-radius: var(--radius-sm);
       background: var(--line-strong);
       opacity: 1;
     }
@@ -1394,19 +1542,19 @@
   .methodology > h2,
   .about > h2 {
     margin: 0.75rem 0 1.25rem;
-    font-size: clamp(2rem, 1.6rem + 1.5vw, 2.75rem);
+    font-size: var(--text-fluid-page);
     font-weight: 700;
   }
 
   .methodology h3,
   .about h3 {
     margin: 2.5rem 0 0.625rem;
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
   }
 
   .methodology h4 {
     margin: 1.75rem 0 0.5rem;
-    font-size: 1.1875rem;
+    font-size: var(--text-lg);
   }
 
   .methodology p,
@@ -1436,15 +1584,15 @@
 
   .methodology code {
     padding: 0.1em 0.3em;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: var(--wash);
-    font-size: 0.875em;
+    font-size: var(--text-sm);
   }
 
   .at-a-glance {
     padding: 1.25rem 1.25rem 0.5rem;
     border: 1px solid var(--line);
-    border-left: 3px solid var(--fir);
+    border-left: 3px solid var(--evergreen);
     border-radius: var(--radius-lg);
     background: var(--surface);
   }
@@ -1463,7 +1611,7 @@
     gap: 0.375rem 1.25rem;
     padding: 0;
     list-style: none;
-    font-size: 0.9375rem;
+    font-size: var(--text-sm);
   }
 
   .methodology-toc li {
@@ -1476,7 +1624,7 @@
     gap: 0.25rem;
     max-width: 20rem;
     margin: 0 0 0.875rem;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     font-weight: 600;
   }
 
@@ -1491,7 +1639,7 @@
   .methodology-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     line-height: 1.4;
     font-variant-numeric: tabular-nums;
   }
@@ -1512,7 +1660,7 @@
 
   .methodology-table thead th {
     color: var(--ink-muted);
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-weight: 600;
   }
 

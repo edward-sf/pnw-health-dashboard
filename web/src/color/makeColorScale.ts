@@ -5,10 +5,11 @@ import type { Indicator, ValueEntry } from "../types";
 export const HATCH_FILL = "url(#hatch-null)" as const;
 
 export type LegendBin = { color: string; min: number; max: number };
+export type Favor = "More favorable" | "Less favorable";
 export type ColorScale = {
   fill: (v: number | null) => string;
   bins: LegendBin[];
-  ends: { low: "Better" | "Worse"; high: "Better" | "Worse" } | null;
+  ends: { low: Favor; high: Favor } | null;
 };
 
 export function makeColorScale(
@@ -30,8 +31,8 @@ export function makeColorScale(
     direction === "neutral"
       ? null
       : direction === "higher_is_worse"
-        ? { low: "Better", high: "Worse" }
-        : { low: "Worse", high: "Better" };
+        ? { low: "More favorable", high: "Less favorable" }
+        : { low: "Less favorable", high: "More favorable" };
 
   const quantile = scaleQuantile<string>().domain(values).range(ramp);
   const fill = (v: number | null): string =>

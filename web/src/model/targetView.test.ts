@@ -21,7 +21,7 @@ describe("targetModel", () => {
 describe("directionNote", () => {
   it("states the sign for a higher_is_worse target", () => {
     expect(directionNote(targetModel(model, "premature_death"))).toBe(
-      "Higher is worse for this measure, so a positive difference means worse than expected.",
+      "Lower is more favorable for this measure, so a positive difference is less favorable than expected.",
     );
   });
 

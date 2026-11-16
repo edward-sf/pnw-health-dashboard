@@ -56,6 +56,7 @@ cd workflow && uv sync && uv run pytest && uv run ruff check && uv run ruff form
 ## Conventions
 
 - **TDD.** Write a failing test, make it pass, then commit. Small commits on the branch are fine.
+- **UI** follows `docs/design-system.md`: tokens from `web/src/styles.css`, never raw colours, font sizes or radii.
 - **Data:** never commit raw or exported data. `data/raw/` and `web/public/data/` are build outputs. Only test fixtures are committed.
 - **E2E specs** import `test` and `expect` from `./fixtures`, not from `@playwright/test`. Otherwise PR `ci`'s 4× CPU throttle never applies to them.
 - **E2E waits:** wait on observable conditions, never fixed sleeps. The Actions runner is several times slower than a dev machine, so keep each test well under its timeout at 4× throttle.

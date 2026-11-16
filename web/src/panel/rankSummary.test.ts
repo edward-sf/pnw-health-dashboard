@@ -22,26 +22,37 @@ function build(n: number, rank: number, stateRank: number) {
   return { counties, entries };
 }
 
-test("formats overall and state rank with spelled-out state", () => {
+test("shows rank/total with the state code, and labels it in full", () => {
   const { counties, entries } = build(6, 12, 3);
-  expect(rankSummary("00000", entries, counties)).toBe(
-    "12th of 6 counties, 3rd of 3 in Washington (1 = best)",
-  );
+  expect(rankSummary("00000", entries, counties)).toEqual({
+    text: "12/6 counties (3rd in WA)",
+    label: "12th most favorable of 6 counties, 3rd of 3 in Washington",
+  });
+});
+
+test("without a state rank there is no parenthesis", () => {
+  const { counties, entries } = build(6, 10, 3);
+  entries["00000"] = e(10, null);
+  expect(rankSummary("00000", entries, counties)).toEqual({
+    text: "10/6 counties",
+    label: "10th most favorable of 6 counties",
+  });
 });
 
 test("denominators exclude nulls", () => {
   const { counties, entries } = build(6, 1, 1);
   entries["00001"] = e(null, null);
   entries["00004"] = e(null, null);
-  expect(rankSummary("00000", entries, counties)).toBe(
-    "1st of 4 counties, 1st of 2 in Washington (1 = best)",
-  );
+  expect(rankSummary("00000", entries, counties)).toEqual({
+    text: "1/4 counties (1st in WA)",
+    label: "1st most favorable of 4 counties, 1st of 2 in Washington",
+  });
 });
 
 test("ordinals", () => {
   const ord = (n: number) => {
     const { counties, entries } = build(2, n, 1);
-    return rankSummary("00000", entries, counties)!.split(" ")[0];
+    return rankSummary("00000", entries, counties)!.label.split(" ")[0];
   };
   expect([1, 2, 3, 11, 12, 13, 21].map(ord)).toEqual([
     "1st",
@@ -67,7 +78,8 @@ test("spells out all states", () => {
     { fips: "3", name: "c", state: "AK" },
   ];
   const entries = { "1": e(1, 1), "2": e(2, 1), "3": e(3, 1) };
-  expect(rankSummary("1", entries, counties)).toContain("in Oregon");
-  expect(rankSummary("2", entries, counties)).toContain("in Idaho");
-  expect(rankSummary("3", entries, counties)).toContain("in Alaska");
+  expect(rankSummary("1", entries, counties)!.label).toContain("in Oregon");
+  expect(rankSummary("2", entries, counties)!.label).toContain("in Idaho");
+  expect(rankSummary("3", entries, counties)!.label).toContain("in Alaska");
+  expect(rankSummary("3", entries, counties)!.text).toBe("3/3 counties (1st in AK)");
 });

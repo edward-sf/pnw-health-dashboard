@@ -68,7 +68,7 @@ export function ModelTable({ rows, selected, onSelect, target }: Props) {
                         style={{ background: tierFill(flag, palette) }}
                       />
                     )}
-                    {tierLabel(flag)}
+                    {tierLabel(flag, target.direction)}
                   </span>
                 </td>
               </tr>

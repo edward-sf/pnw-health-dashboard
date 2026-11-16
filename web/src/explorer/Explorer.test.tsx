@@ -63,7 +63,7 @@ test("indicator title survives filtering", async () => {
 
 test("changing indicator re-renders the panel", async () => {
   setup("/?i=poverty_rate&c=02016");
-  expect(screen.getByText(/1st of 4 counties/)).toBeInTheDocument();
+  expect(screen.getByText(/^1\/4 counties/)).toBeInTheDocument();
   expect(screen.getByText("14.2%", { selector: ".panel-value" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("radio", { name: "Demographics" }));
   expect(screen.queryByText(/of \d+ counties,/)).not.toBeInTheDocument();
@@ -89,7 +89,7 @@ test("select from search moves focus to panel heading", async () => {
   await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
   await userEvent.keyboard("{ArrowDown}{Enter}");
   expect(router.state.location.search).toBe("?c=41051");
-  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Multnomah, OR" })).toHaveFocus();
 });
 
 test("clicking a peer in the panel moves focus to the new county's heading", async () => {
@@ -97,7 +97,7 @@ test("clicking a peer in the panel moves focus to the new county's heading", asy
   const panel = screen.getByRole("dialog", { name: "County details" });
   await userEvent.click(within(panel).getByRole("button", { name: /^Multnomah/ }));
   expect(router.state.location.search).toContain("c=41051");
-  expect(screen.getByRole("heading", { level: 2, name: "Multnomah" })).toHaveFocus();
+  expect(screen.getByRole("heading", { level: 2, name: "Multnomah, OR" })).toHaveFocus();
 });
 
 test("close returns focus to opener", async () => {
@@ -112,7 +112,7 @@ test("close returns focus to opener", async () => {
 test("close returns focus to the table row button", async () => {
   setup("/?view=table");
   await userEvent.click(screen.getByRole("button", { name: "Ada, ID" }));
-  expect(screen.getByRole("heading", { name: "Ada" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Ada, ID" })).toHaveFocus();
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   expect(screen.getByRole("button", { name: "Ada, ID" })).toHaveFocus();
 });
@@ -120,7 +120,7 @@ test("close returns focus to the table row button", async () => {
 test("map clicks do not move focus", async () => {
   setup();
   await userEvent.click(screen.getByLabelText("King, WA"));
-  expect(screen.getByRole("heading", { name: "King" })).not.toHaveFocus();
+  expect(screen.getByRole("heading", { name: "King, WA" })).not.toHaveFocus();
 });
 
 test("Escape in the open search list closes the list, not the panel", async () => {
@@ -161,15 +161,18 @@ test("back restores view and county", async () => {
   });
   expect(router.state.location.search).toBe("?c=53033");
   expect(document.querySelector(".county-map")).not.toBeNull();
-  expect(screen.getByRole("heading", { name: "King" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "King, WA" })).toBeInTheDocument();
 });
 
 const title = () => screen.getByRole("heading", { level: 2, name: "Poverty rate" });
 
-test("shows the indicator description and source under the title", () => {
+test("shows the source under the title and the description only behind About this measure", async () => {
   setup("/?i=poverty_rate");
-  expect(screen.getByText("Share of residents living below the poverty line.")).toBeInTheDocument();
   expect(screen.getByText("Source: Census ACS 5-year, 2023.")).toBeInTheDocument();
+  expect(document.querySelector(".indicator-description--clamped")).toBeNull();
+  expect(screen.queryByText("Share of residents living below the poverty line.")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
+  expect(await screen.findByText("Share of residents living below the poverty line.")).toBeVisible();
 });
 
 test("search, close, then a map click leaves the heading unfocused", async () => {
@@ -178,7 +181,7 @@ test("search, close, then a map click leaves the heading unfocused", async () =>
   await userEvent.keyboard("{ArrowDown}{Enter}");
   await userEvent.click(screen.getByRole("button", { name: "Close" }));
   await userEvent.click(screen.getByLabelText("King, WA"));
-  expect(screen.getByRole("heading", { name: "King" })).not.toHaveFocus();
+  expect(screen.getByRole("heading", { name: "King, WA" })).not.toHaveFocus();
 });
 
 test("a remount from history does not focus the heading", async () => {
@@ -189,17 +192,17 @@ test("a remount from history does not focus the heading", async () => {
   await act(async () => {
     await router.navigate(-1);
   });
-  expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Multnomah, OR" })).not.toHaveFocus();
 });
 
 test("searching for the open county focuses the heading again", async () => {
   setup("/?c=41051");
   await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
   await userEvent.keyboard("{Enter}");
-  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Multnomah, OR" })).toHaveFocus();
   await userEvent.type(screen.getByRole("combobox", { name: "Search counties" }), "Multnomah");
   await userEvent.keyboard("{Enter}");
-  expect(screen.getByRole("heading", { name: "Multnomah" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Multnomah, OR" })).toHaveFocus();
 });
 
 test("table select, switch to map, close focuses the title", async () => {
@@ -298,7 +301,7 @@ test("a pending focus request doesn't fire for a different county", async () => 
   await act(async () => {
     await router.navigate("/?c=41051");
   });
-  expect(screen.getByRole("heading", { name: "Multnomah" })).not.toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Multnomah, OR" })).not.toHaveFocus();
 });
 
 test("Back to the county a pending request named fulfils it", async () => {
@@ -312,7 +315,7 @@ test("Back to the county a pending request named fulfils it", async () => {
     await router.navigate(-1);
   });
   expect(router.state.location.search).toBe("?c=53033");
-  expect(screen.getByRole("heading", { name: "King" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "King, WA" })).toHaveFocus();
 });
 
 test("model table replaces the value table, keeps c and view, and back restores values", async () => {
@@ -336,7 +339,7 @@ test("Compared with expected: hovering King shows the tier tooltip", () => {
     pointerType: "mouse",
   });
   expect(screen.getByRole("tooltip")).toHaveTextContent(
-    "King, WA: notably better than expected (+3.7 years)",
+    "King, WA: notably higher than expected (+3.7 years)",
   );
 });
 
@@ -344,14 +347,14 @@ test("the panel is a dialog and the map stays live: a second county replaces the
   const router = setup("/?i=poverty_rate");
   await userEvent.click(screen.getByLabelText("King, WA"));
   const panel = screen.getByRole("dialog", { name: "County details" });
-  expect(within(panel).getByRole("heading", { level: 2, name: "King" })).toBeInTheDocument();
+  expect(within(panel).getByRole("heading", { level: 2, name: "King, WA" })).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText("Multnomah, OR"));
   expect(router.state.location.search).toBe("?i=poverty_rate&c=41051");
   expect(screen.getAllByRole("dialog", { name: "County details" })).toHaveLength(1);
   expect(
     within(screen.getByRole("dialog", { name: "County details" })).getByRole("heading", {
       level: 2,
-      name: "Multnomah",
+      name: "Multnomah, OR",
     }),
   ).toBeInTheDocument();
   expect(screen.getByLabelText("Multnomah, OR")).toHaveAttribute("aria-current", "true");
@@ -418,14 +421,14 @@ test("phone: the description waits behind About this measure", async () => {
   expect(screen.getByText(text)).toBeInTheDocument();
 });
 
-test("wide viewport: no sheet-open class; the description shows, and in full behind About this measure", async () => {
+test("wide viewport: no sheet-open class; the description is only behind About this measure", async () => {
   mockMatchMedia(false);
   setup("/?i=poverty_rate&c=53033");
   expect(document.querySelector(".explorer")).not.toHaveClass("explorer--sheet-open");
   const text = "Share of residents living below the poverty line.";
-  expect(screen.getByText(text)).toHaveClass("indicator-description--clamped");
+  expect(screen.queryByText(text)).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
-  expect(screen.getAllByText(text)).toHaveLength(2);
+  expect(screen.getAllByText(text)).toHaveLength(1);
 });
 
 test("wide viewport: the Show switch sits in the title block's slot", () => {
@@ -533,11 +536,12 @@ test("switching to Compared with expected with a county open puts the card first
   expect(card.compareDocumentPosition(measure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-test("titles the map and subtitle from the target", () => {
+test("titles the map and subtitle from the target", async () => {
   setup("/?i=premature_death&show=expected");
   expect(
     screen.getByRole("heading", { level: 2, name: "Premature death (years lost): compared with expected" }),
   ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
   expect(
     screen.getByText(/^How each county compares on premature death with what the model expects/),
   ).toBeInTheDocument();
@@ -549,7 +553,7 @@ test("the table, tooltip and card follow the selected target", async () => {
   expect(
     screen.getByRole("heading", { level: 3, name: "Premature death (years lost) model" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByText(/Higher is worse for this measure/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/Lower is more favorable for this measure/).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/\+1,800 per 100k/).length).toBeGreaterThan(0);
 });
 
@@ -557,10 +561,11 @@ test.each([
   ["life_expectancy", "life expectancy"],
   ["premature_death", "premature death"],
   ["injury_deaths", "injury deaths"],
-])("the model subtitle for %s reads without parentheses", (id, name) => {
+])("the model subtitle for %s reads without parentheses", async (id, name) => {
   const injury = { ...prematureDeath, label: "Injury deaths" };
   const withInjury = { ...model, targets: { ...model.targets, injury_deaths: injury } };
   setup(`/?i=${id}&show=expected`, { manifest, values, topology, model: withInjury, strata });
+  await userEvent.click(screen.getByRole("button", { name: "About this measure" }));
   const text = document.querySelector(".indicator-description")!.textContent!;
   expect(text).toContain(`How each county compares on ${name} with what the model expects`);
   expect(text).not.toContain("(");
@@ -581,7 +586,7 @@ test("an old model link is rewritten in place", () => {
   ).toBeInTheDocument();
   expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
   expect(screen.getByRole("dialog", { name: "County details" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "King" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "King, WA" })).toBeInTheDocument();
   expect(router.state.location.search).toBe("?c=53033&view=table&i=injury_deaths&show=expected");
   expect(router.state.historyAction).toBe("REPLACE");
 });

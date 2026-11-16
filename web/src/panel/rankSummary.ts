@@ -22,18 +22,29 @@ function ordinal(n: number): string {
   }
 }
 
+export type RankSummary = {
+  /** Shown on screen: "10/139 counties (3rd in WA)". */
+  text: string;
+  /** The accessible name and hover text, which says which way is first. */
+  label: string;
+};
+
 export function rankSummary(
   fips: string,
   entries: Record<string, ValueEntry>,
   counties: County[],
-): string | null {
+): RankSummary | null {
   const entry = entries[fips];
   if (!entry || entry.rank === null) return null;
   const self = counties.find((c) => c.fips === fips);
   const ranked = counties.filter((c) => entries[c.fips]?.rank != null);
-  const overall = `${ordinal(entry.rank)} of ${ranked.length} counties`;
-  if (!self || entry.state_rank === null) return `${overall} (1 = best)`;
+  const text = `${entry.rank}/${ranked.length} counties`;
+  const label = `${ordinal(entry.rank)} most favorable of ${ranked.length} counties`;
+  if (!self || entry.state_rank === null) return { text, label };
   const inState = ranked.filter((c) => c.state === self.state).length;
   const stateName = STATE_NAMES[self.state] ?? self.state;
-  return `${overall}, ${ordinal(entry.state_rank)} of ${inState} in ${stateName} (1 = best)`;
+  return {
+    text: `${text} (${ordinal(entry.state_rank)} in ${self.state})`,
+    label: `${label}, ${ordinal(entry.state_rank)} of ${inState} in ${stateName}`,
+  };
 }

@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { mockMatchMedia } from "./test/matchMedia";
 import { manifest, model, strata, topology, values } from "./test/fixtures";
 
 function LocationProbe({ onChange }: { onChange: (search: string) => void }) {
@@ -40,33 +39,23 @@ describe("App", () => {
         <App />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "PNW Health Dashboard",
-    );
+    expect(screen.getByRole("heading", { level: 1, name: "PNW Health Atlas" })).toBeInTheDocument();
+    expect(
+      screen.getByText("County health across Washington, Oregon, Idaho and Alaska."),
+    ).toBeInTheDocument();
     expect(await screen.findByRole("group", { name: "County map" })).toBeInTheDocument();
   });
 
-  it("keeps focus order equal to visual order in the header, on desktop and on phones", () => {
-    const tabOrder = () =>
-      [...document.querySelectorAll<HTMLElement>(".site-header a, .site-header button")].map(
-        (el) => el.getAttribute("aria-label") ?? el.textContent,
-      );
-    // Desktop: brand, then the nav, then the theme button at the right end.
-    const desktop = render(
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>,
-    );
-    expect(tabOrder()).toEqual(["Explorer", "Methodology", "About", "Theme"]);
-    desktop.unmount();
-    // Phone: the theme button sits on the brand's row, above the nav.
-    mockMatchMedia(true);
+  it("keeps focus order equal to visual order in the header: nav, then the theme button", () => {
     render(
       <MemoryRouter>
         <App />
       </MemoryRouter>,
     );
-    expect(tabOrder()).toEqual(["Theme", "Explorer", "Methodology", "About"]);
+    const tabOrder = [
+      ...document.querySelectorAll<HTMLElement>(".site-header a, .site-header button"),
+    ].map((el) => el.getAttribute("aria-label") ?? el.textContent);
+    expect(tabOrder).toEqual(["Explorer", "Methodology", "About", "Theme"]);
   });
 
   const at = (path: string) =>
@@ -191,9 +180,9 @@ describe("App", () => {
   });
 
   it.each([
-    ["/", "PNW Health Dashboard"],
-    ["/methodology", "Methodology · PNW Health Dashboard"],
-    ["/about", "About · PNW Health Dashboard"],
+    ["/", "PNW Health Atlas"],
+    ["/methodology", "Methodology · PNW Health Atlas"],
+    ["/about", "About · PNW Health Atlas"],
   ])("%s sets the page title", async (path, title) => {
     at(path);
     await screen.findAllByRole("heading", { level: 2 });
@@ -204,7 +193,7 @@ describe("App", () => {
     at("/about");
     const header = screen.getByRole("banner");
     const main = screen.getByRole("main");
-    const h1 = screen.getByRole("heading", { level: 1, name: "PNW Health Dashboard" });
+    const h1 = screen.getByRole("heading", { level: 1, name: "PNW Health Atlas" });
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(header).toContainElement(h1);
     expect(header).toContainElement(nav);

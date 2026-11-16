@@ -58,6 +58,7 @@ function setup(
       <SimilarCounties
         data={modelData}
         unit="years"
+        direction="higher_is_better"
         features={FEATURES}
         indicators={INDICATORS}
         onSelect={onSelect}
@@ -86,17 +87,24 @@ test("shows 'Not available' for a null value", () => {
   expect(within(row).getByText("Not available")).toBeInTheDocument();
 });
 
-test("Compared with expected shows actual, expected and flag; median row has no flag", () => {
+test("Compared with expected has three columns: actual and a short tier with its swatch", () => {
   setup();
+  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["County", "Actual", "Compared"]);
   const king = screen.getByRole("row", { name: /King/ });
   expect(within(king).getByText("80.8 years")).toBeInTheDocument();
-  expect(within(king).getByText("77.1 years")).toBeInTheDocument();
-  expect(
-    within(king).getByText("Notably better than expected"),
-  ).toBeInTheDocument();
+  expect(within(king).queryByText("77.1 years")).not.toBeInTheDocument();
+  const cell = within(king).getByText("Notably higher").closest("td")!;
+  expect(cell.querySelector(".tier-swatch")).toHaveStyle({ background: "#0571b0" });
+  expect(within(screen.getByRole("row", { name: /Multnomah/ })).getByText("About as expected")).toBeInTheDocument();
   const median = screen.getByRole("row", { name: /Peer median/ });
   expect(within(median).getByText("76.0 years")).toBeInTheDocument();
-  expect(within(median).queryByText(/expected$/)).not.toBeInTheDocument();
+  expect(within(median).getAllByRole("cell")).toHaveLength(2);
+  expect(within(median).getAllByRole("cell")[1]).toBeEmptyDOMElement();
+});
+
+test("the short tier is worded by the outcome's direction", () => {
+  setup({ direction: "higher_is_worse" });
+  expect(within(screen.getByRole("row", { name: /King/ })).getByText("Notably lower")).toBeInTheDocument();
 });
 
 test("clicking a peer calls onSelect with its fips; selected county is not a button", async () => {
@@ -108,23 +116,21 @@ test("clicking a peer calls onSelect with its fips; selected county is not a but
   ).not.toBeInTheDocument();
 });
 
-test("shows the basis sentence with a link to /methodology#similar-counties", () => {
+const MATCHED = (text: string) => async () => {
+  await userEvent.click(screen.getByRole("button", { name: "About similar counties" }));
+  expect(await screen.findByText(text)).toBeVisible();
+};
+
+test("shows a short basis, with every matching measure and the methodology link behind its ⓘ", async () => {
   setup();
-  expect(
-    screen.getByText(
-      /Most similar PNW counties on median household income, poverty rate, uninsured rate and six other social and economic measures\./,
-    ),
-  ).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute(
-    "href",
-    "/methodology#similar-counties",
-  );
-  expect(
-    screen.getByRole("heading", { level: 3, name: "Similar counties" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("table", { name: /Similar counties/ }),
-  ).toBeInTheDocument();
+  expect(screen.getByText("Counties with the most similar social and economic profile.")).toBeInTheDocument();
+  expect(screen.queryByText(/other social and economic measures/)).not.toBeInTheDocument();
+  await MATCHED(
+    "Matched on median household income, poverty rate, uninsured rate, bachelor's degree or higher, unemployment rate, age 65 and older, percent rural, severe housing cost burden and households with broadband.",
+  )();
+  expect(screen.getByRole("link", { name: "Methodology" })).toHaveAttribute("href", "/methodology#similar-counties");
+  expect(screen.getByRole("heading", { level: 3, name: "Similar counties" })).toBeInTheDocument();
+  expect(screen.getByRole("table", { name: /Similar counties/ })).toBeInTheDocument();
 });
 
 test("shows the state for every row, including the selected county", () => {
@@ -133,54 +139,37 @@ test("shows the state for every row, including the selected county", () => {
   expect(screen.getByRole("button", { name: "Multnomah, OR" })).toBeInTheDocument();
 });
 
-test.each([
-  [10, "seven other"],
-  [12, "nine other"],
-])("derives the other-measure count from %i features", (n, words) => {
-  const features = [...FEATURES, "copd", "x1", "x2"].slice(0, n);
-  setup({ features });
-  expect(
-    screen.getByText(
-      new RegExp(`uninsured rate and ${words} social and economic measures\\.`),
-    ),
-  ).toBeInTheDocument();
-});
-
-test("with three features names them all and counts none", () => {
-  setup({ features: FEATURES.slice(0, 3) });
-  expect(
-    screen.getByText(
-      "Most similar PNW counties on median household income, poverty rate and uninsured rate.",
-      { exact: false },
-    ),
-  ).toBeInTheDocument();
-  expect(screen.queryByText(/other social and economic/)).not.toBeInTheDocument();
-});
-
-test("with two features joins them with 'and'", () => {
+test("with two features joins them with 'and'", async () => {
   setup({ features: FEATURES.slice(0, 2) });
-  expect(
-    screen.getByText(/on median household income and poverty rate\./),
-  ).toBeInTheDocument();
+  await MATCHED("Matched on median household income and poverty rate.")();
 });
 
-test("with one feature names just it", () => {
+test("with one feature names just it", async () => {
   setup({ features: ["poverty_rate"] });
-  expect(screen.getByText(/on poverty rate\./)).toBeInTheDocument();
+  await MATCHED("Matched on poverty rate.")();
 });
 
-test("with four features the one other measure is singular", () => {
-  setup({ features: FEATURES.slice(0, 4) });
-  expect(
-    screen.getByText(/uninsured rate and one other social and economic measure\./),
-  ).toBeInTheDocument();
-});
-
-test("keeps acronyms and proper nouns capitalised and falls back to the id", () => {
+test("keeps acronyms and proper nouns capitalised and falls back to the id", async () => {
   setup({ features: ["copd", "bachelors_or_higher", "mystery_id"] });
-  expect(
-    screen.getByText(
-      /on COPD, bachelor's degree or higher and mystery_id\./,
-    ),
-  ).toBeInTheDocument();
+  await MATCHED("Matched on COPD, bachelor's degree or higher and mystery_id.")();
+});
+
+test("values mode keeps County and Value", () => {
+  const data: ValuesPeerData = {
+    kind: "values",
+    rows: [{ kind: "values", fips: "53033", name: "King", state: "WA", isSelected: true, value: 9.5 }],
+    median: { kind: "values", value: 9.5 },
+  };
+  setup({ data, unit: "percent" });
+  expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["County", "Value"]);
+});
+
+test("a peer with not enough data shows the label without an empty swatch", () => {
+  const data: ModelPeerData = {
+    ...modelData,
+    rows: [modelData.rows[0]!, { ...modelData.rows[1]!, flag: "insufficient_data" }],
+  };
+  setup({ data });
+  const cell = within(screen.getByRole("row", { name: /Multnomah/ })).getByText("Not enough data").closest("td")!;
+  expect(cell.querySelector(".tier-swatch")).toBeNull();
 });

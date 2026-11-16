@@ -40,7 +40,7 @@ test("training, validation, metrics, importance and tiers", () => {
   expect(text).toContain("1.15");
   expect(text).toContain("1.64");
   expect(text).toContain("1.2 years");
-  expect(text).toMatch(/positive difference means better than expected/i);
+  expect(text).toMatch(/positive difference is more favorable than expected/i);
   expect(text).toMatch(/average se²/);
 });
 
@@ -113,8 +113,8 @@ test("says why PLACES outcomes and low birth weight are not targets, and how dir
   expect(text).toMatch(/PLACES outcomes .* not targets/);
   expect(text).toMatch(/partly from .*American Community Survey/);
   expect(text).toMatch(/low birth weight/i);
-  expect(text).toMatch(/higher is worse.*a negative difference is better than expected/is);
-  expect(text).toMatch(/blue for better than expected/);
+  expect(text).toMatch(/lower is more favorable.*a negative difference is more favorable than expected/is);
+  expect(text).toMatch(/blue for more favorable than expected/);
 });
 
 const wording = (id: string) => {
@@ -147,7 +147,7 @@ test("makes no claim the data can't support about the sources or intervals", () 
 
 test("flag colours are blue and red, and low birth weight is explained plainly", () => {
   const { text } = wording("life_expectancy");
-  expect(text).toMatch(/blue for better than expected and red for worse/);
+  expect(text).toMatch(/blue for more favorable than expected and red for less favorable/);
   expect(text).not.toMatch(/orange/);
   expect(text).toMatch(/regional offset/);
   expect(text).not.toMatch(/review of the first results|because counties there sit/);
@@ -186,3 +186,18 @@ test.each(["life_expectancy", "premature_death", "injury_deaths"])(
     expect(text).not.toMatch(/deaths differs/);
   },
 );
+
+test("the model section reads higher or lower than expected, and is not a judgment of the county", () => {
+  render(
+    <ModelSection
+      model={modelFile}
+      targetId="life_expectancy"
+      onTargetChange={() => {}}
+      indicators={manifest.indicators}
+    />,
+  );
+  expect(screen.getByRole("heading", { level: 4, name: "Higher or lower than expected" })).toBeInTheDocument();
+  expect(document.body.textContent).toContain(
+    "The tiers compare a county with the model's estimate; they are not a judgment of the county.",
+  );
+});

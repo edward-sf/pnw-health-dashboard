@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { manifest } from "../test/fixtures";
-import { GROUPS, groupOf, measuresIn } from "./categories";
+import { categoryLabel, GROUPS, groupOf, measuresIn } from "./categories";
 
 test("groupOf maps the five manifest categories", () => {
   expect(["Social & Economic", "Access", "Behaviors"].map(groupOf)).toEqual([
@@ -37,4 +37,9 @@ test("measuresIn keeps manifest order and one heading per category", () => {
 
 test("a group with no measures has no sections", () => {
   expect(measuresIn([], "outcomes")).toEqual([]);
+});
+
+test("categoryLabel shows Behaviors as Health behaviors and leaves the rest alone", () => {
+  expect(categoryLabel("Behaviors")).toBe("Health behaviors");
+  expect(categoryLabel("Social & Economic")).toBe("Social & Economic");
 });

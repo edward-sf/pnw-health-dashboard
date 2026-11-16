@@ -8,10 +8,12 @@ import { StripPlot } from "./StripPlot";
 vi.mock("@observablehq/plot", () => ({
   plot: vi.fn(() => document.createElementNS("http://www.w3.org/2000/svg", "svg")),
   dot: vi.fn(() => ({})),
+  ruleX: vi.fn(() => ({})),
 }));
 
 const plot = vi.mocked(Plot.plot);
 const dot = vi.mocked(Plot.dot);
+const ruleX = vi.mocked(Plot.ruleX);
 const county = { fips: "53033", name: "King", state: "WA" };
 const poverty = manifest.indicators[0] as Indicator;
 
@@ -25,6 +27,7 @@ function setup(unit: Unit = "percent") {
 beforeEach(() => {
   plot.mockClear();
   dot.mockClear();
+  ruleX.mockClear();
 });
 
 test("draws at a fixed width with few compact ticks", () => {
@@ -49,16 +52,20 @@ test("spreads dots over a fixed jitter band with no y axis", () => {
   expect(options.y).toMatchObject({ axis: null, domain: [-1, 1] });
   const [, base] = dot.mock.calls[0]!;
   expect(base).toMatchObject({ x: "v", y: "jitter", r: 2.5 });
-  expect((base as { fillOpacity: number }).fillOpacity).toBeLessThan(1);
+  expect((base as { fillOpacity: number }).fillOpacity).toBe(0.45);
 });
 
-test("draws the selected county as a larger ink mark on top", () => {
+test("draws the selected county as a ringed evergreen mark on top, with a rule at its value", () => {
   setup();
   expect(dot).toHaveBeenCalledTimes(2);
   const [data, top] = dot.mock.calls[1]!;
   expect(data).toEqual([expect.objectContaining({ fips: "53033" })]);
-  expect(top).toMatchObject({ fill: "var(--chart-ink)" });
+  expect(top).toMatchObject({ fill: "var(--evergreen)", stroke: "var(--surface)", strokeWidth: 2 });
   expect((top as { r: number }).r).toBeGreaterThan(2.5);
+  expect(ruleX).toHaveBeenCalledTimes(1);
+  const [ruleData, rule] = ruleX.mock.calls[0]!;
+  expect(ruleData).toEqual([expect.objectContaining({ fips: "53033" })]);
+  expect(rule).toMatchObject({ x: "v", stroke: "var(--evergreen)" });
 });
 
 test("hides the chart from assistive tech and keeps the text summary", () => {

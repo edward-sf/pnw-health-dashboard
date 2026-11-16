@@ -17,7 +17,7 @@ Plans hold decisions; GitHub holds status. Don't track status by editing plan ch
 
 - **Milestones** = spec build slices: `M1 Pipeline foundation`, `M2 Map + live site`, `M3 Full data + county panel`, `M4 ML pipeline`, `M5 Model UI`, `M6 Methodology + polish`.
 - **Issues** = one plan task each. The title starts with its plan ID, e.g. `M1.T3 Harmonize FIPS and Alaska geography changes`. The issue body links the plan section and lists its acceptance criteria.
-- **Project board** "PNW Health Dashboard", Status field: `Backlog → Ready → In progress → In review → Merged to milestone → Done`.
+- **Project board** "PNW Health Atlas", Status field: `Backlog → Ready → In progress → In review → Merged to milestone → Done`.
 
 ## Branch model
 
@@ -87,6 +87,8 @@ cd pipeline && uv run pnw-health schema --root ..
 # web (from M2)
 cd web && npm ci && npm test && npm run lint && npm run typecheck
 ```
+
+Web UI follows the design guide, [docs/design-system.md](docs/design-system.md): tokens only, no raw colours, font sizes or radii.
 
 ## Dependency overrides
 

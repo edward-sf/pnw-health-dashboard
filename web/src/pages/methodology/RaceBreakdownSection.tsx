@@ -17,9 +17,10 @@ export function RaceBreakdownSection({
         Outcomes by race and ethnicity
       </h3>
       <p>
-        The county panel shows {measures.length} outcome measures by race and ethnicity wherever
-        County Health Rankings {strata.year} (CHR) publishes a value. Each group's value comes with the confidence interval CHR publishes,
-        next to the county's overall value. The measures are:
+        The site's data include {measures.length} outcome measures by race and ethnicity wherever
+        County Health Rankings {strata.year} (CHR) publishes a value, each with the confidence
+        interval CHR publishes. The Explorer's county panel does not show these breakdowns. The
+        measures are:
       </p>
       <ul>
         {measures.map((m) => (
@@ -47,10 +48,9 @@ export function RaceBreakdownSection({
       <h4>Groups CHR does not report</h4>
       <p>
         CHR does not report a group when there are too few cases to give a stable figure, so
-        most counties have values for only a few groups. The county panel lists the
-        groups with no value by name instead of leaving a blank. A missing group is not a zero
-        and does not mean there is no gap. Some reported values carry CHR's unreliable flag, and
-        the panel marks them as described under{" "}
+        most counties have values for only a few groups. A missing group is not a zero and does not
+        mean there is no gap. Some reported values carry CHR's unreliable flag, which the data keep
+        as described under{" "}
         <Link to={{ hash: "unreliable" }}>unreliable estimates</Link>. Chugach and Copper River,
         the two census areas that replaced Valdez-Cordova in 2019, have no breakdown because CHR
         reports no values for them.

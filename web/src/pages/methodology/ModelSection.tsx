@@ -108,16 +108,17 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
           </li>
         ))}
       </ol>
-      <h4>Better or worse than expected</h4>
+      <h4>Higher or lower than expected</h4>
       <p>
         A county's difference is its actual value minus the model's expected value. Which sign is
-        better depends on the outcome.
+        more favorable depends on the outcome.
         {better &&
-          ` Where higher is better (${better}), a positive difference means better than expected, and a negative one worse.`}
+          ` Where higher is more favorable (${better}), a positive difference is more favorable than expected, and a negative one less favorable.`}
         {worse &&
-          ` Where higher is worse (${worse}), a negative difference is better than expected, and a positive one worse.`}{" "}
-        The flag colors keep blue for better than expected and red for worse, whichever way the
-        outcome runs.
+          ` Where lower is more favorable (${worse}), a negative difference is more favorable than expected, and a positive one less favorable.`}{" "}
+        The flag colors keep blue for more favorable than expected and red for less favorable,
+        whichever way the outcome runs. The tiers compare a county with the model's estimate; they
+        are not a judgment of the county.
       </p>
       <p>
         Each county has its own range, z × √(σ_model² + se²). σ_model is the model's typical error
@@ -125,8 +126,8 @@ export function ModelSection({ model: file, targetId, onTargetChange, indicators
         {formatValue(sigma_model, model.unit, modelDigits(model.unit, 1))}. se is the standard error
         of the county's value, from its published confidence interval; a county without an interval
         uses the average se² instead. A difference beyond the range with z = {formatZ(z_75)} (a
-        two-sided 75% range) is flagged as somewhat better or worse than expected, and beyond the
-        range with z = {formatZ(z_90)} (a two-sided 90% range) as notably better or worse.
+        two-sided 75% range) is flagged as somewhat higher or lower than expected, and beyond the
+        range with z = {formatZ(z_90)} (a two-sided 90% range) as notably higher or lower.
       </p>
       <h4 id="no-result" tabIndex={-1}>
         Counties with no result
