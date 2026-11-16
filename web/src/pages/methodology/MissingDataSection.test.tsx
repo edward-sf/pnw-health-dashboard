@@ -5,15 +5,16 @@ import { MissingDataSection } from "./MissingDataSection";
 
 test("suppression, unreliable estimates and confidence levels", () => {
   render(<MissingDataSection indicators={manifest.indicators} />);
-  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "missing-data");
-  expect(screen.getByRole("heading", { level: 4, name: /Suppressed/ })).toHaveAttribute(
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute(
     "id",
-    "suppression",
+    "missing-data",
   );
-  expect(screen.getByRole("heading", { level: 4, name: /Unreliable/ })).toHaveAttribute(
-    "id",
-    "unreliable",
-  );
+  expect(
+    screen.getByRole("heading", { level: 5, name: /Suppressed/ }),
+  ).toHaveAttribute("id", "suppression");
+  expect(
+    screen.getByRole("heading", { level: 5, name: /Unreliable/ }),
+  ).toHaveAttribute("id", "unreliable");
   const text = document.body.textContent ?? "";
   expect(text).toMatch(/never filled in/);
   expect(text).toMatch(/keep their value and rank/);

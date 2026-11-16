@@ -155,13 +155,18 @@ test("select a similar county", async ({ page }) => {
 
 test("methodology and about pages render", async ({ page }) => {
   await page.goto("./methodology");
-  await expect(page.getByRole("heading", { level: 2, name: "Methodology" })).toBeVisible();
-  await expect(page.getByText("At a glance").first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "How the atlas is built" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Pipeline steps" })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "On this page" }).locator('a[href$="#model"]'),
   ).toBeVisible();
+  await expect(page.locator("main")).toContainText("in Alaska, Idaho, Oregon and Washington");
   await page.goto("./about");
-  await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toBeVisible();
+  // Buttons that are links don't pick up the body-link underline.
+  for (const name of ["View the source on GitHub", "LinkedIn"]) {
+    await expect(page.getByRole("link", { name })).toHaveCSS("text-decoration-line", "none");
+  }
 });
 
 test("a panel Methodology link lands on and focuses its section", async ({ page }) => {
@@ -171,9 +176,12 @@ test("a panel Methodology link lands on and focuses its section", async ({ page 
   const panel = page.getByRole("dialog", { name: "County details" });
   await panel.locator(".model-none").getByRole("link", { name: "Methodology", exact: true }).click();
   await expect(page).toHaveURL(/\/methodology#no-result$/);
-  const heading = page.getByRole("heading", { level: 4, name: "Counties with no result" });
+  const heading = page.getByRole("heading", { level: 5, name: "Counties with no result" });
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport();
+  // Never inside a closed fold: a reader who lands here sees the heading and its text.
+  expect(await heading.evaluate((h) => h.closest("details:not([open])") === null)).toBe(true);
+  await expect(heading.locator("xpath=following-sibling::p[1]")).toBeVisible();
 });
 
 test("the county panel shows no race breakdown in either mode", async ({ page }) => {

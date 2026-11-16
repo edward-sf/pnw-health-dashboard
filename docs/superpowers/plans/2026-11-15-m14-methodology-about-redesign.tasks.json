@@ -1,0 +1,226 @@
+{
+  "milestone": 14,
+  "order": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6",
+    "T7"
+  ],
+  "plan": "docs/superpowers/plans/2026-11-15-m14-methodology-about-redesign.md",
+  "plan_sha": "2aafa9bce40a05e576e18f3b9dd655ab3d56f923",
+  "spec": "docs/superpowers/specs/2026-11-15-m14-methodology-about-redesign-design.md",
+  "tasks": {
+    "T1": {
+      "blocks": [
+        "T2"
+      ],
+      "branch": "341-methodology-steps-headings-and-section",
+      "depends_on": [],
+      "files": [
+        "web/src/pages/methodology/steps.ts",
+        "web/src/pages/methodology/steps.test.ts",
+        "web/src/pages/methodology/MethodologyStep.tsx",
+        "web/src/pages/methodology/SectionLayout.tsx",
+        "web/src/pages/methodology/MethodologyStep.test.tsx",
+        "web/src/pages/Methodology.tsx",
+        "web/src/pages/Methodology.test.tsx",
+        "web/src/pages/methodology/SourcesSection.tsx",
+        "web/src/pages/methodology/SourcesSection.test.tsx",
+        "web/src/pages/methodology/IndicatorCatalog.tsx",
+        "web/src/pages/methodology/IndicatorCatalog.test.tsx",
+        "web/src/pages/methodology/HarmonizationSection.tsx",
+        "web/src/pages/methodology/HarmonizationSection.test.tsx",
+        "web/src/pages/methodology/MissingDataSection.tsx",
+        "web/src/pages/methodology/MissingDataSection.test.tsx",
+        "web/src/pages/methodology/RaceBreakdownSection.tsx",
+        "web/src/pages/methodology/RaceBreakdownSection.test.tsx",
+        "web/src/pages/methodology/ModelSection.tsx",
+        "web/src/pages/methodology/ModelSection.test.tsx",
+        "web/src/pages/methodology/ExclusionsSection.tsx",
+        "web/src/pages/methodology/ExclusionsSection.test.tsx",
+        "web/src/pages/methodology/PeersSection.tsx",
+        "web/src/pages/methodology/PeersSection.test.tsx",
+        "web/src/pages/methodology/ReproducibilitySection.tsx",
+        "web/src/pages/methodology/ReproducibilitySection.test.tsx",
+        "web/src/styles.css",
+        "web/e2e/smoke.spec.ts"
+      ],
+      "id": "T1",
+      "issue": 341,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 6,
+      "title": "Methodology steps, headings and section layout"
+    },
+    "T2": {
+      "blocks": [
+        "T3"
+      ],
+      "branch": "342-methodology-folds-and-deep-links",
+      "depends_on": [
+        "T1"
+      ],
+      "files": [
+        "web/src/pages/methodology/Fold.tsx",
+        "web/src/pages/methodology/Fold.test.tsx",
+        "web/src/pages/methodology/useHashFocus.ts",
+        "web/src/pages/methodology/useHashFocus.test.tsx",
+        "web/src/pages/methodology/IndicatorCatalog.tsx",
+        "web/src/pages/methodology/IndicatorCatalog.test.tsx",
+        "web/src/pages/methodology/ExclusionsSection.tsx",
+        "web/src/pages/methodology/ExclusionsSection.test.tsx",
+        "web/src/pages/methodology/ReproducibilitySection.tsx",
+        "web/src/pages/methodology/ReproducibilitySection.test.tsx",
+        "web/src/pages/methodology/ModelSection.tsx",
+        "web/src/pages/methodology/ModelSection.test.tsx",
+        "web/src/styles.css"
+      ],
+      "id": "T2",
+      "issue": 342,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 6,
+      "title": "Methodology folds and deep links into them"
+    },
+    "T3": {
+      "blocks": [
+        "T4"
+      ],
+      "branch": "343-methodology-model-step-evidence",
+      "depends_on": [
+        "T2"
+      ],
+      "files": [
+        "web/src/pages/methodology/R2Comparison.tsx",
+        "web/src/pages/methodology/R2Comparison.test.tsx",
+        "web/src/pages/methodology/FactorBars.tsx",
+        "web/src/pages/methodology/FactorBars.test.tsx",
+        "web/src/pages/methodology/ModelSection.tsx",
+        "web/src/pages/methodology/ModelSection.test.tsx",
+        "web/src/styles.css"
+      ],
+      "id": "T3",
+      "issue": 343,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 5,
+      "title": "Methodology model step evidence"
+    },
+    "T4": {
+      "blocks": [
+        "T5"
+      ],
+      "branch": "344-methodology-hero-and-pipeline-strip",
+      "depends_on": [
+        "T3"
+      ],
+      "files": [
+        "web/src/pages/methodology/pipelineFigures.ts",
+        "web/src/pages/methodology/pipelineFigures.test.ts",
+        "web/src/pages/methodology/PipelineHero.tsx",
+        "web/src/pages/methodology/PipelineHero.test.tsx",
+        "web/src/pages/methodology/AtAGlance.tsx",
+        "web/src/pages/methodology/AtAGlance.test.tsx",
+        "web/src/pages/Methodology.tsx",
+        "web/src/pages/Methodology.test.tsx",
+        "web/src/App.test.tsx",
+        "web/e2e/smoke.spec.ts",
+        "web/src/styles.css"
+      ],
+      "id": "T4",
+      "issue": 344,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 5,
+      "title": "Methodology hero and pipeline strip"
+    },
+    "T5": {
+      "blocks": [
+        "T6"
+      ],
+      "branch": "345-methodology-reading-rail-and-phone",
+      "depends_on": [
+        "T4"
+      ],
+      "files": [
+        "web/src/pages/methodology/useScrollSpy.ts",
+        "web/src/pages/methodology/useScrollSpy.test.tsx",
+        "web/src/pages/methodology/ReadingRail.tsx",
+        "web/src/pages/methodology/ReadingRail.test.tsx",
+        "web/src/pages/methodology/useHashFocus.ts",
+        "web/src/pages/methodology/useHashFocus.test.tsx",
+        "web/src/pages/Methodology.tsx",
+        "web/src/pages/Methodology.test.tsx",
+        "web/src/styles.css"
+      ],
+      "id": "T5",
+      "issue": 345,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 6,
+      "title": "Methodology reading rail and phone bar"
+    },
+    "T6": {
+      "blocks": [
+        "T7"
+      ],
+      "branch": "346-about-as-a-case-study",
+      "depends_on": [
+        "T5"
+      ],
+      "files": [
+        "web/src/pages/About.tsx",
+        "web/src/pages/About.test.tsx",
+        "web/src/App.test.tsx",
+        "web/e2e/smoke.spec.ts",
+        "web/src/styles.css"
+      ],
+      "id": "T6",
+      "issue": 346,
+      "labels": [
+        "area:web",
+        "type:feature"
+      ],
+      "steps": 5,
+      "title": "About as a case study"
+    },
+    "T7": {
+      "blocks": [],
+      "branch": "347-methodology-e2e-design-guide-and",
+      "depends_on": [
+        "T6"
+      ],
+      "files": [
+        "web/e2e/methodology.spec.ts",
+        "web/e2e/a11y.spec.ts",
+        "docs/design-system.md",
+        "docs/superpowers/specs/2026-11-15-m14-methodology-about-redesign-design.md",
+        "docs/images/methodology.png",
+        "docs/images/about.png",
+        "README.md"
+      ],
+      "id": "T7",
+      "issue": 347,
+      "labels": [
+        "area:web",
+        "area:docs",
+        "type:feature"
+      ],
+      "steps": 5,
+      "title": "Methodology e2e, design guide and as-built notes"
+    }
+  }
+}

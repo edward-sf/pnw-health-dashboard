@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, test, vi } from "vitest";
 import type { DataState } from "../data/useData";
+import { mockMatchMedia } from "../test/matchMedia";
 import { manifest, model, strata, topology, values } from "../test/fixtures";
 import { Methodology } from "./Methodology";
+import { STEPS } from "./methodology/steps";
 
 const ready: DataState = {
   status: "ready",
@@ -21,9 +23,15 @@ const ANCHORS = [
   "unreliable",
   "race-breakdown",
   "model",
+  "model-importance",
+  "no-result",
   "exclusions",
   "similar-counties",
   "model-card",
+  "fetch",
+  "harmonize",
+  "model-step",
+  "publish",
 ];
 
 function at(state: DataState, path = "/methodology") {
@@ -36,7 +44,9 @@ function at(state: DataState, path = "/methodology") {
 
 test("loading shows the loading line", () => {
   at({ status: "loading" });
-  expect(screen.getByRole("heading", { level: 2, name: "Methodology" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "How the atlas is built" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Loading data…")).toBeInTheDocument();
 });
 
@@ -53,15 +63,16 @@ test("ready renders every anchor, focusable, with a table of contents", () => {
   for (const id of ANCHORS) {
     const el = document.getElementById(id);
     expect(el, id).not.toBeNull();
-    expect(el).toHaveAttribute("tabindex", "-1");
+    expect(el, id).toHaveAttribute("tabindex", "-1");
   }
   const toc = screen.getByRole("navigation", { name: "On this page" });
   expect(toc.querySelectorAll("a").length).toBeGreaterThanOrEqual(6);
   expect(screen.getByRole("link", { name: "Sources and vintages" })).toHaveAttribute(
     "href",
-    "/methodology#sources",
+    "#sources",
   );
-  expect(screen.getByRole("heading", { name: "At a glance" })).toBeInTheDocument();
+  expect(document.querySelector(".methodology-toc")).toBeNull();
+  expect(screen.queryByText("At a glance")).toBeNull();
 });
 
 test("a deep link opened before the data loads focuses its heading once ready", () => {
@@ -77,30 +88,50 @@ test("a deep link opened before the data loads focuses its heading once ready", 
 
 test("wording guard: no causal language anywhere on the page", () => {
   at(ready);
-  expect(document.body.textContent).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
-  expect(document.body.textContent).not.toMatch(/explains? the difference/i);
+  // "Associations, not causes." negates causation, so it is the one allowed use of the word.
+  const text = (document.body.textContent ?? "").replace("Associations, not causes.", "");
+  expect(text).not.toMatch(/\b(caus(e|es|ed)|driv(e|es|er|ers))\b/i);
+  expect(text).not.toMatch(/explains? the difference/i);
 });
 
-test("the outline nests: one page h2, sections at h3, sub-anchors at h4", () => {
+test("the outline nests: page h2, steps at h3, sections at h4, sub-anchors at h5", () => {
   at(ready);
   const h2s = screen.getAllByRole("heading", { level: 2 });
-  expect(h2s.map((h) => h.textContent)).toEqual(["Methodology"]);
+  expect(h2s.map((h) => h.textContent)).toEqual(["How the atlas is built"]);
   expect(h2s[0]).toHaveAttribute("data-page-heading");
   for (const id of [
-    "at-a-glance",
     "sources",
     "indicators",
     "harmonization",
     "missing-data",
+    "race-breakdown",
     "model",
     "exclusions",
+    "similar-counties",
     "model-card",
   ]) {
-    expect(document.getElementById(id)?.tagName, id).toBe("H3");
-  }
-  for (const id of ["legacy", "suppression", "unreliable"]) {
     expect(document.getElementById(id)?.tagName, id).toBe("H4");
   }
+  for (const id of ["legacy", "suppression", "unreliable", "model-importance", "no-result"]) {
+    expect(document.getElementById(id)?.tagName, id).toBe("H5");
+  }
+  expect(screen.getByRole("heading", { level: 4, name: "How it works" })).toHaveAttribute(
+    "id",
+    "model",
+  );
+});
+
+test("each step has an h3 with its id and 'Step n of 4', and contains its sections", () => {
+  at(ready);
+  STEPS.forEach((step, i) => {
+    const h = screen.getByRole("heading", { level: 3, name: new RegExp(step.name) });
+    expect(h).toHaveAttribute("id", step.id);
+    expect(h).toHaveTextContent(`Step ${i + 1} of 4`);
+    const stepEl = h.closest("section");
+    for (const { id } of step.sections) {
+      expect(stepEl?.contains(document.getElementById(id)), id).toBe(true);
+    }
+  });
 });
 
 test("the outcome select lives on the page, defaults to life expectancy and drives importance and the model card", async () => {
@@ -108,13 +139,13 @@ test("the outcome select lives on the page, defaults to life expectancy and driv
   const select = screen.getByRole("combobox", { name: "Outcome" });
   expect(select).toHaveTextContent("Life expectancy");
   expect(
-    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+    screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Life expectancy");
   const user = userEvent.setup();
   await user.click(select);
   await user.click(screen.getByRole("option", { name: "Premature death (years lost)" }));
   expect(
-    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+    screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Premature death");
   expect(document.body.textContent).toContain("OutcomePremature death");
 });
@@ -123,9 +154,9 @@ test("has a Similar counties section in the table of contents", () => {
   at(ready);
   expect(screen.getByRole("link", { name: "Similar counties" })).toHaveAttribute(
     "href",
-    "/methodology#similar-counties",
+    "#similar-counties",
   );
-  expect(document.getElementById("similar-counties")?.tagName).toBe("H3");
+  expect(document.getElementById("similar-counties")?.tagName).toBe("H4");
 });
 
 test("a deep link to similar counties focuses its heading", () => {
@@ -142,6 +173,27 @@ test("falls back to the first target when life_expectancy is absent", () => {
     data: { manifest, topology, values, strata, model: { ...model, targets: rest } },
   };
   at(without);
-  expect(screen.getByRole("heading", { name: "Methodology" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "How the atlas is built" })).toBeInTheDocument();
   expect(screen.getByText(/The default is premature death\./)).toBeInTheDocument();
+});
+
+test("clicking a rail link moves focus to its heading", async () => {
+  at(ready);
+  await userEvent.setup().click(screen.getByRole("link", { name: "Indicators" }));
+  expect(document.getElementById("indicators")).toHaveFocus();
+});
+
+test("scrolls smoothly, or instantly when the reader prefers reduced motion", async () => {
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
+  try {
+    at(ready, "/methodology#indicators");
+    expect(scroll).toHaveBeenLastCalledWith({ behavior: "smooth" });
+    cleanup();
+    mockMatchMedia(true);
+    at(ready, "/methodology#indicators");
+    expect(scroll).toHaveBeenLastCalledWith({ behavior: "auto" });
+  } finally {
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  }
 });

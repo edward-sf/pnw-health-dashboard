@@ -108,7 +108,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("about page", async ({ page }, testInfo) => {
       await page.goto("./about");
-      await expect(page.getByRole("heading", { level: 2, name: "About" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 2, name: "A public health atlas, built end to end" })).toBeVisible();
       await audit(page, testInfo);
     });
   });
@@ -127,3 +127,16 @@ test("skip link reaches the county search", async ({ page }) => {
   await expect(page.getByRole("combobox", { name: "Search counties" })).toBeFocused();
   expect(new URL(page.url()).hash).toBe("");
 });
+
+for (const [name, path, heading] of [
+  ["methodology", "./methodology", null],
+  ["about", "./about", "A public health atlas, built end to end"],
+] as const) {
+  test(`${name} page at phone width`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(path);
+    if (heading) await expect(page.getByRole("heading", { level: 2, name: heading })).toBeVisible();
+    else await expect(page.getByRole("navigation", { name: "On this page" })).toBeVisible();
+    await audit(page, testInfo);
+  });
+}

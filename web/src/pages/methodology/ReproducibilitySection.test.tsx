@@ -5,7 +5,10 @@ import { ReproducibilitySection } from "./ReproducibilitySection";
 
 test("seed, folds, LightGBM version and parameters, and build date", () => {
   render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
-  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "model-card");
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute(
+    "id",
+    "model-card",
+  );
   const text = document.body.textContent ?? "";
   expect(text).toContain("Random seed1");
   expect(text).toContain("Cross-validation folds5");
@@ -19,4 +22,11 @@ test("shows the selected outcome's training counties", () => {
   render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
   expect(document.body.textContent).toContain("OutcomeLife expectancy");
   expect(document.body.textContent).toContain("Training counties3,000");
+});
+
+test("the LightGBM parameters are in a closed fold", () => {
+  render(<ReproducibilitySection model={model} builtAt={manifest.built_at} />);
+  const fold = screen.getByText("learning_rate").closest("details")!;
+  expect(fold).toHaveClass("methodology-fold");
+  expect(fold).not.toHaveAttribute("open");
 });
