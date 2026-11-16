@@ -19,7 +19,7 @@ test("training, validation, metrics, importance and tiers", () => {
       indicators={manifest.indicators}
     />,
   );
-  expect(screen.getByRole("heading", { level: 3 })).toHaveAttribute("id", "model");
+  expect(screen.getByRole("heading", { level: 4 })).toHaveAttribute("id", "model");
   const text = document.body.textContent ?? "";
   expect(text).toContain(`${formatCount(model.model_card.training_counties)} US counties`);
   expect(text).toContain(`${model.model_card.n_folds}-fold cross-validation`);
@@ -54,7 +54,7 @@ test("the no-result heading is a focusable deep-link target", () => {
     />,
   );
   const heading = screen.getByRole("heading", {
-    level: 4,
+    level: 5,
     name: "Counties with no result",
   });
   expect(heading).toHaveAttribute("id", "no-result");
@@ -90,7 +90,7 @@ test("importance heading and unit follow the selected target", () => {
     />,
   );
   expect(
-    screen.getByRole("heading", { level: 4, name: /Factors by importance/ }),
+    screen.getByRole("heading", { level: 5, name: /Factors by importance/ }),
   ).toHaveTextContent("Premature death");
   const ranked = within(screen.getByRole("list", { name: /Factors by importance/ })).getAllByRole(
     "listitem",
@@ -179,7 +179,7 @@ test.each(["life_expectancy", "premature_death", "injury_deaths"])(
         indicators={manifest.indicators}
       />,
     );
-    const heading = screen.getByRole("heading", { level: 4, name: "Associations, not effects" });
+    const heading = screen.getByRole("heading", { level: 5, name: "Associations, not effects" });
     const text = heading.nextElementSibling!.textContent!;
     expect(text).toContain("why a county's actual value differs from its expected value");
     expect(text).not.toContain("(");
@@ -196,7 +196,7 @@ test("the model section reads higher or lower than expected, and is not a judgme
       indicators={manifest.indicators}
     />,
   );
-  expect(screen.getByRole("heading", { level: 4, name: "Higher or lower than expected" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 5, name: "Higher or lower than expected" })).toBeInTheDocument();
   expect(document.body.textContent).toContain(
     "The tiers compare a county with the model's estimate; they are not a judgment of the county.",
   );

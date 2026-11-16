@@ -1539,6 +1539,10 @@
     line-height: 1.6;
   }
 
+  .methodology {
+    max-width: 64rem;
+  }
+
   .methodology > h2,
   .about > h2 {
     margin: 0.75rem 0 1.25rem;
@@ -1553,8 +1557,50 @@
   }
 
   .methodology h4 {
+    margin: 2rem 0 0.625rem;
+    font-size: var(--text-xl);
+  }
+
+  .methodology h5 {
     margin: 1.75rem 0 0.5rem;
     font-size: var(--text-lg);
+  }
+
+  .methodology-step-heading {
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .methodology-step-count {
+    display: block;
+    color: var(--ink-muted);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  .methodology-prose,
+  .methodology-section:not(.methodology-section--split) {
+    max-width: 65ch;
+  }
+
+  .methodology-section--split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem 2rem;
+  }
+
+  .methodology-evidence {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+
+  @media (min-width: 721px) {
+    .methodology-section--split {
+      grid-template-columns: 1fr 1fr;
+    }
   }
 
   .methodology p,

@@ -8,7 +8,7 @@ const { peers } = model;
 test("the heading is the focusable id the panel links to", () => {
   render(<PeersSection peers={peers} indicators={manifest.indicators} />);
   const heading = screen.getByRole("heading", {
-    level: 3,
+    level: 4,
     name: "Similar counties",
   });
   expect(heading).toHaveAttribute("id", "similar-counties");

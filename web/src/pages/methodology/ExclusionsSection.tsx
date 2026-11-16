@@ -3,6 +3,7 @@ import type { ModelFile } from "../../types";
 import { groupExcludedCounties } from "./excludedCounties";
 import { formatCount, joinList, outcomeCell, outcomeName } from "./format";
 import { MetricsTable } from "./MetricsTable";
+import { SectionLayout } from "./SectionLayout";
 import { stateNameForFips } from "./stateFipsNames";
 
 const counties = (n: number) => `${formatCount(n)} ${n === 1 ? "county" : "counties"}`;
@@ -19,37 +20,45 @@ export function ExclusionsSection({
   const groups = groupExcludedCounties(model.model_card.excluded_counties);
   return (
     <section aria-labelledby="exclusions">
-      <h3 id="exclusions" tabIndex={-1}>
+      <h4 id="exclusions" tabIndex={-1}>
         What the model leaves out
-      </h3>
-      <h4>Factor groups left out, {outcomeName(model.label)}</h4>
-      <ul>
-        {model.model_card.excluded_feature_groups.map((g) => (
-          <li key={g.category}>
-            {g.category}: {g.reason}
-          </li>
-        ))}
-      </ul>
-      <h4>How much do behaviors add?</h4>
-      <p>
-        A second LightGBM model adds the health behavior measures from CDC PLACES to the factors.
-        For each outcome, it and the main model are refit on the same counties, those with every
-        behavior measure, so the comparison is like for like.
-      </p>
-      <MetricsTable
-        caption="Main model and with behaviors, on the same counties, by outcome"
-        rows={Object.values(file.targets).flatMap((t) => [
-          {
-            target: outcomeCell(t),
-            model: "Main model",
-            ...t.behaviors_comparison.main,
-          },
-          {
-            target: outcomeCell(t),
-            model: "With behaviors",
-            ...t.behaviors_comparison.behaviors,
-          },
-        ])}
+      </h4>
+      <SectionLayout
+        prose={
+          <>
+            <h5>Factor groups left out, {outcomeName(model.label)}</h5>
+            <ul>
+              {model.model_card.excluded_feature_groups.map((g) => (
+                <li key={g.category}>
+                  {g.category}: {g.reason}
+                </li>
+              ))}
+            </ul>
+            <h5>How much do behaviors add?</h5>
+            <p>
+              A second LightGBM model adds the health behavior measures from CDC PLACES to the
+              factors. For each outcome, it and the main model are refit on the same counties, those
+              with every behavior measure, so the comparison is like for like.
+            </p>
+          </>
+        }
+        evidence={
+          <MetricsTable
+            caption="Main model and with behaviors, on the same counties, by outcome"
+            rows={Object.values(file.targets).flatMap((t) => [
+              {
+                target: outcomeCell(t),
+                model: "Main model",
+                ...t.behaviors_comparison.main,
+              },
+              {
+                target: outcomeCell(t),
+                model: "With behaviors",
+                ...t.behaviors_comparison.behaviors,
+              },
+            ])}
+          />
+        }
       />
       {comparison.excluded_states.length > 0 && (
         <>
@@ -70,7 +79,7 @@ export function ExclusionsSection({
         Only the behaviors model's accuracy metrics are used on this site. Its predictions and
         factor contributions are never shown.
       </p>
-      <h4>Counties left out of training, {outcomeName(model.label)}</h4>
+      <h5>Counties left out of training, {outcomeName(model.label)}</h5>
       {groups.length === 0 ? (
         <p>No county with a reported value for this outcome is left out.</p>
       ) : (
