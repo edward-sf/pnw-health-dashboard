@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { expect, test, vi } from "vitest";
 import type { DataState } from "../data/useData";
+import { mockMatchMedia } from "../test/matchMedia";
 import { manifest, model, strata, topology, values } from "../test/fixtures";
 import { Methodology } from "./Methodology";
 import { STEPS } from "./methodology/steps";
@@ -43,7 +44,9 @@ function at(state: DataState, path = "/methodology") {
 
 test("loading shows the loading line", () => {
   at({ status: "loading" });
-  expect(screen.getByRole("heading", { level: 2, name: "How the atlas is built" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "How the atlas is built" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Loading data…")).toBeInTheDocument();
 });
 
@@ -66,8 +69,9 @@ test("ready renders every anchor, focusable, with a table of contents", () => {
   expect(toc.querySelectorAll("a").length).toBeGreaterThanOrEqual(6);
   expect(screen.getByRole("link", { name: "Sources and vintages" })).toHaveAttribute(
     "href",
-    "/methodology#sources",
+    "#sources",
   );
+  expect(document.querySelector(".methodology-toc")).toBeNull();
   expect(screen.queryByText("At a glance")).toBeNull();
 });
 
@@ -150,7 +154,7 @@ test("has a Similar counties section in the table of contents", () => {
   at(ready);
   expect(screen.getByRole("link", { name: "Similar counties" })).toHaveAttribute(
     "href",
-    "/methodology#similar-counties",
+    "#similar-counties",
   );
   expect(document.getElementById("similar-counties")?.tagName).toBe("H4");
 });
@@ -171,4 +175,25 @@ test("falls back to the first target when life_expectancy is absent", () => {
   at(without);
   expect(screen.getByRole("heading", { name: "How the atlas is built" })).toBeInTheDocument();
   expect(screen.getByText(/The default is premature death\./)).toBeInTheDocument();
+});
+
+test("clicking a rail link moves focus to its heading", async () => {
+  at(ready);
+  await userEvent.setup().click(screen.getByRole("link", { name: "Indicators" }));
+  expect(document.getElementById("indicators")).toHaveFocus();
+});
+
+test("scrolls smoothly, or instantly when the reader prefers reduced motion", async () => {
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
+  try {
+    at(ready, "/methodology#indicators");
+    expect(scroll).toHaveBeenLastCalledWith({ behavior: "smooth" });
+    cleanup();
+    mockMatchMedia(true);
+    at(ready, "/methodology#indicators");
+    expect(scroll).toHaveBeenLastCalledWith({ behavior: "auto" });
+  } finally {
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  }
 });
