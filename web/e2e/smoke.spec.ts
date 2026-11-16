@@ -87,9 +87,7 @@ test("model mode: map, card, table and back", async ({ page }) => {
     panel.getByRole("heading", { name: "Life expectancy model" }),
   ).toBeVisible();
   await expect(
-    panel.getByRole("heading", {
-      name: "Factors associated with the expected value",
-    }),
+    panel.getByRole("heading", { name: "Associated factors" }),
   ).toBeVisible();
   await page.getByRole("radio", { name: "Table", exact: true }).click();
   await expect(page).toHaveURL(/[?&]view=table/);

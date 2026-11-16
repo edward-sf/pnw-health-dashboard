@@ -1,5 +1,6 @@
 import { useId, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router";
 import { formatSigned, formatValue } from "../color/formatValue";
@@ -30,7 +31,12 @@ export function ModelCard({ county, entry, indicators, target, targets, onTarget
   return (
     <section className="model-card" aria-labelledby={headingId} data-county={county.fips}>
       <div className="model-card-heading">
-        <h3 id={headingId}>{target.label} model</h3>
+        <div className="model-card-title">
+          <h3 id={headingId}>{target.label} model</h3>
+          <InfoTip label={`About the ${target.label} model`}>
+            <p>{rangeNote(entry, target)}</p>
+          </InfoTip>
+        </div>
         {targets && onTargetChange && (
           <Select value={selectedId} onValueChange={onTargetChange}>
             <SelectTrigger aria-label="Outcome" className="model-outcome">
@@ -71,59 +77,76 @@ function ModelResult({
   const { unit } = target;
   const note = directionNote(target);
   const d = modelDigits(unit);
-  const { actual, predicted, residual, threshold_75, threshold_90, base_value } = entry;
+  const { actual, predicted, residual, threshold_75, threshold_90 } = entry;
   return (
     <>
-      <div className="model-compare">
-        <h4>How this county compares</h4>
-        <p className="model-numbers">
-          <span>Actual {formatValue(actual, unit, d)}</span>
-          {" · "}
-          <span>Expected {formatValue(predicted, unit, d)}</span>
-          {" · "}
-          <strong>Difference {formatSigned(residual, unit, d)}</strong>
-        </p>
-        {note && <p className="model-direction-note">{note}</p>}
-        <p className="model-rounded-note">Figures are rounded.</p>
-        <p>
-          <Badge className="tier-badge">
-            <span
-              className="tier-swatch"
-              aria-hidden="true"
-              style={{ background: tierFill(entry.flag, palette) }}
-            />
-            {tierLabel(entry.flag, target.direction)}
-          </Badge>
-        </p>
-        <ResidualRange
-          residual={residual}
-          threshold75={threshold_75}
-          threshold90={threshold_90}
-          flag={entry.flag}
-          unit={unit}
-          note={note}
-        />
-        <p className="model-range-note">
-          {`A difference beyond ±${formatValue(threshold_75, unit, d)} is flagged as somewhat higher or lower, and beyond ±${formatValue(threshold_90, unit, d)} as notably. These ranges allow for the model's typical error and ${
-            entry.se === null
-              ? "a typical county's measurement uncertainty, since this county's estimate has no confidence interval."
-              : "this county's own measurement uncertainty."
-          }`}
-        </p>
-      </div>
+      <dl className="model-figures">
+        <div>
+          <dt>Actual</dt>
+          <dd>{formatValue(actual, unit, d)}</dd>
+        </div>
+        <div>
+          <dt>Expected</dt>
+          <dd>{formatValue(predicted, unit, d)}</dd>
+        </div>
+        <div>
+          <dt>Difference</dt>
+          <dd>
+            <strong>{formatSigned(residual, unit, d)}</strong>
+          </dd>
+        </div>
+      </dl>
+      {note && <p className="model-direction-note">{note}</p>}
+      <p>
+        <Badge className="tier-badge">
+          <span
+            className="tier-swatch"
+            aria-hidden="true"
+            style={{ background: tierFill(entry.flag, palette) }}
+          />
+          {tierLabel(entry.flag, target.direction)}
+        </Badge>
+      </p>
+      <ResidualRange
+        residual={residual}
+        threshold75={threshold_75}
+        threshold90={threshold_90}
+        flag={entry.flag}
+        unit={unit}
+        direction={target.direction}
+        note={note}
+      />
       <hr className="model-divider" />
       <div className="model-factors">
-        <h4>Factors associated with the expected value</h4>
-        <p>
-          {`These factors moved the model's expected value from a starting point of ${formatValue(base_value, unit, modelDigits(unit, 2))} to ${formatValue(predicted, unit, modelDigits(unit, 2))}. They describe what the model expects for a county with this profile; they don't explain the difference above.`}
-        </p>
-        <ShapBars bars={bars} />
-        <p className="model-factors-note">
-          Some factors stand in for others the model doesn't see. For example, high housing costs
-          often go with expensive metro areas and college towns, so a higher housing cost burden
-          can raise the expected value.
-        </p>
+        <div className="model-factors-heading">
+          <h4>Associated factors</h4>
+          <InfoTip label="About associated factors">
+            <p>
+              They describe what the model expects for a county with this profile; they don't
+              explain the difference above.
+            </p>
+            <p>
+              Some factors stand in for others the model doesn't see. For example, high housing
+              costs often go with expensive metro areas and college towns, so a higher housing
+              cost burden can raise the expected value.
+            </p>
+          </InfoTip>
+        </div>
+        <ShapBars bars={bars} direction={target.direction} />
       </div>
     </>
   );
+}
+
+/** What the tiers mean, for the heading's ⓘ; general when the county has no result. */
+function rangeNote(entry: CountyModel, target: TargetModel): string {
+  if (!hasModelResult(entry)) {
+    return "A difference beyond the model's thresholds is flagged as somewhat or notably higher or lower. These ranges allow for the model's typical error and each county's measurement uncertainty.";
+  }
+  const d = modelDigits(target.unit);
+  return `A difference beyond ±${formatValue(entry.threshold_75, target.unit, d)} is flagged as somewhat higher or lower, and beyond ±${formatValue(entry.threshold_90, target.unit, d)} as notably. These ranges allow for the model's typical error and ${
+    entry.se === null
+      ? "a typical county's measurement uncertainty, since this county's estimate has no confidence interval."
+      : "this county's own measurement uncertainty."
+  }`;
 }

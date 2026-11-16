@@ -8,6 +8,7 @@ import { ModelCard } from "./ModelCard";
 import { rangeDomain } from "./ResidualRange";
 
 const king = { fips: "53033", name: "King", state: "WA" };
+const aleutians = { fips: "02016", name: "Aleutians West", state: "AK" };
 
 function renderCard(entry: CountyModel, county = king, target: TargetModel = model) {
   return render(
@@ -17,40 +18,54 @@ function renderCard(entry: CountyModel, county = king, target: TargetModel = mod
   );
 }
 
-test("King: comparison, badge, range sentence and factors", () => {
-  renderCard(model.counties["53033"]!);
+test("King: three figures, badge, range ⓘ and associated factors", async () => {
+  const { container } = renderCard(model.counties["53033"]!);
   expect(screen.getByRole("heading", { level: 3, name: "Life expectancy model" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 4, name: "How this county compares" })).toBeInTheDocument();
-  expect(screen.getByText("Actual 80.8 years")).toBeInTheDocument();
-  expect(screen.getByText("Expected 77.1 years")).toBeInTheDocument();
-  expect(screen.getByText("Difference +3.7 years")).toBeInTheDocument();
+  expect(screen.queryByText("How this county compares")).toBeNull();
+  expect(screen.queryByText("Figures are rounded.")).toBeNull();
+  expect(screen.queryByText(/starting point/)).toBeNull();
+  expect([...container.querySelectorAll(".model-figures dt")].map((d) => d.textContent)).toEqual([
+    "Actual",
+    "Expected",
+    "Difference",
+  ]);
+  expect([...container.querySelectorAll(".model-figures dd")].map((d) => d.textContent)).toEqual([
+    "80.8 years",
+    "77.1 years",
+    "+3.7 years",
+  ]);
   expect(screen.getByText("Notably higher than expected")).toBeInTheDocument();
-  expect(screen.getByText("Figures are rounded.")).toBeInTheDocument();
+  // The range explanation waits behind the heading's ⓘ.
+  const range =
+    "A difference beyond ±2.4 years is flagged as somewhat higher or lower, and beyond ±3.4 years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty.";
+  expect(screen.queryByText(range)).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "About the Life expectancy model" }));
+  expect(await screen.findByText(range)).toBeVisible();
+  // Associated factors, with both explanations behind its ⓘ and none below the bars.
+  expect(screen.getByRole("heading", { level: 4, name: "Associated factors" })).toBeInTheDocument();
+  expect(screen.queryByText(/Some factors stand in for others/)).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "About associated factors" }));
   expect(
-    screen.getByText(
-      "A difference beyond ±2.4 years is flagged as somewhat higher or lower, and beyond ±3.4 years as notably. These ranges allow for the model's typical error and this county's own measurement uncertainty.",
+    await screen.findByText(
+      "They describe what the model expects for a county with this profile; they don't explain the difference above.",
     ),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { level: 4, name: "Factors associated with the expected value" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText(/starting point of 75\.00 years to 77\.10 years\. They describe what the model expects/),
-  ).toBeInTheDocument();
+  ).toBeVisible();
+  expect(screen.getByText(/^Some factors stand in for others the model doesn't see\./)).toBeVisible();
   expect(screen.getAllByText(/All other factors/).length).toBeGreaterThan(0);
 });
 
-test("null se uses the typical-county wording", () => {
+test("null se uses the typical-county wording", async () => {
   renderCard(model.counties["16001"]!, { fips: "16001", name: "Ada", state: "ID" });
+  await userEvent.click(screen.getByRole("button", { name: "About the Life expectancy model" }));
   expect(
-    screen.getByText(
+    await screen.findByText(
       /and a typical county's measurement uncertainty, since this county's estimate has no confidence interval\.$/,
     ),
   ).toBeInTheDocument();
 });
 
-test("no model result", () => {
-  renderCard(model.counties["02063"]!, { fips: "02063", name: "Chugach", state: "AK" });
+test("no model result: the heading keeps its ⓘ, with no figures, chart or factors", () => {
+  const { container } = renderCard(model.counties["02063"]!, { fips: "02063", name: "Chugach", state: "AK" });
   expect(
     screen.getByText(
       /The model has no result for this county because its life expectancy figure isn't reported\./,
@@ -60,7 +75,10 @@ test("no model result", () => {
     "href",
     "/methodology#no-result",
   );
-  expect(screen.queryByText(/Factors associated/)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "About the Life expectancy model" })).toBeInTheDocument();
+  expect(container.querySelector(".model-figures")).toBeNull();
+  expect(container.querySelector(".residual-range")).toBeNull();
+  expect(screen.queryByText(/Associated factors/)).not.toBeInTheDocument();
 });
 
 test("rangeDomain covers the residual and pads the thresholds", () => {
@@ -87,35 +105,38 @@ test("wording guard: no driver, cause or because of in any tier", () => {
   }
 });
 
-test("the factors section draws neutral bars and never uses a tier colour", () => {
-  const { container } = renderCard(model.counties["53033"]!);
-  const factors = container.querySelector(".model-factors")!;
-  const rects = factors.querySelectorAll("rect.shap-bar");
-  expect(rects.length).toBeGreaterThan(0);
-  for (const r of rects) expect(r).not.toHaveAttribute("fill");
-  const tiers = ["#ca0020", "#f4a582", "#e3e3e3", "#92c5de", "#0571b0"];
-  for (const el of [factors, ...factors.querySelectorAll("*")]) {
-    const used = ["style", "fill", "stroke"]
-      .map((a) => (el.getAttribute(a) ?? "").toLowerCase())
-      .join(" ");
-    for (const t of tiers) expect(used).not.toContain(t);
+test("the card colours factor bars by the outcome's direction", () => {
+  // King's life expectancy factors include positive contributions, which are favorable there.
+  const { container, unmount } = renderCard(model.counties["53033"]!);
+  const fills = () =>
+    [...container.querySelectorAll(".model-factors rect.shap-bar[fill]")].map((r) => r.getAttribute("fill"));
+  expect(fills()).toContain("#0571b0");
+  unmount();
+  // For premature death a positive contribution is the less favorable way, so the same sign is red.
+  const base = prematureDeath.counties["02016"]!;
+  const entry = {
+    ...base,
+    shap: [
+      { feature: "poverty_rate", value: 14.2, contribution: 500 },
+      { feature: "median_household_income", value: 72000, contribution: -300 },
+    ],
+  };
+  const worse = renderCard(entry, aleutians, prematureDeath);
+  const bars = [...worse.container.querySelectorAll(".model-factors g")];
+  expect(bars.filter((g) => g.querySelector("rect.shap-bar[fill]")).length).toBeGreaterThan(0);
+  for (const g of bars) {
+    const rect = g.querySelector("rect.shap-bar")!;
+    const value = g.querySelector(".shap-value")!.textContent!;
+    if (!rect.hasAttribute("fill")) continue;
+    expect(rect.getAttribute("fill")).toBe(value.startsWith("+") ? "#ca0020" : "#0571b0");
   }
 });
 
-test("the factors section notes that some factors stand in for others", () => {
+test("no proxy note sits below the bars any more; it is behind the factors ⓘ", () => {
   const { container } = renderCard(model.counties["53033"]!);
-  const note = container.querySelector(".model-factors .model-factors-note");
-  expect(note?.textContent).toBe(
-    "Some factors stand in for others the model doesn't see. For example, high housing costs often go with expensive metro areas and college towns, so a higher housing cost burden can raise the expected value.",
-  );
-});
-
-test("a county with no result shows no proxy note", () => {
-  const { container } = renderCard(model.counties["02063"]!);
   expect(container.querySelector(".model-factors-note")).toBeNull();
 });
 
-const aleutians = { fips: "02016", name: "Aleutians West", state: "AK" };
 const NOTE = "Lower is more favorable for this measure, so a positive difference is less favorable than expected.";
 
 test("heads the card with the target label", () => {
@@ -125,18 +146,28 @@ test("heads the card with the target label", () => {
   ).toBeInTheDocument();
 });
 
-test("formats actual and expected in the target unit", () => {
+test("formats actual and expected in the target unit", async () => {
   const { container } = renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
-  expect(screen.getByText("Actual 8,800 per 100k")).toBeInTheDocument();
-  expect(screen.getByText("Expected 7,000 per 100k")).toBeInTheDocument();
-  expect(screen.getByText("Difference +1,800 per 100k")).toBeInTheDocument();
-  expect(container.textContent).toContain("beyond ±1,200 per 100k is flagged");
-  expect(container.textContent).toContain("starting point of 7,000 per 100k to 7,000 per 100k.");
+  expect([...container.querySelectorAll(".model-figures dd")].map((d) => d.textContent)).toEqual([
+    "8,800 per 100k",
+    "7,000 per 100k",
+    "+1,800 per 100k",
+  ]);
   expect(container.textContent).not.toMatch(/\d years/);
+  await userEvent.click(screen.getByRole("button", { name: "About the Premature death (years lost) model" }));
+  expect(await screen.findByText(/beyond ±1,200 per 100k is flagged/)).toBeVisible();
 });
 
 test("adds the direction note for higher_is_worse only", () => {
-  const worse = renderCard(prematureDeath.counties["02016"]!, aleutians, prematureDeath);
+  const base = prematureDeath.counties["02016"]!;
+  const entry = {
+    ...base,
+    shap: [
+      { feature: "poverty_rate", value: 14.2, contribution: 500 },
+      { feature: "median_household_income", value: 72000, contribution: -300 },
+    ],
+  };
+  const worse = renderCard(entry, aleutians, prematureDeath);
   expect(screen.getByText(NOTE)).toBeInTheDocument();
   worse.unmount();
   renderCard(model.counties["53033"]!);
@@ -191,7 +222,7 @@ test("with targets, an Outcome select changes the target", async () => {
   const select = screen.getByRole("combobox", { name: "Outcome" });
   expect(select).toHaveTextContent("Life expectancy");
   const heading = screen.getByRole("heading", { level: 3, name: "Life expectancy model" });
-  expect(heading.parentElement).toContainElement(select);
+  expect(heading.closest(".model-card-heading")).toContainElement(select);
   await userEvent.click(select);
   await userEvent.click(screen.getByRole("option", { name: "Injury deaths" }));
   expect(onTargetChange).toHaveBeenCalledExactlyOnceWith("injury_deaths");

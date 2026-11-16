@@ -1,4 +1,5 @@
 import type { ShapBar } from "../model/buildShapBars";
+import { type Direction, factorFill } from "../model/modelView";
 
 const W = 320;
 const ZERO_X = W / 2;
@@ -9,8 +10,12 @@ const BAR_Y = 18;
 const BAR_H = 14;
 const CHAR_W = 5.6;
 
-/** Neutral bars, one per factor; their colors are chart tokens set by class in styles.css. */
-export function ShapBars({ bars }: { bars: ShapBar[] }) {
+/**
+ * One bar per factor, coloured by whether it moves the expected value the favorable way.
+ * "All other factors" is a remainder, not a factor, so it keeps the neutral --chart-muted
+ * set by class in styles.css.
+ */
+export function ShapBars({ bars, direction }: { bars: ShapBar[]; direction: Direction }) {
   if (bars.length === 0) return null;
   const max = Math.max(...bars.map((b) => Math.abs(b.contribution)), 1e-9);
   const height = bars.length * ROW + 4;
@@ -51,6 +56,7 @@ export function ShapBars({ bars }: { bars: ShapBar[] }) {
               />
               <rect
                 className="shap-bar"
+                fill={b.other ? undefined : (factorFill(b.contribution, direction) ?? undefined)}
                 x={x}
                 y={top + BAR_Y}
                 width={len}
