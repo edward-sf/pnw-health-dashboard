@@ -1844,11 +1844,18 @@
 
   .reading-rail--phone {
     position: sticky;
-    top: var(--header-height);
+    top: 0;
     z-index: 2;
     margin: 0 0 1rem;
     border-bottom: 1px solid var(--line);
     background: var(--surface);
+  }
+
+  /* The site header scrolls away, so the bar sits at the top edge; a jump leaves the heading below it. */
+  @media (max-width: 720px) {
+    .methodology [id] {
+      scroll-margin-top: calc(2.75rem + 1px + 0.5rem);
+    }
   }
 
   .reading-rail-toggle {
@@ -1886,7 +1893,7 @@
 
     .reading-rail:not(.reading-rail--phone) {
       position: sticky;
-      top: calc(var(--header-height) + 1rem);
+      top: 1rem;
     }
   }
 

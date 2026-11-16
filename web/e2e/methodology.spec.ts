@@ -171,3 +171,24 @@ for (const width of [375, 721, 900, 1100, 1440]) {
     for (const w of widths) expect(w).toBeGreaterThan(0);
   });
 }
+
+test("the phone bar sticks to the top edge and a jump lands the heading below it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("./methodology");
+  await expect(page.locator("#model-card")).toBeAttached();
+  await page.evaluate(() => window.scrollTo(0, 3000));
+  const bar = rail(page);
+  expect((await bar.boundingBox())!.y).toBe(0);
+  // Nothing of the page shows above the bar.
+  const above = await page.evaluate(() => document.elementFromPoint(180, 0)?.closest("nav")?.getAttribute("aria-label"));
+  expect(above).toBe("On this page");
+  await bar.getByRole("button").click();
+  await bar.getByRole("link", { name: "Indicators" }).click();
+  await settled(page);
+  const barBottom = (await bar.boundingBox())!.y + (await bar.boundingBox())!.height;
+  const top = await page.evaluate(() => document.getElementById("indicators")!.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(barBottom);
+  expect(top).toBeLessThan(barBottom + 40);
+});
