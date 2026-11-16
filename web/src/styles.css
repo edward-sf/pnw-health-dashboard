@@ -1265,9 +1265,26 @@
 
   /* Similar counties */
   .similar-basis {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
     margin: 0 0 0.5rem;
     font-size: var(--text-sm);
     color: var(--ink-muted);
+  }
+
+  .similar-basis p {
+    margin: 0;
+  }
+
+  /* The tier's swatch and short label, kept on one line. */
+  .similar-tier {
+    white-space: nowrap;
+  }
+
+  .similar-tier .tier-swatch {
+    margin-right: 0.375rem;
+    vertical-align: -1px;
   }
 
   .similar-table {
