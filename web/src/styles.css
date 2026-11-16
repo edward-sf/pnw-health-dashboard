@@ -1205,11 +1205,25 @@
   }
 
   /* Who lives here */
+  /* A compact fact sheet: one column in a narrow panel, two once there is room. */
+  .who-lives-here {
+    container-type: inline-size;
+  }
+
   .who-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 1.25rem;
     list-style: none;
     margin: 0;
     padding: 0;
     font-size: var(--text-sm);
+  }
+
+  @container (min-width: 22rem) {
+    .who-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .who-row {
@@ -1238,20 +1252,15 @@
     background: var(--chart-muted);
   }
 
-  .panel-body .who-group-heading {
+  .who-group-title {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
     margin: 0.875rem 0 0.4rem;
   }
 
-  .who-universe {
-    display: block;
-    font-size: var(--text-xs);
-    color: var(--ink-muted);
-  }
-
-  .who-note {
+  .panel-body .who-group-heading {
     margin: 0;
-    font-size: var(--text-sm);
-    color: var(--ink-muted);
   }
 
   /* Similar counties */
